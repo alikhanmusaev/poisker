@@ -11,12 +11,6 @@
       <div id="suggest-box"></div>
     </div>
     <div class="search-filters">
-      <select name="city">
-        <option value="">Все города</option>
-        {% for slug, name in cities.items() %}
-          <option value="{{ slug }}" {% if city == slug %}selected{% endif %}>{{ name }}</option>
-        {% endfor %}
-      </select>
       <select name="category">
         <option value="">Все категории</option>
         {% for slug, (label, icon) in categories.items() %}

@@ -70,9 +70,20 @@ function removeSavedPost(url) {
   writeSavedPosts(readSavedPosts().filter((item) => item.url !== url));
 }
 
+function removeSavedPostById(postId, url) {
+  writeSavedPosts(
+    readSavedPosts().filter((item) => {
+      if (postId && item.postId === postId) return false;
+      if (url && item.url === url) return false;
+      return true;
+    })
+  );
+}
+
 window.saveEditUrl = saveEditUrl;
 window.readSavedPosts = readSavedPosts;
 window.removeSavedPost = removeSavedPost;
+window.removeSavedPostById = removeSavedPostById;
 window.viewUrlForPost = viewUrlForPost;
 window.findSavedPost = findSavedPost;
 window.editUrlForPostId = editUrlForPostId;

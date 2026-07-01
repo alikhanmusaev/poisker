@@ -37,7 +37,6 @@ window.refreshIcons = refreshIcons;
 
 document.addEventListener('DOMContentLoaded', () => {
   refreshIcons();
-  initPwaInstall();
   initHtmxIndicator();
   initSuggestItems();
   initPostCardEditLinks(document);
@@ -53,50 +52,6 @@ document.body.addEventListener('htmx:afterSettle', () => {
   if (window.initImagePickers) window.initImagePickers(document.body);
   initPostCardEditLinks(document.body);
 });
-
-function initPwaInstall() {
-  const banner = document.getElementById('pwa-install');
-  const installBtn = document.getElementById('pwa-install-btn');
-  const dismissBtn = document.getElementById('pwa-install-dismiss');
-  if (!banner || !installBtn || !dismissBtn) return;
-
-  const dismissed = (() => {
-    try {
-      return localStorage.getItem('pwa_install_dismissed') === '1';
-    } catch (e) {
-      return false;
-    }
-  })();
-
-  let deferredPrompt = null;
-
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    if (!dismissed && window.matchMedia('(display-mode: browser)').matches) {
-      banner.hidden = false;
-    }
-  });
-
-  installBtn.addEventListener('click', async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null;
-    banner.hidden = true;
-  });
-
-  dismissBtn.addEventListener('click', () => {
-    banner.hidden = true;
-    try {
-      localStorage.setItem('pwa_install_dismissed', '1');
-    } catch (e) {}
-  });
-
-  window.addEventListener('appinstalled', () => {
-    banner.hidden = true;
-  });
-}
 
 function initHtmxIndicator() {
   const indicator = document.getElementById('htmx-indicator');

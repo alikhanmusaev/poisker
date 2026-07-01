@@ -30,11 +30,19 @@ def _create_post(app, phone="+79001234567", title="Тестовое объявл
 
 def test_contact_reveals_full_phone(client, app):
     post = _create_post(app, phone="+79005551234")
-    res = client.get(f"/posts/{post['id']}/contact")
+    res = client.post(f"/posts/{post['id']}/contact")
     data = res.get_json()
 
     assert res.status_code == 200
     assert data["phone"] == "+79005551234"
+
+
+def test_contact_get_returns_405(client, app):
+    post = _create_post(app, phone="+79005559999")
+    res = client.get(f"/posts/{post['id']}/contact")
+
+    assert res.status_code == 405
+    assert "POST" in res.get_json()["error"]
 
 
 def test_daily_limit_survives_delete(client, app):

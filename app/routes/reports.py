@@ -3,7 +3,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from app.extensions import limiter
 from app.forms import ReportForm
 from app.models import Post, Report
-from app.services.phone import hash_value
+from app.services.captcha import extract_captcha_response, verify_captcha
 from app.services.ranking import maybe_auto_hide
 from app.services.seo import post_public_url
 
@@ -16,10 +16,8 @@ def report_post(post_id):
     post = Post.query.filter_by(id=post_id).first_or_404()
     form = ReportForm()
     if form.validate_on_submit():
-        token = request.form.get("cf-turnstile-response", "")
-        from app.services.captcha import verify_turnstile
-
-        if not verify_turnstile(token, request.remote_addr):
+        token = extract_captcha_response()
+        if not verify_captcha(token, request.remote_addr):
             flash("Подтвердите, что вы не робот", "error")
         else:
             ip_hash = hash_value(request.remote_addr or "unknown")
@@ -41,4 +39,9 @@ def report_post(post_id):
                 maybe_auto_hide(post)
                 flash("Жалоба отправлена. Спасибо!", "success")
                 return redirect(post_public_url(post))
-    return render_template("reports/form.html", form=form, post=post)
+    return render_template(
+        "reports/form.html",
+        form=form,
+        post=post,
+        back_url=post_public_url(post),
+    )

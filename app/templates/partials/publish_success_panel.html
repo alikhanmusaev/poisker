@@ -8,7 +8,7 @@
     <span>Опубликовано</span>
   </p>
   <h2 class="publish-success-title">Сохраните ссылку</h2>
-  <p class="publish-success-note">Без неё не изменить и не удалить</p>
+  <p class="publish-success-note">Профиля нет — сохраните ссылку в заметки или отправьте себе</p>
 
   <div class="publish-success-actions">
     <button type="button" class="btn btn-primary btn-block publish-success-copy" id="copy-edit-btn">
@@ -22,13 +22,13 @@
   </div>
 
   <p class="publish-success-feedback" id="edit-url-hint" hidden role="status"></p>
-  <p class="publish-success-saved" id="autosave-msg" hidden>В «Мои объявления»</p>
+  <p class="publish-success-saved" id="autosave-msg" hidden>Добавлено в «Мои»</p>
 
   <div class="publish-success-links">
     <a href="{{ view_url if view_url is defined else '#' }}"
        class="btn btn-secondary publish-success-view is-disabled"
        id="open-post-btn"
-       {% if not view_url %}aria-disabled="true" tabindex="-1"{% endif %}>Смотреть</a>
-    <a href="{{ url_for('posts.my_posts') }}" class="btn btn-secondary publish-success-my">Мои</a>
+       {% if not view_url %}aria-disabled="true" tabindex="-1"{% endif %}>Открыть объявление</a>
+    <a href="{{ url_for('posts.my_posts') }}" class="btn btn-secondary publish-success-my">Мои объявления</a>
   </div>
 </div>

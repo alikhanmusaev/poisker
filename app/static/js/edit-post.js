@@ -58,6 +58,13 @@ document.addEventListener('DOMContentLoaded', () => {
       danger: true,
     });
     if (ok) {
+      const editForm = document.getElementById('edit-post-form');
+      const postId = editForm?.dataset.postId || '';
+      if (typeof removeSavedPostById === 'function') {
+        removeSavedPostById(postId, window.location.href);
+      } else if (typeof removeSavedPost === 'function') {
+        removeSavedPost(window.location.href);
+      }
       deleteForm.dataset.confirmed = '1';
       deleteForm.requestSubmit();
     }

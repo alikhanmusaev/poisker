@@ -106,7 +106,7 @@
         const allowed = this.maxNewFiles();
         if (this.files.length > allowed) {
           this.files = this.files.slice(0, allowed);
-          this.showError(`Можно добавить не больше ${allowed} новых фото.`);
+          this.showError(`Можно добавить не более ${allowed} новых фото.`);
         }
         this.syncInput();
         this.render();
@@ -167,7 +167,7 @@
       }
 
       if (trimmed) {
-        this.showError(`Можно добавить ещё не больше ${limit} фото.`);
+        this.showError(`Можно добавить не более ${limit} фото.`);
       } else if (rejected.length) {
         this.showError(rejected[0]);
       } else {
@@ -226,7 +226,7 @@
           this.statusEl.textContent = 'Достигнут лимит 5 фото';
         } else if (this.files.length === 0) {
           this.statusEl.textContent = existing
-            ? `Новых фото нет · уже ${existing} из ${this.totalMax}`
+            ? `Новые фото не выбраны · уже ${existing} из ${this.totalMax}`
             : 'Фото не выбраны';
         } else {
           const remaining = limit - this.files.length;

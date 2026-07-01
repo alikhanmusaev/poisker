@@ -98,7 +98,22 @@ document.addEventListener('DOMContentLoaded', () => {
       body.appendChild(titleRow);
 
       body.appendChild(el('p', 'my-post-card-date', formatDate(item.savedAt)));
-      body.appendChild(el('p', 'my-post-card-url', item.url));
+
+      const linkBlock = el('div', 'my-post-card-link-block');
+      linkBlock.appendChild(
+        el('p', 'my-post-card-link-label', 'Ссылка на объявление')
+      );
+      const urlEl = el('code', 'my-post-card-url', item.url);
+      urlEl.setAttribute('translate', 'no');
+      linkBlock.appendChild(urlEl);
+      linkBlock.appendChild(
+        el(
+          'p',
+          'my-post-card-link-hint',
+          'Сохраните эту ссылку, чтобы открыть или изменить объявление позже.'
+        )
+      );
+      body.appendChild(linkBlock);
 
       const actions = el('div', 'my-post-card-actions');
 
@@ -123,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!ok) event.preventDefault();
       });
 
-      const removeBtn = el('button', 'btn btn-secondary btn-sm my-post-remove', 'Убрать');
+      const removeBtn = el('button', 'btn btn-secondary btn-sm my-post-remove', 'Убрать из списка');
       removeBtn.type = 'button';
       removeBtn.dataset.url = item.url;
 
@@ -144,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ok = await confirmDialog({
           title: 'Убрать из списка?',
           message: 'Объявление на сайте останется. Ссылку можно сохранить отдельно.',
-          confirmLabel: 'Убрать',
+          confirmLabel: 'Убрать из списка',
           danger: true,
         });
         if (!ok) return;

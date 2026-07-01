@@ -17,8 +17,8 @@ Required secrets:
 - `TYPESENSE_API_KEY`
 - `S3_ACCESS_KEY`
 - `S3_SECRET_KEY`
-- `TURNSTILE_SITE_KEY`
-- `TURNSTILE_SECRET_KEY`
+- `CAPTCHA_PROVIDER` — `builtin` (по умолчанию), `yandex`, `turnstile`, `none`
+- `REQUIRE_CAPTCHA` — включить капчу
 
 Generate Flask/HMAC secrets with:
 

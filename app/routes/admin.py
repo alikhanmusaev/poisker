@@ -3,12 +3,21 @@ from flask_login import login_required, login_user, logout_user
 
 from app.extensions import db, limiter, login_manager
 from app.forms import AdminLoginForm
-from app.models import AdminUser, BlockedPhone, Post, Promotion, Report, utcnow
+from app.models import AdminAuditLog, AdminUser, BlockedPhone, Post, Promotion, Report, utcnow
+from app.services.audit import log_admin_action_from_request
 from app.services.posts import delete_post
 from app.services.ranking import apply_promotion, start_of_today_msk
 from app.services.search import index_post, remove_post_from_index
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
+
+ACTION_LABELS = {
+    "hide": "Скрытие объявления",
+    "publish": "Публикация объявления",
+    "delete": "Удаление объявления",
+    "block_phone": "Блокировка номера",
+    "approve_promotion": "Одобрение продвижения",
+}
 
 
 @login_manager.user_loader
@@ -80,6 +89,7 @@ def hide_post(post_id):
     post.status = "hidden"
     db.session.commit()
     remove_post_from_index(post.id)
+    log_admin_action_from_request("hide", target_type="post", target_id=post_id)
     flash("Объявление скрыто", "success")
     return redirect(url_for("admin.posts_list"))
 
@@ -91,6 +101,7 @@ def publish_post(post_id):
     post.status = "published"
     db.session.commit()
     index_post(post)
+    log_admin_action_from_request("publish", target_type="post", target_id=post_id)
     flash("Объявление опубликовано", "success")
     return redirect(url_for("admin.posts_list"))
 
@@ -100,6 +111,7 @@ def publish_post(post_id):
 def delete_post_admin(post_id):
     post = Post.query.get_or_404(post_id)
     delete_post(post)
+    log_admin_action_from_request("delete", target_type="post", target_id=post_id)
     flash("Объявление удалено", "success")
     return redirect(url_for("admin.posts_list"))
 
@@ -115,6 +127,7 @@ def block_phone(post_id):
         post.status = "hidden"
         db.session.commit()
         remove_post_from_index(post.id)
+    log_admin_action_from_request("block_phone", target_type="post", target_id=post_id)
     flash("Номер заблокирован", "success")
     return redirect(url_for("admin.posts_list"))
 
@@ -154,5 +167,25 @@ def approve_promotion(promo_id):
     db.session.commit()
     apply_promotion(promo.post, promo.type)
     index_post(promo.post)
+    log_admin_action_from_request("approve_promotion", target_type="promotion", target_id=promo_id)
     flash("Продвижение активировано", "success")
     return redirect(url_for("admin.promotions_list"))
+
+
+@bp.route("/audit")
+@login_required
+def audit_list():
+    logs = (
+        AdminAuditLog.query.order_by(AdminAuditLog.created_at.desc()).limit(100).all()
+    )
+    admin_ids = {log.admin_id for log in logs}
+    admins = {
+        user.id: user.username
+        for user in AdminUser.query.filter(AdminUser.id.in_(admin_ids)).all()
+    } if admin_ids else {}
+    return render_template(
+        "admin/audit.html",
+        logs=logs,
+        admins=admins,
+        action_labels=ACTION_LABELS,
+    )

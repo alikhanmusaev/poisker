@@ -11,6 +11,8 @@ os.environ["RATELIMIT_STORAGE_URI"] = "memory://"
 os.environ["RATELIMIT_ENABLED"] = "false"
 os.environ["SCHEDULER_ENABLED"] = "false"
 os.environ["TYPESENSE_URL"] = "http://127.0.0.1:1"
+os.environ["PHONE_ENCRYPTION_KEY"] = "test-phone-encryption-key"
+os.environ["HMAC_SECRET"] = "test-hmac-secret"
 
 import pytest
 

@@ -21,6 +21,30 @@ CITIES = {
     "benoy": "Бено́й",
 }
 
+# Предложный падеж для SEO-заголовков («в Грозном»)
+CITY_LOCATIVE = {
+    "grozny": "Грозном",
+    "gudermes": "Гудермесе",
+    "argun": "Аргуне",
+    "urus-martan": "Урус-Мартане",
+    "shali": "Шали",
+    "kurchaloy": "Курчалое",
+    "naurskaya": "Наурской",
+    "vedeno": "Ведено",
+    "shatoy": "Шатое",
+    "nozhay-yurt": "Ножай-Юрте",
+    "shelkovskaya": "Шелковской",
+    "goyty": "Гойтах",
+    "achkhoy-martan": "Ачхой-Мартане",
+    "tsentoroy": "Центорое",
+    "starye-atagi": "Старых Атагах",
+    "katar-yurt": "Катар-Юрте",
+    "gekhi": "Гехи",
+    "samashki": "Самашках",
+    "alleroi": "Аллерое",
+    "benoy": "Беное",
+}
+
 # slug -> (label, lucide icon)
 CATEGORIES = {
     "nedvizhimost": ("Недвижимость", "home"),
@@ -31,7 +55,7 @@ CATEGORIES = {
     "dlya-doma": ("Для дома", "sofa"),
     "uslugi": ("Услуги", "wrench"),
     "rabota": ("Работа", "briefcase"),
-    "detskie": ("Детские", "baby"),
+    "detskie": ("Для детей", "baby"),
     "zhivotnye": ("Животные", "paw-print"),
     "sport": ("Спорт", "dumbbell"),
     "stroitelstvo": ("Строительство", "hammer"),
@@ -49,8 +73,8 @@ SORT_OPTIONS = {
     "rank": "Рекомендуемые",
     "relevance": "По релевантности",
     "date_desc": "Сначала новые",
-    "price_asc": "По дешевле",
-    "price_desc": "По дороже",
+    "price_asc": "Сначала дешевле",
+    "price_desc": "Сначала дороже",
 }
 
 DEFAULT_SORT = "rank"
@@ -113,8 +137,8 @@ POPULAR_SUGGESTIONS = [
 REPORT_REASONS = {
     "spam": "Спам",
     "fraud": "Мошенничество",
-    "wrong_phone": "Чужой номер",
-    "inappropriate": "Неприемлемый контент",
+    "wrong_phone": "Неверный номер телефона",
+    "inappropriate": "Недопустимый контент",
     "duplicate": "Дубликат",
     "other": "Другое",
 }

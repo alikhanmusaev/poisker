@@ -1,0 +1,23 @@
+{% if captcha_enabled %}
+  {% if captcha_provider == 'builtin' %}
+  <div class="builtin-captcha{% if captcha_id %} builtin-captcha-{{ captcha_id }}{% endif %}"{% if captcha_id %} id="{{ captcha_id }}"{% endif %}>
+    <label class="field-label" for="captcha-answer{% if captcha_id %}-{{ captcha_id }}{% endif %}">
+      Сколько будет <strong class="captcha-question"{% if captcha_id %} id="{{ captcha_id }}-question"{% endif %}>{{ captcha_question }}</strong>?
+    </label>
+    <input
+      type="text"
+      class="field-input captcha-answer-input"
+      name="captcha_answer"
+      id="captcha-answer{% if captcha_id %}-{{ captcha_id }}{% endif %}"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      autocomplete="off"
+      required
+      aria-label="Ответ на проверочный вопрос">
+  </div>
+  {% elif captcha_site_key and captcha_provider == 'turnstile' %}
+  <div class="cf-turnstile"{% if captcha_callback %} data-callback="{{ captcha_callback }}"{% endif %}{% if captcha_id %} id="{{ captcha_id }}"{% endif %} data-sitekey="{{ captcha_site_key }}"></div>
+  {% elif captcha_site_key %}
+  <div class="smart-captcha"{% if captcha_callback %} data-callback="{{ captcha_callback }}"{% endif %}{% if captcha_id %} id="{{ captcha_id }}"{% endif %} data-sitekey="{{ captcha_site_key }}"></div>
+  {% endif %}
+{% endif %}

@@ -27,17 +27,17 @@ def _normalize_price(value: int | None) -> int | None:
     return value
 
 
-def _listing_context():
+def _listing_context(*, fixed_city: str | None = None, fixed_category: str | None = None):
     query = request.args.get("q", "").strip()
     parsed = parse_search_query(query)
-    city = request.args.get("city", "") or parsed["city"] or ""
-    category = request.args.get("category", "") or parsed["category"] or ""
+    city = fixed_city or ""
+    category = fixed_category or request.args.get("category", "") or parsed["category"] or ""
     price_min = _normalize_price(request.args.get("price_min", type=int) or parsed["price_min"])
     price_max = _normalize_price(request.args.get("price_max", type=int) or parsed["price_max"])
     if price_min is not None and price_max is not None and price_min > price_max:
         price_min, price_max = price_max, price_min
-    with_photo = request.args.get("with_photo") == "1" or parsed["with_photo"]
-    with_price = request.args.get("with_price") == "1" or parsed.get("with_price", False)
+    with_photo = False
+    with_price = False
     sort = request.args.get("sort", "")
     if sort not in SORT_OPTIONS:
         sort = DEFAULT_SEARCH_SORT if parsed["text"] else DEFAULT_SORT
@@ -91,7 +91,17 @@ def _listing_context():
             sort=sort,
             page=page,
         ),
+        "listing_path": request.path,
     }
+
+
+def _render_listing(**kwargs):
+    ctx = _listing_context(**kwargs)
+    if request.headers.get("HX-Request"):
+        if ctx["page"] > 1:
+            return render_template("partials/post_list_more.html", **ctx)
+        return render_template("partials/feed_panel.html", **ctx)
+    return render_template("index.html", **ctx)
 
 
 @bp.route("/obyavlenie/<city_slug>/<category_slug>/<slug>")
@@ -182,12 +192,7 @@ def sitemap_xml():
 @bp.route("/")
 @limiter.limit(lambda: current_app.config["RATELIMIT_INDEX"])
 def index():
-    ctx = _listing_context()
-    if request.headers.get("HX-Request"):
-        if ctx["page"] > 1:
-            return render_template("partials/post_list_more.html", **ctx)
-        return render_template("partials/feed_panel.html", **ctx)
-    return render_template("index.html", **ctx)
+    return _render_listing()
 
 
 @bp.route("/suggest")
@@ -205,24 +210,19 @@ def suggest_view():
 
 
 @bp.route("/gorod/<city_slug>")
+@limiter.limit(lambda: current_app.config["RATELIMIT_INDEX"])
 def city_page(city_slug):
     if city_slug not in CITIES:
         return render_template("errors/404.html"), 404
-    return redirect(url_for("main.index", city=city_slug, **request.args.to_dict()))
+    return _render_listing(fixed_city=city_slug)
 
 
 @bp.route("/gorod/<city_slug>/<category_slug>")
+@limiter.limit(lambda: current_app.config["RATELIMIT_INDEX"])
 def city_category_page(city_slug, category_slug):
     if city_slug not in CITIES or category_slug not in CATEGORIES:
         return render_template("errors/404.html"), 404
-    return redirect(
-        url_for(
-            "main.index",
-            city=city_slug,
-            category=category_slug,
-            **{k: v for k, v in request.args.to_dict().items() if k != "category"},
-        )
-    )
+    return _render_listing(fixed_city=city_slug, fixed_category=category_slug)
 
 
 @bp.route("/offline")

@@ -11,6 +11,48 @@ document.addEventListener('DOMContentLoaded', async () => {
   const phoneText = document.getElementById('phone-text');
   const phoneLink = document.getElementById('phone-link');
   const sharePost = document.getElementById('share-post');
+  const contactError = document.getElementById('contact-error');
+
+  function csrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content || '';
+  }
+
+  async function requestContact() {
+    const headers = {
+      Accept: 'application/json',
+      'X-CSRFToken': csrfToken(),
+    };
+    const res = await fetch(contactUrl, { method: 'POST', headers });
+    let data = {};
+    try {
+      data = await res.json();
+    } catch (e) {}
+    return { res, data };
+  }
+
+  function showContactError(message) {
+    if (!contactError || !message) return;
+    contactError.textContent = message;
+    contactError.hidden = false;
+  }
+
+  function clearContactError() {
+    if (!contactError) return;
+    contactError.textContent = '';
+    contactError.hidden = true;
+  }
+
+  function showPhoneResult(phone, button) {
+    clearContactError();
+    if (phoneText) phoneText.textContent = phone;
+    if (phoneLink) {
+      const digits = phone.replace(/\D/g, '');
+      phoneLink.href = digits ? `tel:+${digits}` : '#';
+    }
+    phoneDisplay?.classList.remove('hidden');
+    if (button) button.hidden = true;
+    if (window.refreshIcons) refreshIcons();
+  }
 
   if (editLink && typeof findSavedPost === 'function') {
     const saved = findSavedPost(postId);
@@ -33,18 +75,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   showPhone?.addEventListener('click', async function () {
     if (!contactUrl) return;
-    const res = await fetch(contactUrl, { headers: { Accept: 'application/json' } });
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!data.phone) return;
-    if (phoneText) phoneText.textContent = data.phone;
-    if (phoneLink) {
-      const digits = data.phone.replace(/\D/g, '');
-      phoneLink.href = digits ? `tel:+${digits}` : '#';
+    clearContactError();
+    const { res, data } = await requestContact();
+    if (res.ok && data.phone) {
+      showPhoneResult(data.phone, this);
+      return;
     }
-    phoneDisplay?.classList.remove('hidden');
-    this.hidden = true;
-    if (window.refreshIcons) refreshIcons();
+    if (res.status === 429) {
+      showContactError(data.error || 'Слишком много запросов. Попробуйте через час.');
+      return;
+    }
+    showContactError(data.error || 'Не удалось показать телефон. Попробуйте позже.');
   });
 
   sharePost?.addEventListener('click', async () => {

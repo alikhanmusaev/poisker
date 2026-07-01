@@ -15,6 +15,15 @@ def get_client_ip() -> str:
     return get_remote_address()
 
 
+def contact_rate_key() -> str:
+    return f"contact:{get_client_ip()}"
+
+
+def contact_post_rate_key() -> str:
+    post_id = request.view_args.get("post_id", "") if request.view_args else ""
+    return f"contact-post:{post_id}:{get_client_ip()}"
+
+
 db = SQLAlchemy()
 migrate = Migrate()
 csrf = CSRFProtect()

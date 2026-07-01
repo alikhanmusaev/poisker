@@ -23,18 +23,32 @@ class Config:
     S3_PUBLIC_URL = os.getenv("S3_PUBLIC_URL", "http://localhost:9000/board-images")
     TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "")
     TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "")
+    CAPTCHA_PROVIDER = os.getenv("CAPTCHA_PROVIDER", "builtin").lower()
+    CAPTCHA_TTL_SECONDS = int(os.getenv("CAPTCHA_TTL_SECONDS", "600"))
+    SMARTCAPTCHA_SITE_KEY = os.getenv("SMARTCAPTCHA_SITE_KEY", "")
+    SMARTCAPTCHA_SECRET_KEY = os.getenv("SMARTCAPTCHA_SECRET_KEY", "")
     HMAC_SECRET = os.getenv("HMAC_SECRET", "dev-hmac-secret")
+    PHONE_ENCRYPTION_KEY = os.getenv("PHONE_ENCRYPTION_KEY", "dev-phone-encryption-key")
     POST_EXPIRY_DAYS = int(os.getenv("POST_EXPIRY_DAYS", "30"))
     PROMOTION_BOOST_24H_AMOUNT = int(os.getenv("PROMOTION_BOOST_24H_AMOUNT", "100"))
     TIMEZONE = "Europe/Moscow"
     MAX_UPLOAD_SIZE = 5 * 1024 * 1024
+    MAX_IMAGE_PIXELS = int(os.getenv("MAX_IMAGE_PIXELS", "20000000"))
     ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+    ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
+    CONTACT_SOFT_LIMIT = int(os.getenv("CONTACT_SOFT_LIMIT", "5"))
+    CONTACT_RATE_LIMIT = os.getenv("CONTACT_RATE_LIMIT", "30 per hour")
     WTF_CSRF_ENABLED = True
     SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() in ("1", "true", "yes")
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
     TRUST_PROXY = os.getenv("TRUST_PROXY", "false").lower() in ("1", "true", "yes")
-    REQUIRE_TURNSTILE = os.getenv("REQUIRE_TURNSTILE", "false").lower() in ("1", "true", "yes")
+    REQUIRE_CAPTCHA = os.getenv("REQUIRE_CAPTCHA", os.getenv("REQUIRE_TURNSTILE", "false")).lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    REQUIRE_TURNSTILE = REQUIRE_CAPTCHA
     SECURITY_HEADERS_ENABLED = os.getenv("SECURITY_HEADERS_ENABLED", "true").lower() in ("1", "true", "yes")
     HSTS_ENABLED = os.getenv("HSTS_ENABLED", "false").lower() in ("1", "true", "yes")
     PERMANENT_SESSION_LIFETIME = timedelta(hours=12)
@@ -69,7 +83,12 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "true").lower() in ("1", "true", "yes")
-    REQUIRE_TURNSTILE = os.getenv("REQUIRE_TURNSTILE", "true").lower() in ("1", "true", "yes")
+    REQUIRE_CAPTCHA = os.getenv("REQUIRE_CAPTCHA", os.getenv("REQUIRE_TURNSTILE", "true")).lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    REQUIRE_TURNSTILE = REQUIRE_CAPTCHA
     HSTS_ENABLED = os.getenv("HSTS_ENABLED", "true").lower() in ("1", "true", "yes")
 
     @staticmethod
@@ -79,6 +98,11 @@ class ProductionConfig(Config):
             weak.append("SECRET_KEY")
         if app.config["HMAC_SECRET"] in ("dev-hmac-secret", "change-me-hmac-secret", ""):
             weak.append("HMAC_SECRET")
+        phone_key = app.config.get("PHONE_ENCRYPTION_KEY", "")
+        if phone_key in ("", "change-me-phone-encryption-key", "dev-phone-encryption-key"):
+            weak.append("PHONE_ENCRYPTION_KEY")
+        if phone_key and phone_key == app.config["HMAC_SECRET"]:
+            raise RuntimeError("Production requires PHONE_ENCRYPTION_KEY distinct from HMAC_SECRET")
         if app.config["TYPESENSE_API_KEY"] in ("typesenseKey", "change-me-typesense-key", ""):
             weak.append("TYPESENSE_API_KEY")
         if app.config["S3_ACCESS_KEY"] in ("minioadmin", "change-me-s3-access-key", ""):
@@ -91,10 +115,19 @@ class ProductionConfig(Config):
                 ", ".join(weak),
             )
             raise RuntimeError(f"Production requires strong values for: {', '.join(weak)}")
-        if app.config["REQUIRE_TURNSTILE"] and (
-            not app.config.get("TURNSTILE_SITE_KEY") or not app.config.get("TURNSTILE_SECRET_KEY")
-        ):
-            raise RuntimeError("Production requires TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY")
+        if app.config["REQUIRE_CAPTCHA"]:
+            provider = app.config.get("CAPTCHA_PROVIDER", "builtin").lower()
+            if provider == "yandex" and (
+                not app.config.get("SMARTCAPTCHA_SITE_KEY") or not app.config.get("SMARTCAPTCHA_SECRET_KEY")
+            ):
+                raise RuntimeError(
+                    "Production requires SMARTCAPTCHA_SITE_KEY and SMARTCAPTCHA_SECRET_KEY "
+                    "(get keys at https://console.yandex.cloud/folders/*/smartcaptcha)"
+                )
+            if provider == "turnstile" and (
+                not app.config.get("TURNSTILE_SITE_KEY") or not app.config.get("TURNSTILE_SECRET_KEY")
+            ):
+                raise RuntimeError("Production requires TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY")
 
 
 config_by_name = {

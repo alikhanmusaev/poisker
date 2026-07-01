@@ -29,7 +29,7 @@
     {{ form.hidden_tag() }}
 
     <section class="post-wizard-step is-active" data-step="1" aria-labelledby="wizard-step-1-title">
-      <h2 class="post-wizard-step-title" id="wizard-step-1-title">Что продаёте?</h2>
+      <h2 class="post-wizard-step-title" id="wizard-step-1-title">Что предлагаете?</h2>
       <div class="field">
         <label class="field-label" for="title">{{ form.title.label.text }}</label>
         {{ form.title(class="input", id="title", placeholder="Например: Продам холодильник", required=true, minlength="5", maxlength="200") }}
@@ -79,7 +79,7 @@
       </div>
       <p class="hint post-wizard-inline-hint">
         <i data-lucide="info" class="icon icon-sm" aria-hidden="true"></i>
-        <span>Одно объявление в сутки с номера.</span>
+        <span>С одного номера — не более одного объявления в сутки.</span>
       </p>
       <div class="post-wizard-nav post-wizard-nav-split">
         <button type="button" class="btn btn-secondary wizard-back" data-back="2">Назад</button>
@@ -112,11 +112,9 @@
     </section>
 
     <section class="post-wizard-step" data-step="5" hidden aria-labelledby="wizard-step-5-title">
-      <h2 class="post-wizard-step-title" id="wizard-step-5-title">Проверка</h2>
+      <h2 class="post-wizard-step-title" id="wizard-step-5-title">Проверьте данные</h2>
       <div id="post-submit-preview" class="post-submit-preview" aria-live="polite"></div>
-      {% if turnstile_site_key %}
-      <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
-      {% endif %}
+      {% include "partials/captcha_widget.html" %}
       <div class="post-wizard-nav post-wizard-nav-split">
         <button type="button" class="btn btn-secondary wizard-back" data-back="4">Назад</button>
         <button type="submit" class="btn btn-primary" id="wizard-submit-btn">

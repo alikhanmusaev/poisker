@@ -1,10 +1,10 @@
 <div id="feed-panel">
   <div class="feed-toolbar">
     <p class="feed-count">
-      {% if query or city or category or price_min or price_max or with_photo or with_price %}
-        Найдено: <strong>{{ total }}</strong>
+      {% if query or category or price_min or price_max %}
+        Найдено: <strong>{{ total }}</strong> {{ total | plural_ru('объявление', 'объявления', 'объявлений') }}
       {% else %}
-        <strong>{{ total }}</strong> объявлений
+        <strong>{{ total }}</strong> {{ total | plural_ru('объявление', 'объявления', 'объявлений') }}
       {% endif %}
     </p>
     <div class="sort-control">
@@ -16,15 +16,12 @@
     </div>
   </div>
 
-  {% if query or city or category or price_min or price_max or with_photo or with_price %}
+  {% if query or category or price_min or price_max %}
     <div class="active-filters" aria-label="Активные фильтры">
       {% if search_text %}<span class="filter-chip">Поиск: {{ search_text }}</span>{% endif %}
-      {% if city %}<span class="filter-chip">{{ cities.get(city, city) }}</span>{% endif %}
       {% if category %}<span class="filter-chip">{{ category_labels.get(category, category) }}</span>{% endif %}
       {% if price_min %}<span class="filter-chip">от {{ "{:,}".format(price_min).replace(",", " ") }} ₽</span>{% endif %}
       {% if price_max %}<span class="filter-chip">до {{ "{:,}".format(price_max).replace(",", " ") }} ₽</span>{% endif %}
-      {% if with_photo %}<span class="filter-chip">с фото</span>{% endif %}
-      {% if with_price %}<span class="filter-chip">с ценой</span>{% endif %}
       <a href="{{ url_for('main.index') }}" class="filter-reset">
         <i data-lucide="x" class="icon icon-xs" aria-hidden="true"></i>
         Сбросить
