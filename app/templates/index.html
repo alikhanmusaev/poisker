@@ -18,6 +18,7 @@
   <form method="get" action="{{ url_for('main.index') }}" class="home-search-form" id="home-search-form"
         hx-get="{{ url_for('main.index') }}" hx-target="#feed-panel" hx-push-url="true" hx-trigger="submit">
     <input type="hidden" name="category" id="category-field" value="{{ category }}">
+    <input type="hidden" name="city" id="city-field" value="{{ city }}">
     <input type="hidden" name="sort" id="sort-field" value="{{ sort }}">
     <input type="hidden" name="with_photo" id="with-photo-field" value="{{ '1' if with_photo else '' }}">
     <input type="hidden" name="with_price" id="with-price-field" value="{{ '1' if with_price else '' }}">
@@ -51,6 +52,15 @@
   </div>
 
   <div class="feed-filter-toggles" role="group" aria-label="Фильтры ленты">
+    <label class="feed-city-filter">
+      <span class="sr-only">Город</span>
+      <select id="city-select" class="feed-city-select" aria-label="Город">
+        <option value="">Все города</option>
+        {% for slug, name in cities.items() %}
+          <option value="{{ slug }}" {% if city == slug %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
     <button type="button" class="feed-filter-toggle {% if with_photo %}is-active{% endif %}" data-filter="with_photo" aria-pressed="{{ 'true' if with_photo else 'false' }}">С фото</button>
     <button type="button" class="feed-filter-toggle {% if with_price %}is-active{% endif %}" data-filter="with_price" aria-pressed="{{ 'true' if with_price else 'false' }}">С ценой</button>
   </div>

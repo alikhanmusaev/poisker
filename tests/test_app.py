@@ -517,9 +517,10 @@ def test_update_post_rejects_negative_price(app):
                 post,
                 {
                     "seller_name": "Ахмад",
-                "title": post.title,
+                    "title": post.title,
                     "body": post.body,
                     "category": post.category,
+                    "city": post.city,
                     "price": -1,
                     "images": post.images,
                 },
@@ -784,9 +785,10 @@ def test_update_post_can_remove_images(app):
                 post,
                 {
                     "seller_name": "Ахмад",
-                "title": post.title,
+                    "title": post.title,
                     "body": post.body,
                     "category": post.category,
+                    "city": post.city,
                     "price": post.price,
                     "images": ["/media/posts/b.jpg"],
                 },

@@ -14,7 +14,9 @@ from app.services.posts import (
     create_post,
     delete_post,
     get_post_by_token,
+    get_public_post,
     increment_contact_clicks,
+    reveal_post_phone,
     update_post,
 )
 from app.services.seo import post_public_url
@@ -124,19 +126,24 @@ def meta(post_id):
 
     from app.models import utcnow
 
-    post = Post.query.filter_by(id=post_id).first()
-    if not post or post.status != "published":
-        return {"ok": False}, 404
     token = request.args.get("token", "")
+    post = Post.query.filter_by(id=post_id).first()
+    if not post:
+        return {"ok": False}, 404
+
     can_edit = bool(token and get_post_by_token(post_id, token))
+    if post.status != "published" and not can_edit:
+        return {"ok": False}, 404
+
     now = utcnow()
     expires_at = post.expires_at
     if expires_at and expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
-    expired = bool(expires_at and expires_at < now)
+    expired = post.status == "expired" or bool(expires_at and expires_at < now)
     return {
         "ok": True,
         "title": post.title,
+        "status": post.status,
         "expired": expired,
         "expires_at": post.expires_at.isoformat() if post.expires_at else None,
         "can_edit": can_edit,
@@ -146,7 +153,11 @@ def meta(post_id):
 @bp.route("/<post_id>")
 @limiter.limit("120 per minute")
 def show(post_id):
-    post = Post.query.filter_by(id=post_id, status="published").first_or_404()
+    post = get_public_post(post_id)
+    if not post:
+        from flask import abort
+
+        abort(404)
     if post.slug:
         return redirect(post_public_url(post), code=301)
     return render_show_page(post)
@@ -155,9 +166,16 @@ def show(post_id):
 @bp.route("/<post_id>/contact")
 @limiter.limit("30 per hour")
 def contact(post_id):
-    post = Post.query.filter_by(id=post_id, status="published").first_or_404()
+    post = get_public_post(post_id)
+    if not post:
+        from flask import abort
+
+        abort(404)
+    phone = reveal_post_phone(post)
+    if not phone:
+        return {"error": "Телефон недоступен для этого объявления"}, 404
     increment_contact_clicks(post)
-    return {"phone_masked": post.phone_masked}
+    return {"phone": phone}
 
 
 @bp.route("/<post_id>/edit", methods=["GET", "POST"])
@@ -185,6 +203,7 @@ def edit(post_id):
                 "seller_name": form.seller_name.data,
                 "body": form.body.data,
                 "category": form.category.data,
+                "city": form.city.data,
                 "price": form.price.data,
                 "images": images,
             }

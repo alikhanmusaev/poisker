@@ -41,6 +41,40 @@ def _ensure_schema():
         print(f"Post slugs backfilled: {len(missing)}")
 
 
+def _ensure_admin_user():
+    production = os.getenv("FLASK_ENV", "development") == "production"
+    username = os.getenv("ADMIN_USERNAME", "admin")
+    password = os.getenv("ADMIN_PASSWORD", "")
+    if production and password in ("", "admin123", "password", "change-me"):
+        raise RuntimeError("Production requires a strong ADMIN_PASSWORD")
+    if not password:
+        password = "admin123"
+    if not AdminUser.query.filter_by(username=username).first():
+        admin = AdminUser(username=username)
+        admin.set_password(password)
+        db.session.add(admin)
+        db.session.commit()
+        print(f"Admin user created: {username}")
+
+
+def bootstrap():
+    """Post-migration setup: storage bucket, search index, admin user (idempotent)."""
+    app = create_app()
+    with app.app_context():
+        try:
+            ensure_bucket()
+            print("Storage bucket ready")
+        except Exception as e:
+            print(f"Storage warning: {e}")
+        try:
+            get_index()
+            print("Typesense collection ready")
+        except Exception as e:
+            print(f"Typesense warning: {e}")
+        _ensure_admin_user()
+        print("Bootstrap complete")
+
+
 def init_db(seed: bool = True, force_seed: bool = False):
     generate_icons()
     app = create_app()
@@ -58,19 +92,7 @@ def init_db(seed: bool = True, force_seed: bool = False):
         except Exception as e:
             print(f"Typesense warning: {e}")
 
-        production = os.getenv("FLASK_ENV", "development") == "production"
-        username = os.getenv("ADMIN_USERNAME", "admin")
-        password = os.getenv("ADMIN_PASSWORD", "")
-        if production and password in ("", "admin123", "password", "change-me"):
-            raise RuntimeError("Production requires a strong ADMIN_PASSWORD")
-        if not password:
-            password = "admin123"
-        if not AdminUser.query.filter_by(username=username).first():
-            admin = AdminUser(username=username)
-            admin.set_password(password)
-            db.session.add(admin)
-            db.session.commit()
-            print(f"Admin user created: {username}")
+        _ensure_admin_user()
 
         if seed:
             count = seed_demo_posts(force=force_seed)
@@ -102,6 +124,8 @@ if __name__ == "__main__":
             force = "--force" in sys.argv
             count = seed_demo_posts(force=force)
             print(f"Demo posts: {count} created")
+    elif cmd == "bootstrap":
+        bootstrap()
     elif cmd == "init":
         force_seed = os.getenv("SEED_FORCE", "").lower() in ("1", "true", "yes")
         production = os.getenv("FLASK_ENV", "development") == "production"
@@ -118,5 +142,5 @@ if __name__ == "__main__":
             )
         init_db(seed=seed, force_seed=force_seed)
     else:
-        print("Usage: python manage.py [init|seed] [--seed|--no-seed] [--force]")
+        print("Usage: python manage.py [init|bootstrap|seed] [--seed|--no-seed] [--force]")
         sys.exit(1)

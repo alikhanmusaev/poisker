@@ -32,6 +32,11 @@ class EditPostForm(FlaskForm):
         choices=[(k, v) for k, v in CATEGORY_LABELS.items()],
         validators=[DataRequired()],
     )
+    city = SelectField(
+        "Город",
+        choices=[(k, v) for k, v in CITIES.items()],
+        validators=[DataRequired()],
+    )
     price = IntegerField("Цена, ₽", validators=[Optional()])
 
 

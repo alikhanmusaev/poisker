@@ -2,7 +2,7 @@ from flask import Blueprint, current_app, jsonify, redirect, render_template, re
 
 from app.constants import CATEGORIES, CITIES, DEFAULT_SEARCH_SORT, DEFAULT_SORT, SORT_OPTIONS
 from app.extensions import limiter
-from app.models import Post
+from app.models import Post, utcnow
 from app.routes.post_detail import render_show_page
 from app.services.posts import get_published_post_by_slug
 from app.services.search import search_posts, suggest
@@ -118,6 +118,19 @@ def post_public_legacy(slug):
     return redirect(post_public_url(post), code=301)
 
 
+@bp.route("/health")
+def health():
+    from sqlalchemy import text
+
+    from app.extensions import db
+
+    try:
+        db.session.execute(text("SELECT 1"))
+        return jsonify(status="ok"), 200
+    except Exception:
+        return jsonify(status="error"), 503
+
+
 @bp.route("/robots.txt")
 def robots_txt():
     return (
@@ -146,6 +159,7 @@ def sitemap_xml():
     posts = (
         Post.query.filter_by(status="published")
         .filter(Post.slug.isnot(None))
+        .filter(Post.expires_at >= utcnow())
         .order_by(Post.created_at.desc())
         .limit(2000)
         .all()

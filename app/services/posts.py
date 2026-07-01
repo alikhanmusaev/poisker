@@ -1,19 +1,65 @@
-from datetime import timedelta
+from datetime import timedelta, timezone
 
 from flask import current_app, session
 
 from app.constants import CATEGORIES, CITIES
 from app.extensions import db
-from app.models import BlockedPhone, Post, utcnow
+from app.models import BlockedPhone, PhoneDailyPublish, Post, utcnow
 from app.services.phone import generate_edit_token, hash_phone, mask_phone, validate_phone
-from app.services.ranking import calculate_rank_score, start_of_today_msk
+from app.services.phone_crypto import decrypt_phone, encrypt_phone
+from app.services.ranking import calculate_rank_score, start_of_today_msk, today_msk_date
 from app.services.search import index_post, remove_post_from_index
 from app.services.slug import make_unique_slug
 from app.services.storage import delete_stored_images
 
 
+def _normalize_expires_at(expires_at):
+    if not expires_at:
+        return None
+    if expires_at.tzinfo is None:
+        return expires_at.replace(tzinfo=timezone.utc)
+    return expires_at
+
+
+def is_post_expired(post: Post) -> bool:
+    expires_at = _normalize_expires_at(post.expires_at)
+    return bool(expires_at and expires_at < utcnow())
+
+
+def is_post_publicly_visible(post: Post) -> bool:
+    if post.status != "published":
+        return False
+    return not is_post_expired(post)
+
+
+def mark_post_expired_if_needed(post: Post) -> bool:
+    """Return True if post remains publicly visible."""
+    if post.status != "published":
+        return False
+    if not is_post_expired(post):
+        return True
+    post.status = "expired"
+    remove_post_from_index(post.id)
+    db.session.commit()
+    return False
+
+
 def get_published_post_by_slug(slug: str) -> Post | None:
-    return Post.query.filter_by(slug=slug, status="published").first()
+    post = Post.query.filter_by(slug=slug, status="published").first()
+    if not post:
+        return None
+    if not mark_post_expired_if_needed(post):
+        return None
+    return post
+
+
+def get_public_post(post_id: str) -> Post | None:
+    post = Post.query.filter_by(id=post_id, status="published").first()
+    if not post:
+        return None
+    if not mark_post_expired_if_needed(post):
+        return None
+    return post
 
 
 class PostLimitError(Exception):
@@ -29,6 +75,9 @@ class ValidationError(Exception):
 
 
 def has_post_today(phone_hash: str) -> bool:
+    today = today_msk_date()
+    if PhoneDailyPublish.query.filter_by(phone_hash=phone_hash, publish_date=today).first():
+        return True
     start = start_of_today_msk()
     return (
         Post.query.filter(
@@ -37,6 +86,20 @@ def has_post_today(phone_hash: str) -> bool:
             Post.status.in_(["published", "hidden"]),
         ).first()
         is not None
+    )
+
+
+def record_phone_publish(phone_hash: str, post_id: str):
+    today = today_msk_date()
+    existing = PhoneDailyPublish.query.filter_by(phone_hash=phone_hash, publish_date=today).first()
+    if existing:
+        return
+    db.session.add(
+        PhoneDailyPublish(
+            phone_hash=phone_hash,
+            publish_date=today,
+            post_id=post_id,
+        )
     )
 
 
@@ -100,6 +163,7 @@ def create_post(data: dict, ip_hash: str | None = None) -> Post:
         price=price,
         phone_hash=phone_hash,
         phone_masked=mask_phone(phone),
+        phone_encrypted=encrypt_phone(phone),
         edit_token=generate_edit_token(),
         status="published",
         images=images,
@@ -113,6 +177,7 @@ def create_post(data: dict, ip_hash: str | None = None) -> Post:
     db.session.flush()
     post.slug = make_unique_slug(title, post.id)
     post.rank_score = calculate_rank_score(post)
+    record_phone_publish(phone_hash, post.id)
     db.session.commit()
     index_post(post)
     return post
@@ -122,9 +187,15 @@ def get_post_by_token(post_id: str, token: str) -> Post | None:
     return Post.query.filter_by(id=post_id, edit_token=token).first()
 
 
+def reveal_post_phone(post: Post) -> str | None:
+    return decrypt_phone(post.phone_encrypted)
+
+
 def update_post(post: Post, data: dict) -> Post:
     if data.get("category") not in CATEGORIES:
         raise ValidationError("Выберите категорию")
+    if data.get("city") not in CITIES:
+        raise ValidationError("Выберите город из списка")
 
     title = (data.get("title") or "").strip()
     body = (data.get("body") or "").strip()
@@ -147,10 +218,12 @@ def update_post(post: Post, data: dict) -> Post:
 
     images = data.get("images")
     title_changed = title != post.title
+    city_changed = data["city"] != post.city
     post.title = title
     post.seller_name = seller_name
     post.body = body
     post.category = data["category"]
+    post.city = data["city"]
     post.price = price
     if title_changed:
         post.slug = make_unique_slug(title, post.id, current_slug=post.slug)
@@ -163,7 +236,7 @@ def update_post(post: Post, data: dict) -> Post:
 
     post.rank_score = calculate_rank_score(post)
     db.session.commit()
-    if post.status == "published":
+    if post.status == "published" and not is_post_expired(post):
         index_post(post)
     return post
 
@@ -195,7 +268,8 @@ def increment_contact_clicks(post: Post):
 
 
 def get_feed(city: str | None = None, category: str | None = None, page: int = 1, per_page: int = 20):
-    q = Post.query.filter_by(status="published")
+    now = utcnow()
+    q = Post.query.filter_by(status="published").filter(Post.expires_at >= now)
     if city and city in CITIES:
         q = q.filter_by(city=city)
     if category and category in CATEGORIES:

@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const showPhone = document.getElementById('show-phone');
   const phoneDisplay = document.getElementById('phone-display');
   const phoneText = document.getElementById('phone-text');
+  const phoneLink = document.getElementById('phone-link');
   const sharePost = document.getElementById('share-post');
 
   if (editLink && typeof findSavedPost === 'function') {
@@ -33,8 +34,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   showPhone?.addEventListener('click', async function () {
     if (!contactUrl) return;
     const res = await fetch(contactUrl, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return;
     const data = await res.json();
-    if (phoneText) phoneText.textContent = data.phone_masked;
+    if (!data.phone) return;
+    if (phoneText) phoneText.textContent = data.phone;
+    if (phoneLink) {
+      const digits = data.phone.replace(/\D/g, '');
+      phoneLink.href = digits ? `tel:+${digits}` : '#';
+    }
     phoneDisplay?.classList.remove('hidden');
     this.hidden = true;
     if (window.refreshIcons) refreshIcons();

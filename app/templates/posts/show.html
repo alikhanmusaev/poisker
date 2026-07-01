@@ -12,7 +12,7 @@
   <meta property="og:image" content="{{ og_image }}">
   {% endif %}
   <meta name="twitter:card" content="{% if og_image %}summary_large_image{% else %}summary{% endif %}">
-  <script type="application/ld+json">{{ json_ld|safe }}</script>
+  <script type="application/ld+json">{{ json_ld | tojson }}</script>
 {% endblock %}
 {% block content %}
 <article class="page-card post-detail"
@@ -132,8 +132,10 @@
       Показать телефон
     </button>
     <p id="phone-display" class="phone-display hidden">
-      <i data-lucide="phone" class="icon" aria-hidden="true"></i>
-      <span id="phone-text"></span>
+      <a id="phone-link" class="phone-link" href="#">
+        <i data-lucide="phone" class="icon" aria-hidden="true"></i>
+        <span id="phone-text"></span>
+      </a>
     </p>
     <button type="button" class="btn btn-secondary btn-block" id="share-post">
       <i data-lucide="share-2" class="icon" aria-hidden="true"></i>

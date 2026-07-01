@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from urllib.parse import urlencode
 
 from flask import current_app, request, url_for
@@ -136,7 +135,7 @@ def city_category_path(city_slug: str, category_slug: str | None = None) -> str:
     return url_for("main.city_page", city_slug=city_slug)
 
 
-def post_json_ld(post, *, canonical_url: str, image_url: str | None = None) -> str:
+def post_json_ld(post, *, canonical_url: str, image_url: str | None = None) -> dict:
     city_name = CITIES.get(post.city, post.city)
     category_name = CATEGORY_LABELS.get(post.category, post.category)
     data = {
@@ -191,4 +190,4 @@ def post_json_ld(post, *, canonical_url: str, image_url: str | None = None) -> s
             },
         ],
     }
-    return json.dumps(data, ensure_ascii=False)
+    return data

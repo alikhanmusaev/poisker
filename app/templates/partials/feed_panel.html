@@ -16,7 +16,7 @@
     </div>
   </div>
 
-  {% if query or city or category or price_min or price_max or with_photo %}
+  {% if query or city or category or price_min or price_max or with_photo or with_price %}
     <div class="active-filters" aria-label="Активные фильтры">
       {% if search_text %}<span class="filter-chip">Поиск: {{ search_text }}</span>{% endif %}
       {% if city %}<span class="filter-chip">{{ cities.get(city, city) }}</span>{% endif %}

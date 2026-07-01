@@ -19,10 +19,20 @@ def start_of_today_msk() -> datetime:
     return start.astimezone(timezone.utc)
 
 
-def freshness_score(created_at: datetime) -> float:
+def today_msk_date():
+    return datetime.now(MSK).date()
+
+
+def freshness_score(created_at: datetime, bumped_at: datetime | None = None) -> float:
     if created_at.tzinfo is None:
         created_at = created_at.replace(tzinfo=timezone.utc)
-    age_hours = (utcnow() - created_at).total_seconds() / 3600
+    reference = created_at
+    if bumped_at:
+        if bumped_at.tzinfo is None:
+            bumped_at = bumped_at.replace(tzinfo=timezone.utc)
+        if bumped_at > reference:
+            reference = bumped_at
+    age_hours = (utcnow() - reference).total_seconds() / 3600
     return math.exp(-age_hours / 72)
 
 
@@ -76,7 +86,7 @@ def active_paid_boost(post: Post) -> float:
 
 
 def calculate_rank_score(post: Post) -> float:
-    fresh = freshness_score(post.created_at)
+    fresh = freshness_score(post.created_at, post.bumped_at)
     complete = completeness_score(post)
     trust = trust_score(post)
     engage = engagement_score(post)

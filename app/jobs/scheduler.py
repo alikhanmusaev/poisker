@@ -18,7 +18,7 @@ def init_scheduler(app):
             try:
                 upsert_published_rank_scores()
             except Exception:
-                pass
+                app.logger.exception("Scheduler: failed to upsert published rank scores")
 
     @scheduler.scheduled_job("interval", hours=1, id="expire_posts")
     def expire_job():
@@ -31,6 +31,6 @@ def init_scheduler(app):
             try:
                 reindex_published_posts()
             except Exception:
-                pass
+                app.logger.exception("Scheduler: failed to reindex published posts")
 
     scheduler.start()

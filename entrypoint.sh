@@ -21,6 +21,8 @@ done
 if [ "${RUN_DB_UPGRADE:-false}" = "true" ]; then
   echo "Running database migrations..."
   flask db upgrade
+  echo "Running post-migration bootstrap..."
+  python manage.py bootstrap
 elif [ "${RUN_DB_INIT:-false}" = "true" ]; then
   echo "Initializing database..."
   python manage.py init --no-seed

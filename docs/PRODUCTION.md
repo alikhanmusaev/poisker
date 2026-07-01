@@ -31,11 +31,17 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 Use the production override:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml build web
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
-The web container runs database migrations when `RUN_DB_UPGRADE=true`.
+The web container runs database migrations when `RUN_DB_UPGRADE=true`, then an idempotent
+`python manage.py bootstrap` (admin user, MinIO bucket, Typesense collection). No manual
+first-deploy step is required.
+
+Background jobs (ranking, expiry, reindex) run in a separate `scheduler` container so they
+are not duplicated across Gunicorn workers.
+
 Use `RUN_DB_INIT=true` only for a controlled first-time legacy bootstrap, not for normal restarts.
 
 ## 3. Reverse Proxy
@@ -61,6 +67,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml logs --tail=100 
 
 Check in browser:
 
+- `/health`
 - `/`
 - `/posts/new`
 - `/admin`

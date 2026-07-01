@@ -524,7 +524,20 @@ body:not(.page-home) .site-main {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
   margin: 0 0 16px;
+}
+
+.feed-city-select {
+  min-height: 44px;
+  min-width: 10rem;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 13px;
+  color: var(--slate-600);
 }
 
 .feed-filter-toggle {

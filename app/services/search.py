@@ -13,7 +13,7 @@ from app.constants import (
     SEARCH_SYNONYMS,
     SORT_OPTIONS,
 )
-from app.models import Post
+from app.models import Post, utcnow
 from app.services.search_ranking import rerank_hits, uses_hybrid_ranking
 from app.services.smart_query import parse_search_query, smart_suggestions
 
@@ -35,6 +35,10 @@ PRICE_SUGGEST_THRESHOLDS = (
     500_000,
     1_000_000,
 )
+
+
+def _live_posts_query(q):
+    return q.filter(Post.expires_at >= utcnow())
 
 
 def _collection_schema() -> dict:
@@ -368,7 +372,7 @@ def search_posts_fallback(
 ):
     sort = _resolve_sort(sort, query)
 
-    q = Post.query.filter_by(status="published")
+    q = _live_posts_query(Post.query.filter_by(status="published"))
     if city:
         q = q.filter_by(city=city)
     if category:
@@ -380,7 +384,7 @@ def search_posts_fallback(
     if with_photo:
         q = q.filter(Post.has_photo.is_(True))
     if with_price:
-        q = q.filter(Post.price.isnot(None))
+        q = q.filter(Post.price.isnot(None), Post.price > 0)
     if query:
         terms = expanded_terms or [query]
         clauses = []
@@ -503,7 +507,7 @@ def _posts_matching_parsed(
     with_price: bool = False,
     expanded_terms: list[str] | None = None,
 ):
-    q = Post.query.filter_by(status="published")
+    q = _live_posts_query(Post.query.filter_by(status="published"))
     if city:
         q = q.filter_by(city=city)
     if category:
@@ -515,7 +519,7 @@ def _posts_matching_parsed(
     if with_photo:
         q = q.filter(Post.has_photo.is_(True))
     if with_price:
-        q = q.filter(Post.price.isnot(None))
+        q = q.filter(Post.price.isnot(None), Post.price > 0)
     if text:
         terms = expanded_terms or [text]
         clauses = []

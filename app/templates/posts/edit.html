@@ -39,9 +39,13 @@
         {{ form.category(class="input select-input") }}
       </div>
       <div class="field">
-        <label class="field-label">{{ form.price.label.text }}</label>
-        {{ form.price(class="input", min="0", inputmode="numeric") }}
+        <label class="field-label">{{ form.city.label.text }}</label>
+        {{ form.city(class="input select-input") }}
       </div>
+    </div>
+    <div class="field">
+      <label class="field-label">{{ form.price.label.text }}</label>
+      {{ form.price(class="input", min="0", inputmode="numeric") }}
     </div>
     {% if post.images %}
       <div class="current-images">

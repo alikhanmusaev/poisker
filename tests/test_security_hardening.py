@@ -73,3 +73,57 @@ def test_hidden_attribute_cannot_be_overridden_by_button_styles():
     css = Path("app/static/css/style.css").read_text(encoding="utf-8")
 
     assert "[hidden] { display: none !important; }" in css
+
+
+def test_post_json_ld_returns_dict(app):
+    from types import SimpleNamespace
+
+    from app.services.seo import post_json_ld
+
+    post = SimpleNamespace(
+        title="Test item",
+        body="Body text",
+        city="grozny",
+        category="prodazha",
+        price=1000,
+    )
+    with app.test_request_context("/"):
+        data = post_json_ld(post, canonical_url="https://example.com/item", image_url=None)
+
+    assert isinstance(data, dict)
+    assert data["@context"] == "https://schema.org"
+    assert data["@graph"][1]["name"] == "Test item"
+
+
+def test_post_page_json_ld_escapes_script_breakout(client, app):
+    from app.services.posts import create_post
+
+    malicious = "</script><script>alert(1)</script>"
+    with app.app_context():
+        post = create_post(
+            {
+                "seller_name": "Seller",
+                "title": malicious,
+                "body": "Enough body text for the listing page to render correctly.",
+                "category": "prodazha",
+                "city": "grozny",
+                "phone": "+79005550999",
+                "images": [],
+            },
+            ip_hash="json-ld-xss-test",
+        )
+        url = f"/obyavlenie/{post.city}/{post.category}/{post.slug}"
+
+    res = client.get(url)
+    text = res.get_data(as_text=True)
+
+    assert res.status_code == 200
+    assert malicious not in text
+    assert "application/ld+json" in text
+
+
+def test_health_endpoint(client):
+    res = client.get("/health")
+
+    assert res.status_code == 200
+    assert res.get_json() == {"status": "ok"}

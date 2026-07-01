@@ -19,13 +19,22 @@ function el(tag, className, text) {
   return node;
 }
 
-async function fetchPostStatus(postId) {
-  if (!postId) return null;
+async function fetchPostStatus(item) {
+  if (!item?.postId) return null;
   try {
-    const res = await fetch(`/posts/${postId}/meta`, { headers: { Accept: 'application/json' } });
+    let url = `/posts/${item.postId}/meta`;
+    if (item.url) {
+      const token = new URL(item.url, window.location.origin).searchParams.get('token');
+      if (token) url += `?token=${encodeURIComponent(token)}`;
+    }
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
     if (!res.ok) return { active: false };
     const data = await res.json();
-    return { active: Boolean(data.ok), expired: Boolean(data.expired) };
+    return {
+      active: Boolean(data.ok),
+      expired: Boolean(data.expired),
+      status: data.status || 'published',
+    };
   } catch (e) {
     return null;
   }
@@ -49,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     emptyEl.hidden = true;
     listEl.hidden = false;
 
-    const statuses = await Promise.all(items.map((item) => fetchPostStatus(item.postId)));
+    const statuses = await Promise.all(items.map((item) => fetchPostStatus(item)));
 
     items.forEach((item, index) => {
       const viewUrl = typeof viewUrlForPost === 'function' ? viewUrlForPost(item) : '';
@@ -75,7 +84,10 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (!status.active) {
         badge.className += ' my-post-status-ended';
         badge.textContent = 'Не найдено';
-      } else if (status.expired) {
+      } else if (status.status === 'hidden') {
+        badge.className += ' my-post-status-ended';
+        badge.textContent = 'Скрыто';
+      } else if (status.expired || status.status === 'expired') {
         badge.className += ' my-post-status-ended';
         badge.textContent = 'Истекло';
       } else {

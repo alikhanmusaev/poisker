@@ -34,3 +34,22 @@ services:
       RUN_DB_UPGRADE: ${RUN_DB_UPGRADE:-true}
       RUN_DB_INIT: "false"
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+      SCHEDULER_ENABLED: "false"
+
+  scheduler:
+    environment:
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY}
+      HMAC_SECRET: ${HMAC_SECRET:?set HMAC_SECRET}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-board}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-chechnya_board}
+      TYPESENSE_API_KEY: ${TYPESENSE_API_KEY:?set TYPESENSE_API_KEY}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY}
+      SCHEDULER_ENABLED: "true"
+
+  web:
+    ports: !reset []
+
+  nginx:
+    ports:
+      - "127.0.0.1:80:80"

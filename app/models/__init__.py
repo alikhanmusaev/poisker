@@ -20,6 +20,7 @@ class Post(db.Model):
     price = db.Column(db.Integer, nullable=True)
     phone_hash = db.Column(db.String(64), nullable=False, index=True)
     phone_masked = db.Column(db.String(20), nullable=False)
+    phone_encrypted = db.Column(db.Text, nullable=True)
     edit_token = db.Column(db.String(64), unique=True, nullable=False, index=True)
     slug = db.Column(db.String(120), nullable=True, unique=True, index=True)
     status = db.Column(db.String(20), nullable=False, default="published", index=True)
@@ -106,6 +107,18 @@ class BlockedPhone(db.Model):
     phone_hash = db.Column(db.String(64), unique=True, nullable=False, index=True)
     reason = db.Column(db.String(200), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class PhoneDailyPublish(db.Model):
+    __tablename__ = "phone_daily_publishes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    phone_hash = db.Column(db.String(64), nullable=False, index=True)
+    publish_date = db.Column(db.Date, nullable=False)
+    post_id = db.Column(db.String(36), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    __table_args__ = (db.UniqueConstraint("phone_hash", "publish_date", name="uq_phone_daily_publish"),)
 
 
 class AdminUser(db.Model):

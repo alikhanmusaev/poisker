@@ -7,6 +7,7 @@ from flask import current_app
 from app.extensions import db
 from app.models import Post, utcnow
 from app.services.phone import generate_edit_token, hash_phone, mask_phone, validate_phone
+from app.services.phone_crypto import encrypt_phone
 from app.services.ranking import calculate_rank_score
 from app.services.search import index_post, remove_post_from_index
 
@@ -213,6 +214,7 @@ def _create_seed_post(data: dict) -> Post:
         price=data.get("price"),
         phone_hash=phone_hash,
         phone_masked=mask_phone(phone),
+        phone_encrypted=encrypt_phone(phone),
         edit_token=generate_edit_token(),
         status="published",
         images=images,

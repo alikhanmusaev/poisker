@@ -1,6 +1,7 @@
 (function () {
   const form = document.getElementById('home-search-form');
   const categoryField = document.getElementById('category-field');
+  const cityField = document.getElementById('city-field');
   const sortField = document.getElementById('sort-field');
   const photoField = document.getElementById('with-photo-field');
   const priceField = document.getElementById('with-price-field');
@@ -26,6 +27,11 @@
     if (sortSelect) sortSelect.value = sort;
     if (sortField) sortField.value = sort;
     if (categoryField) categoryField.value = cat;
+
+    const city = params.get('city') || '';
+    const citySelect = document.getElementById('city-select');
+    if (citySelect) citySelect.value = city;
+    if (cityField) cityField.value = city;
 
     const photo = params.get('with_photo') === '1';
     const price = params.get('with_price') === '1';
@@ -62,9 +68,15 @@
   });
 
   document.body.addEventListener('change', (event) => {
-    if (event.target?.id !== 'sort-select') return;
-    sortField.value = event.target.value;
-    submitFeed();
+    if (event.target?.id === 'sort-select') {
+      sortField.value = event.target.value;
+      submitFeed();
+      return;
+    }
+    if (event.target?.id === 'city-select') {
+      if (cityField) cityField.value = event.target.value;
+      submitFeed();
+    }
   });
 
   document.body.addEventListener('htmx:afterSettle', syncControlsFromUrl);
