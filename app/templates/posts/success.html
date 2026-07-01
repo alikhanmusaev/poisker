@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Сохраните ссылку{% endblock %}
+{% block body_class %}page-success publish-success-gate{% endblock %}
+{% block content %}
+<div class="page-card post-wizard-card publish-success-page">
+  {% include "partials/publish_success_panel.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/publish-success.js') }}"></script>
+{% endblock %}

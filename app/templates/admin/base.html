@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Админ{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='fonts/inter/inter.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body class="admin-body">
+  <nav class="admin-nav">
+    <a href="{{ url_for('admin.dashboard') }}">Дашборд</a>
+    <a href="{{ url_for('admin.posts_list') }}">Объявления</a>
+    <a href="{{ url_for('admin.reports_list') }}">Жалобы</a>
+    <a href="{{ url_for('admin.promotions_list') }}">Продвижение</a>
+    <a href="{{ url_for('admin.logout') }}">Выход</a>
+  </nav>
+  <main class="admin-main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

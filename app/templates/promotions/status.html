@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Статус продвижения{% endblock %}
+{% block content %}
+<h1 class="page-title">Заявка на продвижение</h1>
+<p>Статус: <strong>{{ promo.status }}</strong></p>
+<p>Тип: {{ promotion_types[promo.type][0] }}</p>
+<p>Сумма: {{ promo.amount }} ₽</p>
+{% if promo.status == 'pending' %}
+  <div class="payment-instructions">
+    <h2>Оплата</h2>
+    <p>Переведите {{ promo.amount }} ₽ по СБП или на карту (реквизиты уточняйте у администратора).</p>
+    <p>В комментарии укажите: <code>PROMO-{{ promo.id }}</code></p>
+    <p>После оплаты продвижение активируется в течение нескольких часов.</p>
+  </div>
+{% elif promo.status == 'paid' %}
+  <p class="success-text">Продвижение активно до {{ promo.ends_at.strftime('%d.%m.%Y %H:%M') if promo.ends_at else '—' }}</p>
+{% endif %}
+<a href="{{ url_for('posts.edit', post_id=post.id, token=token) }}" class="btn btn-secondary">Назад к редактированию</a>
+{% endblock %}

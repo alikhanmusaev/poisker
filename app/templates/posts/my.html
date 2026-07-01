@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Мои объявления{% endblock %}
+{% block content %}
+<section class="my-posts-page">
+  <header class="page-header">
+    <h1 class="page-title">Мои объявления</h1>
+    <p class="page-lead">Просмотр, редактирование и ссылки, сохранённые на этом устройстве. Без регистрации — только здесь и в том, куда вы их скопировали.</p>
+  </header>
+
+  <div id="my-posts-empty" class="empty-state" hidden>
+    <i data-lucide="bookmark" class="icon icon-xl" aria-hidden="true"></i>
+    <h2>Пока пусто</h2>
+    <p>После публикации сохраните секретную ссылку — она появится здесь автоматически.</p>
+    <a href="{{ url_for('posts.create') }}" class="btn btn-primary">Подать объявление</a>
+  </div>
+
+  <ul id="my-posts-list" class="my-posts-list" aria-label="Сохранённые ссылки"></ul>
+
+  <div class="my-posts-note">
+    <i data-lucide="info" class="icon icon-sm" aria-hidden="true"></i>
+    <p>Данные хранятся только в браузере этого устройства. Очистка кэша или другой телефон — ссылку нужно сохранить отдельно.</p>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/my-posts.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,104 @@
+import os
+from datetime import timedelta
+
+
+class Config:
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        "DATABASE_URL",
+        "sqlite:///chechnya_board.db",
+    )
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
+    RATELIMIT_ENABLED = os.getenv("RATELIMIT_ENABLED", "true").lower() not in ("0", "false", "no")
+    RATELIMIT_DEFAULT = os.getenv("RATELIMIT_DEFAULT", "600 per minute")
+    RATELIMIT_INDEX = os.getenv("RATELIMIT_INDEX", "300 per minute")
+    RATELIMIT_SUGGEST = os.getenv("RATELIMIT_SUGGEST", "180 per minute")
+    TYPESENSE_URL = os.getenv("TYPESENSE_URL", "http://localhost:8108")
+    TYPESENSE_API_KEY = os.getenv("TYPESENSE_API_KEY", "typesenseKey")
+    S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://localhost:9000")
+    S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "minioadmin")
+    S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "minioadmin")
+    S3_BUCKET = os.getenv("S3_BUCKET", "board-images")
+    S3_PUBLIC_URL = os.getenv("S3_PUBLIC_URL", "http://localhost:9000/board-images")
+    TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "")
+    TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "")
+    HMAC_SECRET = os.getenv("HMAC_SECRET", "dev-hmac-secret")
+    POST_EXPIRY_DAYS = int(os.getenv("POST_EXPIRY_DAYS", "30"))
+    PROMOTION_BOOST_24H_AMOUNT = int(os.getenv("PROMOTION_BOOST_24H_AMOUNT", "100"))
+    TIMEZONE = "Europe/Moscow"
+    MAX_UPLOAD_SIZE = 5 * 1024 * 1024
+    ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+    WTF_CSRF_ENABLED = True
+    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() in ("1", "true", "yes")
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
+    TRUST_PROXY = os.getenv("TRUST_PROXY", "false").lower() in ("1", "true", "yes")
+    REQUIRE_TURNSTILE = os.getenv("REQUIRE_TURNSTILE", "false").lower() in ("1", "true", "yes")
+    SECURITY_HEADERS_ENABLED = os.getenv("SECURITY_HEADERS_ENABLED", "true").lower() in ("1", "true", "yes")
+    HSTS_ENABLED = os.getenv("HSTS_ENABLED", "false").lower() in ("1", "true", "yes")
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=12)
+    # Site / SEO / PWA
+    APP_DOMAIN = os.getenv("APP_DOMAIN", "poisker.ru")
+    SITE_NAME = os.getenv("SITE_NAME", "Поискер")
+    SITE_TAGLINE = os.getenv("SITE_TAGLINE", "Доска объявлений Чеченской Республики")
+    SITE_DESCRIPTION = os.getenv(
+        "SITE_DESCRIPTION",
+        "Поискер — бесплатные объявления по Чеченской Республике. Покупка, продажа, услуги без регистрации.",
+    )
+    ANDROID_PACKAGE_NAME = os.getenv("ANDROID_PACKAGE_NAME", "ru.poisker.app")
+    ANDROID_SHA256_FINGERPRINTS = [
+        fp.strip()
+        for fp in os.getenv("ANDROID_SHA256_FINGERPRINTS", "").split(",")
+        if fp.strip()
+    ]
+    SCHEDULER_ENABLED = os.getenv("SCHEDULER_ENABLED", "false").lower() in ("1", "true", "yes")
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+    }
+
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+    RATELIMIT_DEFAULT = "2000 per minute"
+    RATELIMIT_INDEX = "600 per minute"
+    RATELIMIT_SUGGEST = "300 per minute"
+
+
+class ProductionConfig(Config):
+    DEBUG = False
+    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "true").lower() in ("1", "true", "yes")
+    REQUIRE_TURNSTILE = os.getenv("REQUIRE_TURNSTILE", "true").lower() in ("1", "true", "yes")
+    HSTS_ENABLED = os.getenv("HSTS_ENABLED", "true").lower() in ("1", "true", "yes")
+
+    @staticmethod
+    def init_app(app):
+        weak = []
+        if app.config["SECRET_KEY"] in ("dev-secret-key", "change-me-in-production", ""):
+            weak.append("SECRET_KEY")
+        if app.config["HMAC_SECRET"] in ("dev-hmac-secret", "change-me-hmac-secret", ""):
+            weak.append("HMAC_SECRET")
+        if app.config["TYPESENSE_API_KEY"] in ("typesenseKey", "change-me-typesense-key", ""):
+            weak.append("TYPESENSE_API_KEY")
+        if app.config["S3_ACCESS_KEY"] in ("minioadmin", "change-me-s3-access-key", ""):
+            weak.append("S3_ACCESS_KEY")
+        if app.config["S3_SECRET_KEY"] in ("minioadmin", "change-me-s3-secret-key", ""):
+            weak.append("S3_SECRET_KEY")
+        if weak:
+            app.logger.warning(
+                "Production: set strong values for %s in environment variables",
+                ", ".join(weak),
+            )
+            raise RuntimeError(f"Production requires strong values for: {', '.join(weak)}")
+        if app.config["REQUIRE_TURNSTILE"] and (
+            not app.config.get("TURNSTILE_SITE_KEY") or not app.config.get("TURNSTILE_SECRET_KEY")
+        ):
+            raise RuntimeError("Production requires TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY")
+
+
+config_by_name = {
+    "development": DevelopmentConfig,
+    "production": ProductionConfig,
+    "default": DevelopmentConfig,
+}

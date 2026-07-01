@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Подать объявление — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-card post-wizard-card">
+  <h1 class="page-title" id="wizard-page-title">Подать объявление</h1>
+
+  <div class="errors" id="wizard-submit-errors" {% if not errors %}hidden{% endif %}>
+    {% for error in errors %}
+      <p class="error">
+        <i data-lucide="alert-circle" class="icon icon-sm" aria-hidden="true"></i>
+        {{ error }}
+      </p>
+    {% endfor %}
+  </div>
+
+  <div class="post-wizard-header">
+    <p class="post-wizard-step-label" id="wizard-step-label" aria-live="polite">Шаг 1 из 5 · Описание</p>
+    <div class="post-wizard-progress" aria-hidden="true">
+      <div class="post-wizard-progress-bar" id="wizard-progress-bar"></div>
+    </div>
+  </div>
+
+  <form method="post"
+        enctype="multipart/form-data"
+        class="form post-wizard-form"
+        id="create-post-form"
+        data-initial-step="{{ 5 if errors else 1 }}"
+        novalidate>
+    {{ form.hidden_tag() }}
+
+    <section class="post-wizard-step is-active" data-step="1" aria-labelledby="wizard-step-1-title">
+      <h2 class="post-wizard-step-title" id="wizard-step-1-title">Что продаёте?</h2>
+      <div class="field">
+        <label class="field-label" for="title">{{ form.title.label.text }}</label>
+        {{ form.title(class="input", id="title", placeholder="Например: Продам холодильник", required=true, minlength="5", maxlength="200") }}
+      </div>
+      <div class="field">
+        <label class="field-label" for="body">{{ form.body.label.text }}</label>
+        {{ form.body(class="input textarea", id="body", rows=6, placeholder="Опишите состояние, комплект, район…", required=true, minlength="20", maxlength="5000") }}
+      </div>
+      <div class="post-wizard-nav">
+        <button type="button" class="btn btn-primary btn-block wizard-next" data-next="2">Далее</button>
+      </div>
+    </section>
+
+    <section class="post-wizard-step" data-step="2" hidden aria-labelledby="wizard-step-2-title">
+      <h2 class="post-wizard-step-title" id="wizard-step-2-title">Категория и цена</h2>
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label" for="category">{{ form.category.label.text }}</label>
+          {{ form.category(class="input select-input", id="category", required=true) }}
+        </div>
+        <div class="field">
+          <label class="field-label" for="city">{{ form.city.label.text }}</label>
+          {{ form.city(class="input select-input", id="city", required=true) }}
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="price">{{ form.price.label.text }}</label>
+        {{ form.price(class="input", id="price", placeholder="Необязательно", min="0", inputmode="numeric") }}
+      </div>
+      <div class="post-wizard-nav post-wizard-nav-split">
+        <button type="button" class="btn btn-secondary wizard-back" data-back="1">Назад</button>
+        <button type="button" class="btn btn-primary wizard-next" data-next="3">Далее</button>
+      </div>
+    </section>
+
+    <section class="post-wizard-step" data-step="3" hidden aria-labelledby="wizard-step-3-title">
+      <h2 class="post-wizard-step-title" id="wizard-step-3-title">Контакты</h2>
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label" for="seller_name">{{ form.seller_name.label.text }}</label>
+          {{ form.seller_name(class="input", id="seller_name", placeholder="Ваше имя", autocomplete="name", required=true, minlength="2", maxlength="80") }}
+        </div>
+        <div class="field">
+          <label class="field-label" for="phone">{{ form.phone.label.text }}</label>
+          {{ form.phone(class="input", id="phone", type="tel", placeholder="+7 (900) 123-45-67", autocomplete="tel", maxlength="18", required=true) }}
+        </div>
+      </div>
+      <p class="hint post-wizard-inline-hint">
+        <i data-lucide="info" class="icon icon-sm" aria-hidden="true"></i>
+        <span>Одно объявление в сутки с номера.</span>
+      </p>
+      <div class="post-wizard-nav post-wizard-nav-split">
+        <button type="button" class="btn btn-secondary wizard-back" data-back="2">Назад</button>
+        <button type="button" class="btn btn-primary wizard-next" data-next="4">Далее</button>
+      </div>
+    </section>
+
+    <section class="post-wizard-step" data-step="4" hidden aria-labelledby="wizard-step-4-title">
+      <h2 class="post-wizard-step-title" id="wizard-step-4-title">Фотографии</h2>
+      <div class="field">
+        <label class="field-label">Фото (до 5)</label>
+        <div class="image-picker" data-total-max="5" data-existing-count="0" data-max-bytes="{{ config.MAX_UPLOAD_SIZE }}">
+          <input type="file" name="images" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple class="sr-only image-picker-input">
+          <div class="image-picker-control">
+            <button type="button" class="btn btn-secondary image-picker-add">
+              <i data-lucide="image-plus" class="icon" aria-hidden="true"></i>
+              <span class="image-picker-button-label">Добавить фото</span>
+            </button>
+            <span class="image-picker-status" role="status" aria-live="polite">Фото не выбраны</span>
+          </div>
+          <p class="image-picker-error" role="alert" hidden></p>
+          <div class="image-picker-preview" hidden></div>
+          <p class="field-help">JPG, PNG или WebP · до 5 МБ</p>
+        </div>
+      </div>
+      <div class="post-wizard-nav post-wizard-nav-split">
+        <button type="button" class="btn btn-secondary wizard-back" data-back="3">Назад</button>
+        <button type="button" class="btn btn-primary wizard-next" data-next="5">Далее</button>
+      </div>
+    </section>
+
+    <section class="post-wizard-step" data-step="5" hidden aria-labelledby="wizard-step-5-title">
+      <h2 class="post-wizard-step-title" id="wizard-step-5-title">Проверка</h2>
+      <div id="post-submit-preview" class="post-submit-preview" aria-live="polite"></div>
+      {% if turnstile_site_key %}
+      <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
+      {% endif %}
+      <div class="post-wizard-nav post-wizard-nav-split">
+        <button type="button" class="btn btn-secondary wizard-back" data-back="4">Назад</button>
+        <button type="submit" class="btn btn-primary" id="wizard-submit-btn">
+          <i data-lucide="send" class="icon" aria-hidden="true"></i>
+          Опубликовать
+        </button>
+      </div>
+    </section>
+  </form>
+
+  <section class="post-wizard-success" id="wizard-publish-success" hidden>
+    {% include "partials/publish_success_panel.html" %}
+  </section>
+
+  <script type="application/json" id="create-wizard-labels">{{ {"cities": cities, "categories": categories}|tojson }}</script>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/phone-mask.js') }}"></script>
+<script src="{{ url_for('static', filename='js/publish-success.js') }}"></script>
+<script src="{{ url_for('static', filename='js/create-wizard.js') }}"></script>
+{% endblock %}

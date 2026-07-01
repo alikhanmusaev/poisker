@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-board}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-board}
+      POSTGRES_DB: ${POSTGRES_DB:-chechnya_board}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U board -d chechnya_board"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4.2-alpine
+
+  typesense:
+    image: typesense/typesense:26.0
+    command: "--data-dir /data --api-key=${TYPESENSE_API_KEY:-typesenseKey} --enable-cors"
+    volumes:
+      - typesense_data:/data
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  web:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      FLASK_ENV: ${FLASK_ENV:-development}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key}
+      HMAC_SECRET: ${HMAC_SECRET:-dev-hmac-secret}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-board}:${POSTGRES_PASSWORD:-board}@postgres:5432/${POSTGRES_DB:-chechnya_board}
+      TYPESENSE_URL: http://typesense:8108
+      TYPESENSE_API_KEY: ${TYPESENSE_API_KEY:-typesenseKey}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_URL: ${S3_PUBLIC_URL:-http://localhost:9000/board-images}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      RATELIMIT_STORAGE_URI: redis://redis:6379/1
+      SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-true}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      REQUIRE_TURNSTILE: ${REQUIRE_TURNSTILE:-false}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+      HSTS_ENABLED: ${HSTS_ENABLED:-false}
+      RUN_DB_UPGRADE: ${RUN_DB_UPGRADE:-false}
+      RUN_DB_INIT: ${RUN_DB_INIT:-false}
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      typesense:
+        condition: service_started
+      minio:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  typesense_data:
+  minio_data:

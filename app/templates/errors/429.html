@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Слишком много запросов{% endblock %}
+{% block content %}
+<div class="empty-state" role="alert">
+  <i data-lucide="timer" class="icon icon-xl" aria-hidden="true"></i>
+  <h1>Слишком много запросов</h1>
+  <p>Подождите минуту и обновите страницу. Если вы только просматриваете объявления — это временное ограничение защиты от спама.</p>
+  <button type="button" class="btn btn-primary" data-reload-page>Обновить</button>
+  <p class="empty-state-hint"><a href="{{ url_for('main.index') }}">На главную</a></p>
+</div>
+{% endblock %}

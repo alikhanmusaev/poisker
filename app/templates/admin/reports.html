@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}
+{% block title %}Жалобы{% endblock %}
+{% block content %}
+<h1>Жалобы</h1>
+<table class="admin-table">
+  <thead><tr><th>Дата</th><th>Объявление</th><th>Причина</th><th>Комментарий</th></tr></thead>
+  <tbody>
+    {% for r in reports %}
+    <tr>
+      <td>{{ r.created_at.strftime('%d.%m.%Y') }}</td>
+      <td><a href="{{ post_public_url(r.post) if r.post else url_for('posts.show', post_id=r.post_id) }}">{{ r.post.title[:30] if r.post else r.post_id }}</a></td>
+      <td>{{ r.reason }}</td>
+      <td>{{ r.comment or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

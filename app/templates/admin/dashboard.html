@@ -1,0 +1,12 @@
+{% extends "admin/base.html" %}
+{% block title %}Дашборд{% endblock %}
+{% block content %}
+<h1>Дашборд</h1>
+<div class="stats-grid">
+  <div class="stat-card"><span class="stat-value">{{ posts_today }}</span><span class="stat-label">Сегодня</span></div>
+  <div class="stat-card"><span class="stat-value">{{ total_posts }}</span><span class="stat-label">Активных</span></div>
+  <div class="stat-card"><span class="stat-value">{{ reports_pending }}</span><span class="stat-label">Жалоб</span></div>
+  <div class="stat-card"><span class="stat-value">{{ promos_pending }}</span><span class="stat-label">Ожидают оплаты</span></div>
+  <div class="stat-card"><span class="stat-value">{{ revenue }} ₽</span><span class="stat-label">Доход</span></div>
+</div>
+{% endblock %}

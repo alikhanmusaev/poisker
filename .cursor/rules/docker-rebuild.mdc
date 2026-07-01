@@ -1,0 +1,24 @@
+---
+description: Пересборка Docker после изменений в коде приложения
+alwaysApply: true
+---
+
+# Docker: обновление контейнера после правок
+
+После любых изменений в коде приложения (Python, шаблоны, статика, конфиг) **в конце задачи** пересобери и перезапусти web:
+
+```bash
+docker compose build web && docker compose up -d web
+```
+
+На Windows PowerShell:
+
+```powershell
+docker compose build web; docker compose up -d web
+```
+
+Если `docker compose` ругается на переменные из `.env`, задай недостающие (например `POSTGRES_PASSWORD`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`) в `.env` или в сессии перед командой.
+
+Не пропускай этот шаг: без пересборки в контейнере остаётся старый образ и пользователь не видит изменений.
+
+**Только `docker compose up`, не `docker compose run`** для запуска сайта. Команда `docker compose run web …` создаёт отдельный одноразовый контейнер `web-run-…` вне стека — его видно в Docker Desktop отдельно от `web-1`. Для тестов: `docker compose run --rm --no-deps --entrypoint python web -m pytest tests/ -q` (с `--rm`, чтобы контейнер удалился после выхода).

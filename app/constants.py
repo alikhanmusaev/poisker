@@ -1,0 +1,129 @@
+CITIES = {
+    "grozny": "Грозный",
+    "gudermes": "Гудермес",
+    "argun": "Аргун",
+    "urus-martan": "Урус-Мартан",
+    "shali": "Шали",
+    "kurchaloy": "Курчалой",
+    "naurskaya": "Наурская",
+    "vedeno": "Ведено",
+    "shatoy": "Шатой",
+    "nozhay-yurt": "Ножай-Юрт",
+    "shelkovskaya": "Шелковская",
+    "goyty": "Гойты",
+    "achkhoy-martan": "Ачхой-Мартан",
+    "tsentoroy": "Центорой",
+    "starye-atagi": "Старые Атаги",
+    "katar-yurt": "Катар-Юрт",
+    "gekhi": "Гехи",
+    "samashki": "Самашки",
+    "alleroi": "Аллерой",
+    "benoy": "Бено́й",
+}
+
+# slug -> (label, lucide icon)
+CATEGORIES = {
+    "nedvizhimost": ("Недвижимость", "home"),
+    "avto": ("Авто", "car"),
+    "zapchasti": ("Запчасти", "cog"),
+    "elektronika": ("Электроника", "smartphone"),
+    "prodazha": ("Личные вещи", "shopping-bag"),
+    "dlya-doma": ("Для дома", "sofa"),
+    "uslugi": ("Услуги", "wrench"),
+    "rabota": ("Работа", "briefcase"),
+    "detskie": ("Детские", "baby"),
+    "zhivotnye": ("Животные", "paw-print"),
+    "sport": ("Спорт", "dumbbell"),
+    "stroitelstvo": ("Строительство", "hammer"),
+    "rasteniya": ("Растения", "flower-2"),
+    "produkti": ("Продукты", "apple"),
+    "biznes": ("Бизнес", "store"),
+    "drugoe": ("Другое", "layout-grid"),
+}
+
+# Flat labels for forms/selects
+CATEGORY_LABELS = {slug: label for slug, (label, _) in CATEGORIES.items()}
+CATEGORY_ICONS = {slug: icon for slug, (_, icon) in CATEGORIES.items()}
+
+SORT_OPTIONS = {
+    "rank": "Рекомендуемые",
+    "relevance": "По релевантности",
+    "date_desc": "Сначала новые",
+    "price_asc": "По дешевле",
+    "price_desc": "По дороже",
+}
+
+DEFAULT_SORT = "rank"
+DEFAULT_SEARCH_SORT = "relevance"
+
+SEARCH_SYNONYMS = {
+    "машина": ["авто", "автомобиль"],
+    "авто": ["машина", "автомобиль"],
+    "кв": ["квартира", "жилье"],
+    "квартира": ["кв", "жилье"],
+    "тел": ["телефон", "смартфон"],
+    "телефон": ["тел", "смартфон"],
+}
+
+BRAND_ALIASES = {
+    "айфон": ["iphone"],
+    "iphone": ["айфон"],
+    "самсунг": ["samsung", "samsung galaxy"],
+    "samsung": ["самсунг"],
+    "ксиоми": ["xiaomi", "redmi"],
+    "xiaomi": ["ксиоми", "redmi"],
+    "редми": ["redmi", "xiaomi"],
+    "redmi": ["редми", "xiaomi"],
+    "шевроле": ["chevrolet"],
+    "chevrolet": ["шевроле"],
+    "матиз": ["matiz", "daewoo matiz"],
+    "matiz": ["матиз"],
+}
+
+CATEGORY_KEYWORDS = {
+    "квартира": "nedvizhimost",
+    "жилье": "nedvizhimost",
+    "дом": "nedvizhimost",
+    "машина": "avto",
+    "автомобиль": "avto",
+    "авто": "avto",
+    "матиз": "avto",
+    "айфон": "elektronika",
+    "iphone": "elektronika",
+    "телефон": "elektronika",
+    "смартфон": "elektronika",
+    "ноутбук": "elektronika",
+    "диван": "dlya-doma",
+    "куртка": "prodazha",
+    "велосипед": "sport",
+    "собака": "zhivotnye",
+    "кот": "zhivotnye",
+    "работа": "rabota",
+    "вакансия": "rabota",
+}
+
+POPULAR_SUGGESTIONS = [
+    "айфон",
+    "квартира грозный",
+    "матиз",
+    "диван",
+    "велосипед",
+]
+
+REPORT_REASONS = {
+    "spam": "Спам",
+    "fraud": "Мошенничество",
+    "wrong_phone": "Чужой номер",
+    "inappropriate": "Неприемлемый контент",
+    "duplicate": "Дубликат",
+    "other": "Другое",
+}
+
+POST_STATUSES = ("draft", "published", "hidden", "expired")
+
+PROMOTION_TYPES = {
+    "boost_24h": ("Поднять на 24 часа", 1.5, 24),
+    "top_7d": ("Топ 7 дней", 2.0, 168),
+}
+
+REPORTS_AUTO_HIDE_THRESHOLD = 3

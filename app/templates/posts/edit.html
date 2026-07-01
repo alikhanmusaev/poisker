@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Редактировать — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-card">
+  <h1 class="page-title">Редактировать</h1>
+  <p class="hint">
+    <i data-lucide="phone" class="icon icon-sm" aria-hidden="true"></i>
+    <span>Номер: {{ post.phone_masked }} (изменить нельзя)</span>
+  </p>
+
+  {% if errors %}
+    <div class="errors">{% for e in errors %}<p class="error"><i data-lucide="alert-circle" class="icon icon-sm"></i>{{ e }}</p>{% endfor %}</div>
+  {% endif %}
+
+  <form method="post"
+        enctype="multipart/form-data"
+        class="form"
+        id="edit-post-form"
+        data-post-id="{{ post.id }}"
+        data-post-title="{{ post.title }}"
+        data-view-url="{{ post_public_url(post, external=True) }}">
+    {{ form.hidden_tag() }}
+    <input type="hidden" name="token" value="{{ token }}">
+    <div class="field">
+      <label class="field-label">{{ form.title.label.text }}</label>
+      {{ form.title(class="input") }}
+    </div>
+    <div class="field">
+      <label class="field-label">{{ form.seller_name.label.text }}</label>
+      {{ form.seller_name(class="input", autocomplete="name", required=true, minlength="2", maxlength="80") }}
+    </div>
+    <div class="field">
+      <label class="field-label">{{ form.body.label.text }}</label>
+      {{ form.body(class="input textarea", rows=5) }}
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label">{{ form.category.label.text }}</label>
+        {{ form.category(class="input select-input") }}
+      </div>
+      <div class="field">
+        <label class="field-label">{{ form.price.label.text }}</label>
+        {{ form.price(class="input", min="0", inputmode="numeric") }}
+      </div>
+    </div>
+    {% if post.images %}
+      <div class="current-images">
+        {% for img in post.images %}
+          <label class="current-image-item">
+            <img src="{{ image_url(img) }}" alt="" class="thumb">
+            <span class="current-image-remove">
+              <input type="checkbox" name="remove_images" value="{{ img }}">
+              Удалить
+            </span>
+          </label>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <div class="field">
+      <label class="field-label">Добавить фото</label>
+      {% set remaining_images = 5 - (post.images|length if post.images else 0) %}
+      <div class="image-picker"
+           data-total-max="5"
+           data-existing-count="{{ post.images|length if post.images else 0 }}"
+           data-max-bytes="{{ config.MAX_UPLOAD_SIZE }}">
+        <input type="file"
+               name="images"
+               accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+               multiple
+               class="sr-only image-picker-input"
+               {% if remaining_images <= 0 %}tabindex="-1" aria-hidden="true"{% endif %}>
+        <div class="image-picker-control">
+          <button type="button" class="btn btn-secondary image-picker-add" {% if remaining_images <= 0 %}disabled{% endif %}>
+            <i data-lucide="image-plus" class="icon" aria-hidden="true"></i>
+            <span class="image-picker-button-label">Добавить фото</span>
+          </button>
+          <span class="image-picker-status" role="status" aria-live="polite">
+            {% if remaining_images <= 0 %}Достигнут лимит 5 фото{% else %}Фото не выбраны{% endif %}
+          </span>
+        </div>
+        <p class="image-picker-error" role="alert" hidden></p>
+        {% if remaining_images > 0 %}
+          <div class="image-picker-preview" hidden></div>
+          <p class="field-help">JPG, PNG или WebP · до 5 МБ · можно добавить ещё {{ remaining_images }}.</p>
+        {% else %}
+          <p class="field-help">Удалите существующее фото, чтобы загрузить новое.</p>
+        {% endif %}
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">
+      <i data-lucide="save" class="icon" aria-hidden="true"></i>
+      Сохранить
+    </button>
+  </form>
+
+  <div class="edit-actions">
+    <a href="{{ url_for('promotions.promote', post_id=post.id, token=token) }}" class="btn btn-secondary btn-block">
+      <i data-lucide="zap" class="icon" aria-hidden="true"></i>
+      Поднять объявление
+    </a>
+    <form method="post" action="{{ url_for('posts.remove', post_id=post.id) }}" id="delete-post-form">
+      <input type="hidden" name="token" value="{{ token }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="button" class="btn btn-danger btn-block" id="delete-post-trigger">
+        <i data-lucide="trash-2" class="icon" aria-hidden="true"></i>
+        Удалить
+      </button>
+      <div class="delete-confirm-panel" id="delete-confirm-panel" hidden>
+        <p class="delete-confirm-text">Удалить объявление без восстановления?</p>
+        <div class="delete-confirm-actions">
+          <button type="button" class="btn btn-secondary" id="delete-post-cancel">Отмена</button>
+          <button type="submit" class="btn btn-danger" id="delete-post-submit">
+            Да, удалить
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/edit-post.js') }}"></script>
+{% endblock %}

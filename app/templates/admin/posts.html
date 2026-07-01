@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+{% block title %}Объявления{% endblock %}
+{% block content %}
+<h1>Объявления</h1>
+<table class="admin-table">
+  <thead>
+    <tr><th>Заголовок</th><th>Город</th><th>Статус</th><th>Жалобы</th><th>Действия</th></tr>
+  </thead>
+  <tbody>
+    {% for post in posts %}
+    <tr>
+      <td><a href="{{ post_public_url(post) }}">{{ post.title[:40] }}</a></td>
+      <td>{{ post.city }}</td>
+      <td>{{ post.status }}</td>
+      <td>{{ post.reports_count }}</td>
+      <td class="actions">
+        {% if post.status == 'published' %}
+        <form method="post" action="{{ url_for('admin.hide_post', post_id=post.id) }}" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">Скрыть</button>
+        </form>
+        {% else %}
+        <form method="post" action="{{ url_for('admin.publish_post', post_id=post.id) }}" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">Опубликовать</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('admin.block_phone', post_id=post.id) }}" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">Блок номера</button>
+        </form>
+        <form method="post" action="{{ url_for('admin.delete_post_admin', post_id=post.id) }}" style="display:inline" onsubmit="return confirm('Удалить?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">Удалить</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

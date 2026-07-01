@@ -1,0 +1,11 @@
+{% extends "admin/base.html" %}
+{% block title %}Вход — Админ{% endblock %}
+{% block content %}
+<form method="post" class="form admin-login">
+  {{ form.hidden_tag() }}
+  <h1>Вход в админку</h1>
+  <label>{{ form.username.label }}{{ form.username(class="input") }}</label>
+  <label>{{ form.password.label }}{{ form.password(class="input", type="password") }}</label>
+  <button type="submit" class="btn btn-primary">Войти</button>
+</form>
+{% endblock %}

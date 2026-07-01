@@ -1,0 +1,27 @@
+{% extends "admin/base.html" %}
+{% block title %}Продвижение{% endblock %}
+{% block content %}
+<h1>Заявки на продвижение</h1>
+<table class="admin-table">
+  <thead><tr><th>ID</th><th>Объявление</th><th>Тип</th><th>Сумма</th><th>Статус</th><th></th></tr></thead>
+  <tbody>
+    {% for p in promos %}
+    <tr>
+      <td>{{ p.id }}</td>
+      <td>{{ p.post.title[:30] if p.post else '—' }}</td>
+      <td>{{ p.type }}</td>
+      <td>{{ p.amount }} ₽</td>
+      <td>{{ p.status }}</td>
+      <td>
+        {% if p.status == 'pending' %}
+        <form method="post" action="{{ url_for('admin.approve_promotion', promo_id=p.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">Подтвердить оплату</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

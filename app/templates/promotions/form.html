@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Поднять объявление{% endblock %}
+{% block content %}
+<h1 class="page-title">Продвижение объявления</h1>
+<p>{{ post.title }}</p>
+<form method="post" class="form">
+  <input type="hidden" name="token" value="{{ token }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% for key, (label, boost, hours) in promotion_types.items() %}
+    <label class="promo-option">
+      <input type="radio" name="type" value="{{ key }}" {% if loop.first %}checked{% endif %}>
+      {{ label }} (×{{ boost }})
+    </label>
+  {% endfor %}
+  <p class="hint">После заявки вы получите инструкцию по оплате. Активация после подтверждения.</p>
+  <button type="submit" class="btn btn-primary btn-block">Оформить</button>
+</form>
+{% endblock %}

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#b91c1c">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="{% block meta_description %}{{ site_description }}{% endblock %}">
+  {% block robots %}<meta name="robots" content="index, follow">{% endblock %}
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="{{ site_name }}">
+  <meta property="og:site_name" content="{{ site_name }}">
+  <meta property="og:locale" content="ru_RU">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}" sizes="192x192">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='fonts/inter/inter.css') }}">
+  <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  {% block canonical %}{% endblock %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="{{ url_for('static', filename='vendor/htmx.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='vendor/lucide.min.js') }}" defer></script>
+  {% if turnstile_site_key %}
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  {% endif %}
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <a href="#main-content" class="skip-link">Перейти к содержимому</a>
+  <noscript>
+    <div class="noscript-banner" role="alert">
+      Для работы сервиса включите JavaScript в настройках браузера.
+    </div>
+  </noscript>
+
+  <div class="app-shell">
+    <header class="site-header" role="banner">
+      <div class="container header-inner">
+        <a href="{{ url_for('main.index') }}" class="brand" aria-label="{{ site_name }} — на главную">
+          <span class="brand-mark" aria-hidden="true">
+            <i data-lucide="map-pin" class="icon icon-sm"></i>
+          </span>
+          <span class="brand-text">
+            <span class="brand-title">{{ site_name }}</span>
+            <span class="brand-sub">{{ site_tagline }}</span>
+          </span>
+        </a>
+        <nav class="header-nav" aria-label="Основная навигация">
+          <a href="{{ url_for('main.index') }}" class="header-nav-link {% if request.endpoint == 'main.index' %}is-active{% endif %}">
+            <i data-lucide="layout-grid" class="icon" aria-hidden="true"></i>
+            <span>Главная</span>
+          </a>
+          <a href="{{ url_for('posts.my_posts') }}" class="header-nav-link {% if request.endpoint == 'posts.my_posts' %}is-active{% endif %}">
+            <i data-lucide="bookmark" class="icon" aria-hidden="true"></i>
+            <span>Мои</span>
+          </a>
+          <a href="{{ url_for('posts.create') }}" class="btn btn-primary btn-sm header-cta">
+            <i data-lucide="plus" class="icon" aria-hidden="true"></i>
+            <span>Подать</span>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content" class="site-main" role="main" tabindex="-1">
+      <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-messages" aria-live="polite">
+              {% for category, message in messages %}
+                <div class="flash flash-{{ category }}" role="alert">
+                  <i data-lucide="{% if category == 'error' %}alert-circle{% else %}check-circle{% endif %}" class="icon" aria-hidden="true"></i>
+                  <span>{{ message }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+      <div class="container footer-inner">
+        <p class="footer-copy">© 2026 {{ site_name }}</p>
+        <nav class="footer-nav" aria-label="Правовая информация">
+          <a href="{{ url_for('main.privacy') }}" class="footer-link">Конфиденциальность</a>
+          <a href="{{ url_for('main.terms') }}" class="footer-link">Условия</a>
+          <a href="{{ url_for('main.guidelines') }}" class="footer-link">Правила</a>
+        </nav>
+      </div>
+    </footer>
+
+    <nav class="mobile-nav" aria-label="Мобильная навигация">
+      <a href="{{ url_for('main.index') }}" class="mobile-nav-item {% if request.endpoint == 'main.index' %}is-active{% endif %}">
+        <i data-lucide="layout-grid" class="icon" aria-hidden="true"></i>
+        <span>Главная</span>
+      </a>
+      <a href="{{ url_for('posts.my_posts') }}" class="mobile-nav-item {% if request.endpoint == 'posts.my_posts' %}is-active{% endif %}">
+        <i data-lucide="bookmark" class="icon" aria-hidden="true"></i>
+        <span>Мои</span>
+      </a>
+      <a href="{{ url_for('posts.create') }}" class="mobile-nav-item mobile-nav-fab {% if request.endpoint == 'posts.create' %}is-active{% endif %}" aria-label="Подать объявление">
+        <i data-lucide="plus" class="icon icon-lg" aria-hidden="true"></i>
+        <span>Подать</span>
+      </a>
+    </nav>
+
+    <div id="pwa-install" class="pwa-install" hidden role="region" aria-label="Установка приложения">
+      <p class="pwa-install-text">Добавьте на главный экран для быстрого доступа</p>
+      <div class="pwa-install-actions">
+        <button type="button" class="btn btn-primary btn-sm" id="pwa-install-btn">Установить</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="pwa-install-dismiss" aria-label="Закрыть">Не сейчас</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="htmx-indicator" class="htmx-indicator" aria-hidden="true" role="status">
+    <span class="htmx-spinner"></span>
+    <span class="sr-only">Загрузка…</span>
+  </div>
+
+  <div class="confirm-dialog" id="confirm-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
+    <div class="confirm-dialog-backdrop" data-confirm-backdrop></div>
+    <div class="confirm-dialog-panel">
+      <h2 class="confirm-dialog-title" id="confirm-dialog-title" data-confirm-title>Подтвердите действие</h2>
+      <p class="confirm-dialog-message" data-confirm-message></p>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn btn-secondary" data-confirm-cancel>Отмена</button>
+        <button type="button" class="btn btn-primary" data-confirm-ok>Да</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/confirm-dialog.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/image-picker.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/edit-links.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
