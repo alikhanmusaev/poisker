@@ -129,6 +129,8 @@ class AdminUser(db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 
+    audit_logs = db.relationship("AdminAuditLog", backref="admin", lazy="dynamic")
+
     def get_id(self):
         return str(self.id)
 
@@ -153,3 +155,15 @@ class AdminUser(db.Model):
         from werkzeug.security import check_password_hash
 
         return check_password_hash(self.password_hash, password)
+
+
+class AdminAuditLog(db.Model):
+    __tablename__ = "admin_audit_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("admin_users.id"), nullable=False, index=True)
+    action = db.Column(db.String(50), nullable=False)
+    target_type = db.Column(db.String(50), nullable=False)
+    target_id = db.Column(db.String(64), nullable=False)
+    ip_hash = db.Column(db.String(64), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, index=True)

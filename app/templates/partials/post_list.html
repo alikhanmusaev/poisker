@@ -9,17 +9,17 @@
   {% if page > 1 or has_next %}
     <nav class="feed-pagination" aria-label="Страницы ленты">
       {% if page > 1 %}
-        <a class="feed-pagination-link" rel="prev" href="{{ url_for('main.index', page=page - 1, q=query or none, city=city or none, category=category or none, price_min=price_min, price_max=price_max, with_photo='1' if with_photo else none, with_price='1' if with_price else none, sort=sort) }}">← Назад</a>
+        <a class="feed-pagination-link" rel="prev" href="{{ url_for('main.index', page=page - 1, q=query or none, category=category or none, price_min=price_min, price_max=price_max, sort=sort) }}">← Назад</a>
       {% endif %}
       <span class="feed-pagination-current">Страница {{ page }}</span>
       {% if has_next %}
-        <a class="feed-pagination-link" rel="next" href="{{ url_for('main.index', page=page + 1, q=query or none, city=city or none, category=category or none, price_min=price_min, price_max=price_max, with_photo='1' if with_photo else none, with_price='1' if with_price else none, sort=sort) }}">Далее →</a>
+        <a class="feed-pagination-link" rel="next" href="{{ url_for('main.index', page=page + 1, q=query or none, category=category or none, price_min=price_min, price_max=price_max, sort=sort) }}">Далее →</a>
       {% endif %}
     </nav>
   {% endif %}
   {% if has_next %}
     <div class="load-more"
-         hx-get="{{ url_for('main.index', page=page + 1, q=query, city=city, category=category, price_min=price_min, price_max=price_max, with_photo='1' if with_photo else none, with_price='1' if with_price else none, sort=sort) }}"
+         hx-get="{{ url_for('main.index', page=page + 1, q=query, category=category, price_min=price_min, price_max=price_max, sort=sort) }}"
          hx-trigger="revealed" hx-swap="outerHTML">
       <i data-lucide="loader-circle" class="icon icon-sm" aria-hidden="true"></i>
       <span>Загрузка...</span>
@@ -28,11 +28,11 @@
 {% else %}
   <div class="empty-state">
     <div class="empty-state-icon">
-      <i data-lucide="{% if query or category or city or price_min or price_max or with_photo or with_price %}search-x{% else %}inbox{% endif %}" class="icon icon-lg" aria-hidden="true"></i>
+      <i data-lucide="{% if query or category or price_min or price_max %}search-x{% else %}inbox{% endif %}" class="icon icon-lg" aria-hidden="true"></i>
     </div>
-    {% if query or category or city or price_min or price_max or with_photo or with_price %}
+    {% if query or category or price_min or price_max %}
       <p>Ничего не найдено</p>
-      <p>Попробуйте изменить запрос, город, цену или категорию</p>
+      <p>Попробуйте изменить запрос, категорию или цену</p>
     {% else %}
       <p>Объявлений пока нет</p>
       <a href="{{ url_for('posts.create') }}" class="btn btn-primary">

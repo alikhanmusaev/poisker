@@ -15,17 +15,15 @@
 {% block content %}
 <div class="home-page">
   <h1 class="sr-only">{{ seo_title }}</h1>
-  <form method="get" action="{{ url_for('main.index') }}" class="home-search-form" id="home-search-form"
-        hx-get="{{ url_for('main.index') }}" hx-target="#feed-panel" hx-push-url="true" hx-trigger="submit">
+  <div class="home-mobile-toolbar" id="home-mobile-toolbar">
+  <form method="get" action="{{ listing_path }}" class="home-search-form" id="home-search-form"
+        hx-get="{{ listing_path }}" hx-target="#feed-panel" hx-push-url="true" hx-trigger="submit">
     <input type="hidden" name="category" id="category-field" value="{{ category }}">
-    <input type="hidden" name="city" id="city-field" value="{{ city }}">
     <input type="hidden" name="sort" id="sort-field" value="{{ sort }}">
-    <input type="hidden" name="with_photo" id="with-photo-field" value="{{ '1' if with_photo else '' }}">
-    <input type="hidden" name="with_price" id="with-price-field" value="{{ '1' if with_price else '' }}">
 
     <div class="search-bar">
       <i data-lucide="search" class="icon search-bar-icon" aria-hidden="true"></i>
-      <input type="search" name="q" value="{{ query }}" placeholder="Например: Грозный айфон до 50000"
+      <input type="search" name="q" value="{{ query }}" placeholder="iPhone, квартира, автомобиль…"
              class="search-bar-input" autocomplete="off" minlength="2" aria-label="Поиск объявлений"
              hx-get="{{ url_for('main.suggest_view') }}" hx-trigger="keyup changed delay:400ms"
              hx-target="#suggest-box" hx-swap="innerHTML">
@@ -34,36 +32,34 @@
 
   </form>
 
-  <div class="category-carousel-wrap">
-    <div class="category-carousel" id="category-carousel" role="tablist" aria-label="Категории">
-      <button type="button" class="category-chip {% if not category %}is-active{% endif %}"
-              data-category="" role="tab" aria-selected="{{ 'true' if not category else 'false' }}">
-        <span class="category-chip-icon"><i data-lucide="layout-grid" class="icon" aria-hidden="true"></i></span>
-        <span class="category-chip-label">Все</span>
-      </button>
-      {% for slug, (label, icon) in categories.items() %}
-        <button type="button" class="category-chip {% if category == slug %}is-active{% endif %}"
-                data-category="{{ slug }}" role="tab" aria-selected="{{ 'true' if category == slug else 'false' }}">
-          <span class="category-chip-icon"><i data-lucide="{{ icon }}" class="icon" aria-hidden="true"></i></span>
-          <span class="category-chip-label">{{ label }}</span>
+  <div class="category-carousel-wrap" id="category-carousel-wrap">
+    <button type="button" class="category-carousel-nav category-carousel-nav--prev" id="category-carousel-prev"
+            aria-label="Предыдущие категории" aria-controls="category-carousel" hidden>
+      <i data-lucide="chevron-left" class="icon" aria-hidden="true"></i>
+    </button>
+    <div class="category-carousel-shell" id="category-carousel-shell">
+      <div class="category-carousel" id="category-carousel" role="tablist" aria-label="Категории" tabindex="0">
+        <button type="button" class="category-chip {% if not category %}is-active{% endif %}"
+                data-category="" role="tab" aria-selected="{{ 'true' if not category else 'false' }}">
+          <span class="category-chip-icon"><i data-lucide="layout-grid" class="icon" aria-hidden="true"></i></span>
+          <span class="category-chip-label">Все</span>
         </button>
-      {% endfor %}
-    </div>
-  </div>
-
-  <div class="feed-filter-toggles" role="group" aria-label="Фильтры ленты">
-    <label class="feed-city-filter">
-      <span class="sr-only">Город</span>
-      <select id="city-select" class="feed-city-select" aria-label="Город">
-        <option value="">Все города</option>
-        {% for slug, name in cities.items() %}
-          <option value="{{ slug }}" {% if city == slug %}selected{% endif %}>{{ name }}</option>
+        {% for slug, (label, icon) in categories.items() %}
+          <button type="button" class="category-chip {% if category == slug %}is-active{% endif %}"
+                  data-category="{{ slug }}" role="tab" aria-selected="{{ 'true' if category == slug else 'false' }}">
+            <span class="category-chip-icon"><i data-lucide="{{ icon }}" class="icon" aria-hidden="true"></i></span>
+            <span class="category-chip-label">{{ label }}</span>
+          </button>
         {% endfor %}
-      </select>
-    </label>
-    <button type="button" class="feed-filter-toggle {% if with_photo %}is-active{% endif %}" data-filter="with_photo" aria-pressed="{{ 'true' if with_photo else 'false' }}">С фото</button>
-    <button type="button" class="feed-filter-toggle {% if with_price %}is-active{% endif %}" data-filter="with_price" aria-pressed="{{ 'true' if with_price else 'false' }}">С ценой</button>
+      </div>
+    </div>
+    <button type="button" class="category-carousel-nav category-carousel-nav--next" id="category-carousel-next"
+            aria-label="Следующие категории" aria-controls="category-carousel" hidden>
+      <i data-lucide="chevron-right" class="icon" aria-hidden="true"></i>
+    </button>
   </div>
+  </div>
+  <div class="home-mobile-toolbar-spacer" id="home-mobile-toolbar-spacer" hidden aria-hidden="true"></div>
 
   {% include "partials/feed_panel.html" %}
 </div>

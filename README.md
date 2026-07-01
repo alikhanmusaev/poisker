@@ -45,17 +45,51 @@ docker compose build web
 docker compose up -d
 ```
 
-По умолчанию в Docker используется `FLASK_ENV=development` из `.env` — так стек поднимается с dev-секретами (minioadmin, typesenseKey).
+По умолчанию в Docker используется `FLASK_ENV=development` — dev-секреты допустимы для локальной разработки.
 
-Для **продакшена** в `.env` задайте `FLASK_ENV=production`, сильные `SECRET_KEY` / `HMAC_SECRET`, ключи Turnstile и `REQUIRE_TURNSTILE=true`.
-
-Приложение: http://localhost:8000
+Приложение: http://localhost/ (nginx) или http://127.0.0.1:8000/ (web напрямую)
 
 После изменений в коде:
 
 ```bash
 docker compose build web && docker compose up -d web
 ```
+
+## Docker (production)
+
+1. Скопируйте шаблон: `cp .env.production.example .env`
+2. Заполните **обязательные** переменные (см. ниже)
+3. Запуск:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build web
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+В production наружу смотрит только **nginx** (порт 80). Postgres, Redis, Typesense и MinIO доступны только внутри Docker-сети.
+
+Включены: `FLASK_ENV=production`, `SESSION_COOKIE_SECURE=true`, `REQUIRE_CAPTCHA=true`, `HSTS_ENABLED=true`, `TRUST_PROXY=true`.
+
+### Обязательные переменные для production
+
+| Переменная | Описание |
+|------------|----------|
+| `SECRET_KEY` | Секрет Flask-сессий |
+| `HMAC_SECRET` | HMAC для хешей телефона и IP |
+| `PHONE_ENCRYPTION_KEY` | Ключ шифрования телефонов (отдельно от HMAC) |
+| `POSTGRES_PASSWORD` | Пароль PostgreSQL |
+| `ADMIN_PASSWORD` | Пароль админки |
+| `TYPESENSE_API_KEY` | API-ключ Typesense |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Учётные данные MinIO |
+| `S3_PUBLIC_URL` | Публичный URL медиа (HTTPS) |
+| `CAPTCHA_PROVIDER` | `builtin` (по умолчанию), `yandex`, `turnstile`, `none` |
+| `REQUIRE_CAPTCHA` | Требовать капчу при публикации и жалобах |
+
+Полный список — в `.env.production.example`.
+
+## Резервное копирование
+
+См. [`docs/BACKUP.md`](docs/BACKUP.md) — PostgreSQL, MinIO, volumes и график бэкапов.
 
 ## Стек
 
@@ -70,8 +104,8 @@ docker compose build web && docker compose up -d web
 См. `.env.example`
 
 Перед продакшеном:
-- `SECRET_KEY`, `HMAC_SECRET` — сильные случайные значения
-- `REQUIRE_TURNSTILE=true` и ключи Cloudflare Turnstile
+- `SECRET_KEY`, `HMAC_SECRET`, `PHONE_ENCRYPTION_KEY` — сильные случайные значения (`PHONE_ENCRYPTION_KEY` ≠ `HMAC_SECRET`)
+- `REQUIRE_CAPTCHA=true` — встроенная математическая капча, внешние ключи не нужны
 - `APP_DOMAIN=poisker.ru`, `SITE_NAME=Поискер` — для SEO, PWA и Google Play asset links
 
 ## Структура

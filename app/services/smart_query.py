@@ -5,7 +5,6 @@ from app.constants import (
     CATEGORIES,
     CATEGORY_KEYWORDS,
     CATEGORY_LABELS,
-    CITIES,
 )
 
 
@@ -24,15 +23,6 @@ def _price_to_int(value: str) -> int | None:
         return None
     return int(digits) * multiplier
 
-
-CITY_ALIASES = {
-    slug: slug for slug in CITIES
-}
-for slug, label in CITIES.items():
-    normalized_label = _norm(label)
-    CITY_ALIASES[normalized_label] = slug
-    CITY_ALIASES[normalized_label.replace("-", " ")] = slug
-    CITY_ALIASES[slug.replace("-", " ")] = slug
 
 CATEGORY_ALIASES = {
     slug: slug for slug in CATEGORIES
@@ -71,14 +61,6 @@ def parse_search_query(raw_query: str) -> dict:
     raw = raw_query or ""
     normalized = _norm(raw)
     cleaned = f" {normalized} "
-
-    city = None
-    for alias, slug in sorted(CITY_ALIASES.items(), key=lambda item: len(item[0]), reverse=True):
-        pattern = rf"(?<!\w){re.escape(alias)}(?!\w)"
-        if re.search(pattern, cleaned):
-            city = slug
-            cleaned = re.sub(pattern, " ", cleaned)
-            break
 
     category = None
     for alias, slug in sorted(CATEGORY_ALIASES.items(), key=lambda item: len(item[0]), reverse=True):
@@ -127,14 +109,6 @@ def parse_search_query(raw_query: str) -> dict:
         price_min = _price_to_int(min_match.group(1))
         cleaned = cleaned.replace(min_match.group(0), " ")
 
-    with_photo = bool(re.search(r"(?:с фото|фото|фотографи)", cleaned))
-    if with_photo:
-        cleaned = re.sub(r"(?:с фото|фото|фотографи\w*)", " ", cleaned)
-
-    with_price = bool(re.search(r"с\s+ценой", cleaned))
-    if with_price:
-        cleaned = re.sub(r"с\s+ценой", " ", cleaned)
-
     search_text = re.sub(r"\b(?:руб|рублей|р|₽|цена)\b", " ", cleaned)
     search_text = re.sub(r"\s+", " ", search_text).strip()
 
@@ -143,12 +117,12 @@ def parse_search_query(raw_query: str) -> dict:
 
     return {
         "text": search_text,
-        "city": city,
+        "city": None,
         "category": category,
         "price_min": price_min,
         "price_max": price_max,
-        "with_photo": with_photo,
-        "with_price": with_price,
+        "with_photo": False,
+        "with_price": False,
         "expanded_terms": expanded_terms,
     }
 
@@ -159,9 +133,6 @@ def smart_suggestions(raw_query: str, limit: int = 5) -> list[str]:
         return []
 
     items = []
-    for label in CITIES.values():
-        if _norm(label).startswith(query):
-            items.append(label)
     for label in CATEGORY_LABELS.values():
         if _norm(label).startswith(query):
             items.append(label)

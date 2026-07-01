@@ -7,6 +7,29 @@ from app.config import config_by_name
 from app.extensions import csrf, db, limiter, login_manager, migrate
 
 
+def _content_security_policy(app) -> str:
+    provider = app.config.get("CAPTCHA_PROVIDER", "yandex").lower()
+    captcha_hosts = []
+    if provider == "turnstile":
+        captcha_hosts = ["https://challenges.cloudflare.com"]
+    elif provider == "yandex":
+        captcha_hosts = ["https://smartcaptcha.cloud.yandex.ru"]
+    captcha_src = " ".join(captcha_hosts)
+    return (
+        "default-src 'self'; "
+        "base-uri 'self'; "
+        "object-src 'none'; "
+        "frame-ancestors 'none'; "
+        "img-src 'self' data: blob:; "
+        "font-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        f"script-src 'self' {captcha_src}; "
+        f"connect-src 'self' {captcha_src}; "
+        f"frame-src {captcha_src}; "
+        "form-action 'self'"
+    )
+
+
 def create_app(config_name=None):
     if config_name is None:
         config_name = os.getenv("FLASK_ENV", "development")
@@ -47,17 +70,7 @@ def create_app(config_name=None):
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault(
             "Content-Security-Policy",
-            "default-src 'self'; "
-            "base-uri 'self'; "
-            "object-src 'none'; "
-            "frame-ancestors 'none'; "
-            "img-src 'self' data: blob:; "
-            "font-src 'self'; "
-            "style-src 'self' 'unsafe-inline'; "
-            "script-src 'self' https://challenges.cloudflare.com; "
-            "connect-src 'self' https://challenges.cloudflare.com; "
-            "frame-src https://challenges.cloudflare.com; "
-            "form-action 'self'",
+            _content_security_policy(app),
         )
         if app.config.get("HSTS_ENABLED"):
             response.headers.setdefault(
@@ -76,6 +89,12 @@ def create_app(config_name=None):
     app.register_blueprint(promotions.bp)
     app.register_blueprint(admin.bp)
 
+    from app.utils.text_ru import plural_ru
+
+    @app.template_filter("plural_ru")
+    def plural_ru_filter(count, one, few, many):
+        return plural_ru(count, one, few, many)
+
     @app.context_processor
     def inject_globals():
         from datetime import timezone
@@ -83,6 +102,8 @@ def create_app(config_name=None):
         from app.constants import CATEGORIES, CATEGORY_ICONS, CATEGORY_LABELS, CITIES, SORT_OPTIONS
         from app.models import utcnow
         from app.routes.media import resolve_image_url
+
+        from app.utils.text_ru import plural_ru
 
         def relative_time(value):
             if not value:
@@ -93,26 +114,38 @@ def create_app(config_name=None):
             seconds = max(int(delta.total_seconds()), 0)
             if seconds < 3600:
                 minutes = max(seconds // 60, 1)
-                return f"{minutes} мин назад"
+                return f"{minutes} {plural_ru(minutes, 'минуту', 'минуты', 'минут')} назад"
             if seconds < 86400:
-                hours = seconds // 3600
-                return f"{hours} ч назад"
+                hours = max(seconds // 3600, 1)
+                return f"{hours} {plural_ru(hours, 'час', 'часа', 'часов')} назад"
             days = seconds // 86400
             if days == 1:
                 return "вчера"
             if days < 7:
-                return f"{days} дн назад"
+                return f"{days} {plural_ru(days, 'день', 'дня', 'дней')} назад"
             return value.strftime("%d.%m.%Y")
 
         from app.services.seo import post_public_url, site_description, site_name, site_tagline
 
+        from app.services.captcha import (
+            captcha_enabled,
+            captcha_provider,
+            captcha_site_key,
+            ensure_captcha_challenge,
+        )
+
+        provider = captcha_provider()
         return {
             "cities": CITIES,
             "categories": CATEGORIES,
             "category_labels": CATEGORY_LABELS,
             "category_icons": CATEGORY_ICONS,
             "sort_options": SORT_OPTIONS,
-            "turnstile_site_key": app.config.get("TURNSTILE_SITE_KEY", ""),
+            "captcha_enabled": captcha_enabled(),
+            "captcha_provider": provider,
+            "captcha_site_key": captcha_site_key(),
+            "captcha_question": ensure_captcha_challenge() if captcha_enabled() and provider == "builtin" else "",
+            "turnstile_site_key": captcha_site_key(),
             "support_email": app.config.get("SUPPORT_EMAIL", ""),
             "app_domain": app.config.get("APP_DOMAIN", ""),
             "site_name": site_name(),
@@ -134,6 +167,8 @@ def create_app(config_name=None):
                 '<p class="flash flash-error" role="alert">Слишком много запросов. Подождите минуту.</p>',
                 429,
             )
+        if request.accept_mimetypes.best == "application/json":
+            return {"error": "Слишком много запросов. Попробуйте позже."}, 429
         return render_template("errors/429.html"), 429
 
     with app.app_context():

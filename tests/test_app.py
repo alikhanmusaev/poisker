@@ -236,47 +236,51 @@ def test_index_has_sort_labels(client):
     res = client.get("/")
     text = res.get_data(as_text=True)
     assert res.status_code == 200
-    assert "По дешевле" in text
-    assert "По дороже" in text
+    assert "Сначала дешевле" in text
+    assert "Сначала дороже" in text
 
 
-def test_index_with_price_filter(client, app):
+def test_price_filter(client, app):
+    from unittest.mock import patch
+
     with app.app_context():
         create_post(
             {
                 "seller_name": "Ахмад",
-                "title": "С ценой",
-                "body": "Объявление с указанной ценой для фильтра.",
-                "category": "prodazha",
+                "title": "Телефон с фото",
+                "body": "Хороший телефон с комплектом и фотографиями.",
+                "category": "elektronika",
                 "city": "grozny",
-                "phone": "+79001110001",
+                "phone": "+79007770001",
                 "price": 15000,
-                "images": [],
+                "images": ["/static/demo/elektronika.jpg"],
             },
-            ip_hash="priced",
+            ip_hash="filter-a",
         )
         create_post(
             {
                 "seller_name": "Ахмад",
-                "title": "Без цены",
-                "body": "Объявление без цены для проверки фильтра с ценой.",
-                "category": "prodazha",
+                "title": "Телефон без фото",
+                "body": "Рабочий телефон без фотографии в объявлении.",
+                "category": "elektronika",
                 "city": "grozny",
-                "phone": "+79001110002",
-                "price": None,
+                "phone": "+79007770002",
+                "price": 5000,
                 "images": [],
             },
-            ip_hash="unpriced",
+            ip_hash="filter-b",
         )
 
-    res = client.get("/?with_price=1")
+    with patch("app.services.search._typesense_search", side_effect=RuntimeError("test")):
+        res = client.get("/?price_min=10000")
+
     text = res.get_data(as_text=True)
     assert res.status_code == 200
-    assert "С ценой" in text
-    assert "Без цены" not in text
+    assert "Телефон с фото" in text
+    assert "Телефон без фото" not in text
 
 
-def test_post_meta_endpoint(client, app):
+def test_smart_query_extracts_price_and_category():
     with app.app_context():
         post = create_post(
             {
@@ -581,57 +585,43 @@ def test_search_ignores_stale_index_total(app):
     assert total == 0
 
 
-def test_price_and_photo_filters(client, app):
-    from unittest.mock import patch
-
-    with app.app_context():
-        create_post(
-            {
-                "seller_name": "Ахмад",
-                "title": "Телефон с фото",
-                "body": "Хороший телефон с комплектом и фотографиями.",
-                "category": "elektronika",
-                "city": "grozny",
-                "phone": "+79007770001",
-                "price": 15000,
-                "images": ["/static/demo/elektronika.jpg"],
-            },
-            ip_hash="filter-a",
-        )
-        create_post(
-            {
-                "seller_name": "Ахмад",
-                "title": "Телефон без фото",
-                "body": "Рабочий телефон без фотографии в объявлении.",
-                "category": "elektronika",
-                "city": "grozny",
-                "phone": "+79007770002",
-                "price": 5000,
-                "images": [],
-            },
-            ip_hash="filter-b",
-        )
-
-    with patch("app.services.search._typesense_search", side_effect=RuntimeError("test")):
-        res = client.get("/?price_min=10000&with_photo=1")
-
-    text = res.get_data(as_text=True)
-    assert res.status_code == 200
-    assert "Телефон с фото" in text
-    assert "Телефон без фото" not in text
-
-
-def test_smart_query_extracts_city_and_price():
+def test_smart_query_extracts_price_and_category():
     from app.services.smart_query import parse_search_query
 
     parsed = parse_search_query("Грозный айфон до 50000 с фото")
 
-    assert parsed["city"] == "grozny"
+    assert parsed["city"] is None
     assert parsed["price_max"] == 50000
-    assert parsed["with_photo"] is True
-    assert parsed["text"] == "айфон"
+    assert parsed["with_photo"] is False
+    assert "грозный" in parsed["text"]
+    assert "айфон" in parsed["text"]
+    assert "фото" in parsed["text"]
     assert parsed["category"] == "elektronika"
     assert "iphone" in parsed["expanded_terms"]
+
+
+def test_post_meta_endpoint(client, app):
+    with app.app_context():
+        post = create_post(
+            {
+                "seller_name": "Ахмад",
+                "title": "Мета тест",
+                "body": "Проверка JSON-метаданных объявления для списка Мои.",
+                "category": "prodazha",
+                "city": "grozny",
+                "phone": "+79001110003",
+                "price": 1000,
+                "images": [],
+            },
+            ip_hash="meta",
+        )
+        post_id = post.id
+
+    res = client.get(f"/posts/{post_id}/meta")
+    data = res.get_json()
+    assert res.status_code == 200
+    assert data["ok"] is True
+    assert data["title"] == "Мета тест"
 
 
 def test_home_smart_query_filters_results(client, app):
@@ -671,7 +661,7 @@ def test_home_smart_query_filters_results(client, app):
     text = res.get_data(as_text=True)
     assert res.status_code == 200
     assert "айфон в Грозном" in text
-    assert "айфон в Шали" not in text
+    assert "айфон в Шали" in text
 
 
 def test_legal_pages(client):
@@ -936,7 +926,7 @@ def test_feed_total_matches_rendered_cards(client, app):
 
     text = res.get_data(as_text=True)
     assert res.status_code == 200
-    assert "<strong>4</strong> объявлений" in text
+    assert "<strong>4</strong> объявления" in text
     assert text.count("Счётчик") == 4
 
 

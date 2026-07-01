@@ -5,7 +5,7 @@
   <h1 class="page-title">Редактировать</h1>
   <p class="hint">
     <i data-lucide="phone" class="icon icon-sm" aria-hidden="true"></i>
-    <span>Номер: {{ post.phone_masked }} (изменить нельзя)</span>
+    <span>Телефон: {{ owner_phone or post.phone_masked }}. Изменить нельзя.</span>
   </p>
 
   {% if errors %}

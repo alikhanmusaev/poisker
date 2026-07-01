@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 
 from flask import current_app, request, url_for
 
-from app.constants import CATEGORIES, CATEGORY_LABELS, CITIES
+from app.constants import CATEGORIES, CATEGORY_LABELS, CITIES, CITY_LOCATIVE
 from app.routes.media import resolve_image_url
 from app.services.storage import extract_s3_key
 
@@ -20,7 +20,7 @@ def site_tagline() -> str:
 def site_description() -> str:
     return current_app.config.get(
         "SITE_DESCRIPTION",
-        "Поискер — бесплатные объявления по Чеченской Республике. Без регистрации и SMS.",
+        "Поискер — бесплатные объявления по Чеченской Республике. Без регистрации и смс.",
     )
 
 
@@ -78,14 +78,21 @@ def post_og_image(post) -> str | None:
     return None
 
 
+def city_locative(city_slug: str) -> str:
+    return CITY_LOCATIVE.get(city_slug, CITIES.get(city_slug, city_slug))
+
+
 def listing_seo_title(*, query: str = "", city: str = "", category: str = "") -> str:
+    if city and city in CITIES:
+        loc = city_locative(city)
+        if category and category in CATEGORY_LABELS:
+            return f"{CATEGORY_LABELS[category]} в {loc} — {site_name()}"
+        return f"Объявления в {loc} — {site_name()}"
     parts = []
     if query:
         parts.append(query)
     if category and category in CATEGORY_LABELS:
         parts.append(CATEGORY_LABELS[category])
-    if city and city in CITIES:
-        parts.append(CITIES[city])
     if parts:
         return f"{' '.join(parts)} — {site_name()}"
     return f"{site_name()} — {site_tagline()}"
@@ -103,24 +110,36 @@ def listing_seo_description(*, query: str = "", city: str = "", category: str = 
 
 
 def listing_canonical_url(**ctx) -> str:
+    city = ctx.get("city") or ""
+    category = ctx.get("category") or ""
+    page = ctx.get("page", 1) or 1
+    has_extra = any(
+        [
+            ctx.get("query"),
+            ctx.get("price_min"),
+            ctx.get("price_max"),
+            page > 1,
+        ]
+    )
+    if not has_extra:
+        if city and category and city in CITIES and category in CATEGORIES:
+            return absolute_url(city_category_path(city, category))
+        if city and city in CITIES:
+            return absolute_url(city_category_path(city))
+
     params = {}
     if ctx.get("query"):
         params["q"] = ctx["query"]
-    if ctx.get("city"):
-        params["city"] = ctx["city"]
-    if ctx.get("category"):
-        params["category"] = ctx["category"]
+    if city:
+        params["city"] = city
+    if category:
+        params["category"] = category
     if ctx.get("price_min"):
         params["price_min"] = ctx["price_min"]
     if ctx.get("price_max"):
         params["price_max"] = ctx["price_max"]
     if ctx.get("sort"):
         params["sort"] = ctx["sort"]
-    if ctx.get("with_photo"):
-        params["with_photo"] = "1"
-    if ctx.get("with_price"):
-        params["with_price"] = "1"
-    page = ctx.get("page", 1) or 1
     if page > 1:
         params["page"] = page
     base = absolute_url("/")

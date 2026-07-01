@@ -62,7 +62,7 @@ function initPublishSuccess(root) {
     if (navigator.share) {
       try {
         await navigator.share({ title: postTitle, url: editUrl });
-        showFeedback('Отправлено');
+        showFeedback('Ссылка отправлена');
         markComplete();
         return;
       } catch (e) {
@@ -90,7 +90,7 @@ function initPublishSuccess(root) {
       if (savedConfirmed) return;
       const ok = await confirmDialog({
         title: 'Сначала сохраните ссылку',
-        message: 'Без неё нельзя будет изменить или удалить объявление.',
+        message: 'Сначала сохраните ссылку.',
         confirmLabel: 'Уйти',
         danger: true,
       });

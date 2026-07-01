@@ -1,11 +1,11 @@
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 
 from app.constants import CATEGORIES, CATEGORY_LABELS, CITIES
-from app.extensions import limiter
+from app.extensions import contact_post_rate_key, contact_rate_key, limiter
 from app.forms import EditPostForm, PostForm
 from app.models import Post
 from app.routes.post_detail import render_show_page
-from app.services.captcha import verify_turnstile
+from app.services.captcha import extract_captcha_response, verify_captcha
 from app.services.phone import hash_value
 from app.services.posts import (
     BlockedPhoneError,
@@ -37,8 +37,8 @@ def create():
     is_ajax = _ajax_request()
 
     if form.validate_on_submit():
-        token = request.form.get("cf-turnstile-response", "")
-        if not verify_turnstile(token, request.remote_addr):
+        token = extract_captcha_response()
+        if not verify_captcha(token, request.remote_addr):
             errors.append("Подтвердите, что вы не робот")
         else:
             try:
@@ -163,17 +163,23 @@ def show(post_id):
     return render_show_page(post)
 
 
-@bp.route("/<post_id>/contact")
-@limiter.limit("30 per hour")
+@bp.route("/<post_id>/contact", methods=["GET", "POST"])
+@limiter.limit(lambda: current_app.config["CONTACT_RATE_LIMIT"], key_func=contact_rate_key, methods=["POST"])
+@limiter.limit("20 per hour", key_func=contact_post_rate_key, methods=["POST"])
 def contact(post_id):
+    if request.method == "GET":
+        return {"error": "Используйте POST для раскрытия телефона"}, 405
+
     post = get_public_post(post_id)
     if not post:
         from flask import abort
 
         abort(404)
+
     phone = reveal_post_phone(post)
     if not phone:
         return {"error": "Телефон недоступен для этого объявления"}, 404
+
     increment_contact_clicks(post)
     return {"phone": phone}
 
@@ -213,11 +219,14 @@ def edit(post_id):
         except ValidationError as e:
             errors.append(str(e))
 
+    owner_phone = reveal_post_phone(post)
+
     return render_template(
         "posts/edit.html",
         form=form,
         post=post,
         token=token,
+        owner_phone=owner_phone,
         errors=errors,
         cities=CITIES,
         categories=CATEGORY_LABELS,

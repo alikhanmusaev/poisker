@@ -122,6 +122,58 @@ def test_post_page_json_ld_escapes_script_breakout(client, app):
     assert "application/ld+json" in text
 
 
+def test_captcha_skipped_when_not_required(app):
+    from app.services.captcha import verify_captcha
+
+    with app.app_context():
+        app.config["REQUIRE_CAPTCHA"] = False
+        app.config["CAPTCHA_PROVIDER"] = "yandex"
+        assert verify_captcha("", None) is True
+
+
+def test_builtin_captcha_verify(app):
+    from app.services.captcha import ensure_captcha_challenge, verify_captcha
+
+    with app.test_request_context("/"):
+        with app.app_context():
+            app.config["REQUIRE_CAPTCHA"] = True
+            app.config["CAPTCHA_PROVIDER"] = "builtin"
+            question = ensure_captcha_challenge()
+            answer = str(sum(int(x) for x in question.split(" + ")))
+            assert verify_captcha(answer) is True
+            assert verify_captcha("999") is False
+
+
+def test_builtin_captcha_single_use(app):
+    from app.services.captcha import ensure_captcha_challenge, verify_captcha
+
+    with app.test_request_context("/"):
+        with app.app_context():
+            app.config["REQUIRE_CAPTCHA"] = True
+            app.config["CAPTCHA_PROVIDER"] = "builtin"
+            question = ensure_captcha_challenge()
+            answer = str(sum(int(x) for x in question.split(" + ")))
+            assert verify_captcha(answer) is True
+            assert verify_captcha(answer) is False
+
+
+def test_security_headers_builtin_captcha_has_no_external_scripts(app, client):
+    with app.app_context():
+        app.config["CAPTCHA_PROVIDER"] = "builtin"
+    res = client.get("/")
+    csp = res.headers.get("Content-Security-Policy", "")
+    assert "challenges.cloudflare.com" not in csp
+    assert "smartcaptcha.cloud.yandex.ru" not in csp
+
+
+def test_security_headers_allow_yandex_captcha(app, client):
+    with app.app_context():
+        app.config["CAPTCHA_PROVIDER"] = "yandex"
+    res = client.get("/")
+    csp = res.headers.get("Content-Security-Policy", "")
+    assert "smartcaptcha.cloud.yandex.ru" in csp
+
+
 def test_health_endpoint(client):
     res = client.get("/health")
 

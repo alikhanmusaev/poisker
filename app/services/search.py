@@ -1,3 +1,4 @@
+import logging
 import typesense
 from flask import current_app
 from markupsafe import Markup, escape
@@ -19,6 +20,7 @@ from app.services.smart_query import parse_search_query, smart_suggestions
 
 
 COLLECTION_NAME = "posts"
+logger = logging.getLogger(__name__)
 CANDIDATE_MIN = 60
 CANDIDATE_MAX = 250
 PRICE_SUGGEST_THRESHOLDS = (
@@ -35,6 +37,13 @@ PRICE_SUGGEST_THRESHOLDS = (
     500_000,
     1_000_000,
 )
+
+
+def _log_typesense_error(message: str):
+    try:
+        current_app.logger.exception(message)
+    except RuntimeError:
+        logger.exception(message)
 
 
 def _live_posts_query(q):
@@ -144,7 +153,7 @@ def ensure_collection(recreate: bool = False):
     try:
         _sync_synonyms()
     except Exception:
-        pass
+        _log_typesense_error("Failed to sync Typesense synonyms")
     return collection
 
 
@@ -166,7 +175,7 @@ def index_post(post: Post):
         ensure_collection()
         get_typesense_client().collections[COLLECTION_NAME].documents.upsert(_post_to_doc(post))
     except Exception:
-        pass
+        _log_typesense_error(f"Failed to index post {post.id}")
 
 
 def upsert_published_rank_scores() -> int:
@@ -182,6 +191,7 @@ def upsert_published_rank_scores() -> int:
         )
         return len(docs)
     except Exception:
+        _log_typesense_error("Failed to upsert published rank scores to Typesense")
         return 0
 
 
@@ -198,6 +208,7 @@ def reindex_published_posts() -> int:
         )
         return len(docs)
     except Exception:
+        _log_typesense_error("Failed to reindex published posts in Typesense")
         return 0
 
 
@@ -205,7 +216,7 @@ def remove_post_from_index(post_id: str):
     try:
         get_typesense_client().collections[COLLECTION_NAME].documents[post_id].delete()
     except Exception:
-        pass
+        _log_typesense_error(f"Failed to remove post {post_id} from Typesense index")
 
 
 def _build_filter(
@@ -481,6 +492,7 @@ def search_posts(
         total = _count_published_posts(query, city, category, price_min, price_max, with_photo, with_price)
         return results, total
     except Exception:
+        _log_typesense_error("Typesense search failed, using SQL fallback")
         return search_posts_fallback(
             query,
             city,
@@ -629,6 +641,7 @@ def suggest(query: str, limit: int = 5):
             if h.get("document", {}).get("title")
         ]
     except Exception:
+        _log_typesense_error("Typesense suggest failed, using SQL fallback")
         like = f"%{query}%"
         posts = (
             Post.query.filter(Post.status == "published", Post.title.ilike(like))
