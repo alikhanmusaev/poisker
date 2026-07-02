@@ -6,6 +6,7 @@ from flask import current_app, request, url_for
 
 from app.constants import CATEGORIES, CATEGORY_LABELS, CITIES, CITY_LOCATIVE
 from app.routes.media import resolve_image_url
+from app.utils.post_display import cover_image, ordered_images
 from app.services.storage import extract_s3_key
 
 
@@ -64,9 +65,9 @@ def absolute_url(path: str) -> str:
 
 
 def post_og_image(post) -> str | None:
-    if not post.images:
+    first = cover_image(post)
+    if not first:
         return None
-    first = post.images[0]
     resolved = resolve_image_url(first)
     if resolved.startswith("/static/"):
         return absolute_url(resolved)
@@ -88,6 +89,8 @@ def listing_seo_title(*, query: str = "", city: str = "", category: str = "") ->
         if category and category in CATEGORY_LABELS:
             return f"{CATEGORY_LABELS[category]} в {loc} — {site_name()}"
         return f"Объявления в {loc} — {site_name()}"
+    if category and category in CATEGORY_LABELS:
+        return f"{CATEGORY_LABELS[category]} — {site_name()}"
     parts = []
     if query:
         parts.append(query)
@@ -126,6 +129,8 @@ def listing_canonical_url(**ctx) -> str:
             return absolute_url(city_category_path(city, category))
         if city and city in CITIES:
             return absolute_url(city_category_path(city))
+        if category and category in CATEGORIES:
+            return absolute_url(category_path(category))
 
     params = {}
     if ctx.get("query"):
@@ -152,6 +157,10 @@ def city_category_path(city_slug: str, category_slug: str | None = None) -> str:
     if category_slug:
         return url_for("main.city_category_page", city_slug=city_slug, category_slug=category_slug)
     return url_for("main.city_page", city_slug=city_slug)
+
+
+def category_path(category_slug: str) -> str:
+    return url_for("main.category_page", category_slug=category_slug)
 
 
 def post_json_ld(post, *, canonical_url: str, image_url: str | None = None) -> dict:

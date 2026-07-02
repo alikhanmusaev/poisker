@@ -7,10 +7,13 @@ import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
 from flask import current_app
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 from werkzeug.datastructures import FileStorage
 
 logger = logging.getLogger(__name__)
+
+JPEG_QUALITY = 82
+MAX_DIMENSION = 1200
 
 
 def extract_s3_key(url: str) -> str | None:
@@ -78,6 +81,31 @@ def _check_file_size(file: FileStorage) -> None:
         raise ValueError(f"Файл слишком большой (макс. {max_size // (1024 * 1024)} МБ)")
 
 
+def _watermark_font(size: int):
+    for name in ("DejaVuSans.ttf", "arial.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"):
+        try:
+            return ImageFont.truetype(name, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
+def _apply_watermark(img: Image.Image) -> Image.Image:
+    text = (current_app.config.get("APP_DOMAIN") or "poisker.ru").lower()
+    font = _watermark_font(max(14, min(img.size) // 28))
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    bbox = draw.textbbox((0, 0), text, font=font)
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+    margin = max(8, min(img.size) // 40)
+    x = img.width - tw - margin
+    y = img.height - th - margin
+    draw.rectangle([x - 6, y - 4, x + tw + 6, y + th + 4], fill=(0, 0, 0, 150))
+    draw.text((x, y), text, fill=(255, 255, 255, 230), font=font)
+    return Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
+
+
 def _validate_and_resize_image(file: FileStorage) -> bytes:
     max_pixels = current_app.config.get("MAX_IMAGE_PIXELS", 20_000_000)
     Image.MAX_IMAGE_PIXELS = max_pixels
@@ -99,10 +127,10 @@ def _validate_and_resize_image(file: FileStorage) -> bytes:
         raise ValueError("Изображение слишком большое")
 
     img = img.convert("RGB")
-    max_size = (1200, 1200)
-    img.thumbnail(max_size, Image.Resampling.LANCZOS)
+    img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
+    img = _apply_watermark(img)
     buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=85, optimize=True)
+    img.save(buf, format="JPEG", quality=JPEG_QUALITY, optimize=True, progressive=True)
     buf.seek(0)
     return buf.read()
 

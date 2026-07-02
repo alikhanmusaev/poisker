@@ -42,7 +42,7 @@ def test_post_cards_include_hidden_owner_edit_link(client, app):
                 "phone": "+79005550123",
                 "images": [],
             },
-            ip_hash="editable-card",
+            ip_hash="editable-card", publish=True,
         )
         post_id = post.id
 
@@ -110,7 +110,7 @@ def test_post_page_json_ld_escapes_script_breakout(client, app):
                 "phone": "+79005550999",
                 "images": [],
             },
-            ip_hash="json-ld-xss-test",
+            ip_hash="json-ld-xss-test", publish=True,
         )
         url = f"/obyavlenie/{post.city}/{post.category}/{post.slug}"
 
@@ -127,7 +127,6 @@ def test_captcha_skipped_when_not_required(app):
 
     with app.app_context():
         app.config["REQUIRE_CAPTCHA"] = False
-        app.config["CAPTCHA_PROVIDER"] = "yandex"
         assert verify_captcha("", None) is True
 
 
@@ -137,11 +136,10 @@ def test_builtin_captcha_verify(app):
     with app.test_request_context("/"):
         with app.app_context():
             app.config["REQUIRE_CAPTCHA"] = True
-            app.config["CAPTCHA_PROVIDER"] = "builtin"
             question = ensure_captcha_challenge()
             answer = str(sum(int(x) for x in question.split(" + ")))
-            assert verify_captcha(answer) is True
             assert verify_captcha("999") is False
+            assert verify_captcha(answer) is True
 
 
 def test_builtin_captcha_single_use(app):
@@ -150,7 +148,6 @@ def test_builtin_captcha_single_use(app):
     with app.test_request_context("/"):
         with app.app_context():
             app.config["REQUIRE_CAPTCHA"] = True
-            app.config["CAPTCHA_PROVIDER"] = "builtin"
             question = ensure_captcha_challenge()
             answer = str(sum(int(x) for x in question.split(" + ")))
             assert verify_captcha(answer) is True
@@ -158,20 +155,10 @@ def test_builtin_captcha_single_use(app):
 
 
 def test_security_headers_builtin_captcha_has_no_external_scripts(app, client):
-    with app.app_context():
-        app.config["CAPTCHA_PROVIDER"] = "builtin"
     res = client.get("/")
     csp = res.headers.get("Content-Security-Policy", "")
     assert "challenges.cloudflare.com" not in csp
     assert "smartcaptcha.cloud.yandex.ru" not in csp
-
-
-def test_security_headers_allow_yandex_captcha(app, client):
-    with app.app_context():
-        app.config["CAPTCHA_PROVIDER"] = "yandex"
-    res = client.get("/")
-    csp = res.headers.get("Content-Security-Policy", "")
-    assert "smartcaptcha.cloud.yandex.ru" in csp
 
 
 def test_health_endpoint(client):

@@ -1,20 +1,14 @@
 import os
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.config import config_by_name
 from app.extensions import csrf, db, limiter, login_manager, migrate
+from app.utils.static_assets import compute_static_version
 
 
 def _content_security_policy(app) -> str:
-    provider = app.config.get("CAPTCHA_PROVIDER", "yandex").lower()
-    captcha_hosts = []
-    if provider == "turnstile":
-        captcha_hosts = ["https://challenges.cloudflare.com"]
-    elif provider == "yandex":
-        captcha_hosts = ["https://smartcaptcha.cloud.yandex.ru"]
-    captcha_src = " ".join(captcha_hosts)
     return (
         "default-src 'self'; "
         "base-uri 'self'; "
@@ -23,9 +17,8 @@ def _content_security_policy(app) -> str:
         "img-src 'self' data: blob:; "
         "font-src 'self'; "
         "style-src 'self' 'unsafe-inline'; "
-        f"script-src 'self' {captcha_src}; "
-        f"connect-src 'self' {captcha_src}; "
-        f"frame-src {captcha_src}; "
+        "script-src 'self'; "
+        "connect-src 'self'; "
         "form-action 'self'"
     )
 
@@ -39,6 +32,7 @@ def create_app(config_name=None):
     config_class = config_by_name.get(config_name, config_by_name["default"])
     if hasattr(config_class, "init_app"):
         config_class.init_app(app)
+    app.config["STATIC_VERSION"] = compute_static_version(app.static_folder)
     app.url_map.strict_slashes = False
     if app.config.get("TRUST_PROXY"):
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
@@ -126,6 +120,7 @@ def create_app(config_name=None):
             return value.strftime("%d.%m.%Y")
 
         from app.services.seo import post_public_url, site_description, site_name, site_tagline
+        from app.utils.post_display import cover_image, ordered_images
 
         from app.services.captcha import (
             captcha_enabled,
@@ -134,8 +129,14 @@ def create_app(config_name=None):
             ensure_captcha_challenge,
         )
 
+        def static_url(filename: str) -> str:
+            version = app.config.get("STATIC_VERSION", "1")
+            return f"{url_for('static', filename=filename)}?v={version}"
+
         provider = captcha_provider()
         return {
+            "static_version": app.config.get("STATIC_VERSION", "1"),
+            "static_url": static_url,
             "cities": CITIES,
             "categories": CATEGORIES,
             "category_labels": CATEGORY_LABELS,
@@ -144,8 +145,7 @@ def create_app(config_name=None):
             "captcha_enabled": captcha_enabled(),
             "captcha_provider": provider,
             "captcha_site_key": captcha_site_key(),
-            "captcha_question": ensure_captcha_challenge() if captcha_enabled() and provider == "builtin" else "",
-            "turnstile_site_key": captcha_site_key(),
+            "captcha_question": ensure_captcha_challenge() if captcha_enabled() else "",
             "support_email": app.config.get("SUPPORT_EMAIL", ""),
             "app_domain": app.config.get("APP_DOMAIN", ""),
             "site_name": site_name(),
@@ -153,6 +153,8 @@ def create_app(config_name=None):
             "site_description": site_description(),
             "post_public_url": post_public_url,
             "image_url": resolve_image_url,
+            "ordered_images": ordered_images,
+            "cover_image": cover_image,
             "relative_time": relative_time,
         }
 

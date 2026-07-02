@@ -1,16 +1,13 @@
 import random
 import time
 
-import httpx
 from flask import current_app, session
 
-YANDEX_VALIDATE_URL = "https://smartcaptcha.cloud.yandex.ru/validate"
-TURNSTILE_VALIDATE_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 SESSION_KEY = "captcha_challenge"
 
 
 def captcha_provider() -> str:
-    return (current_app.config.get("CAPTCHA_PROVIDER") or "builtin").lower()
+    return "builtin"
 
 
 def captcha_required() -> bool:
@@ -20,15 +17,10 @@ def captcha_required() -> bool:
 
 
 def captcha_enabled() -> bool:
-    return captcha_required() and captcha_provider() not in ("none", "")
+    return captcha_required()
 
 
 def captcha_site_key() -> str:
-    provider = captcha_provider()
-    if provider == "turnstile":
-        return current_app.config.get("TURNSTILE_SITE_KEY", "")
-    if provider == "yandex":
-        return current_app.config.get("SMARTCAPTCHA_SITE_KEY", "")
     return ""
 
 
@@ -61,66 +53,23 @@ def new_captcha_question() -> str:
 
 
 def _verify_builtin(answer: str) -> bool:
-    challenge = session.pop(SESSION_KEY, None)
-    session.modified = True
+    challenge = session.get(SESSION_KEY)
     if not _challenge_valid(challenge):
         return False
     if not answer:
         return False
-    return answer.strip() == challenge.get("answer")
-
-
-def _verify_yandex(token: str, remote_ip: str | None) -> bool:
-    secret = current_app.config.get("SMARTCAPTCHA_SECRET_KEY", "")
-    if not secret:
+    if answer.strip() != challenge.get("answer"):
         return False
-    if not token:
-        return False
-
-    data = {"secret": secret, "token": token}
-    if remote_ip:
-        data["ip"] = remote_ip
-
-    try:
-        with httpx.Client(timeout=10) as client:
-            resp = client.post(YANDEX_VALIDATE_URL, data=data)
-            result = resp.json()
-            return result.get("status") == "ok"
-    except httpx.HTTPError:
-        return False
-
-
-def _verify_turnstile(token: str, remote_ip: str | None) -> bool:
-    secret = current_app.config.get("TURNSTILE_SECRET_KEY", "")
-    if not secret:
-        return False
-    if not token:
-        return False
-
-    data = {"secret": secret, "response": token}
-    if remote_ip:
-        data["remoteip"] = remote_ip
-
-    try:
-        with httpx.Client(timeout=10) as client:
-            resp = client.post(TURNSTILE_VALIDATE_URL, data=data)
-            result = resp.json()
-            return bool(result.get("success"))
-    except httpx.HTTPError:
-        return False
+    session.pop(SESSION_KEY, None)
+    session.modified = True
+    return True
 
 
 def verify_captcha(response: str, remote_ip: str | None = None) -> bool:
-    provider = captcha_provider()
-    if provider == "none" or not captcha_required():
+    del remote_ip
+    if not captcha_required():
         return True
-    if provider == "builtin":
-        return _verify_builtin(response)
-    if provider == "turnstile":
-        return _verify_turnstile(response, remote_ip)
-    if provider == "yandex":
-        return _verify_yandex(response, remote_ip)
-    return False
+    return _verify_builtin(response)
 
 
 def verify_turnstile(token: str, remote_ip: str | None = None) -> bool:
@@ -130,16 +79,8 @@ def verify_turnstile(token: str, remote_ip: str | None = None) -> bool:
 def extract_captcha_response() -> str:
     from flask import request
 
-    return (
-        request.form.get("captcha_answer", "")
-        or request.headers.get("X-Captcha-Answer", "")
-        or request.headers.get("X-Captcha-Token", "")
-        or request.headers.get("X-Turnstile-Token", "")
-        or request.form.get("smart-token", "")
-        or request.form.get("cf-turnstile-response", "")
-    )
+    return request.form.get("captcha_answer", "") or request.headers.get("X-Captcha-Answer", "")
 
 
 def extract_captcha_token() -> str:
-    """Backward-compatible alias."""
     return extract_captcha_response()

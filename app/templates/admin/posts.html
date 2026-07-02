@@ -2,6 +2,18 @@
 {% block title %}Объявления{% endblock %}
 {% block content %}
 <h1>Объявления</h1>
+
+<nav class="admin-filters" aria-label="Фильтр по статусу">
+  <a href="{{ url_for('admin.posts_list', status='pending') }}" class="{% if status == 'pending' %}is-active{% endif %}">На модерации</a>
+  <a href="{{ url_for('admin.posts_list', status='revisions') }}" class="{% if status == 'revisions' %}is-active{% endif %}">Правки</a>
+  <a href="{{ url_for('admin.posts_list', status='published') }}" class="{% if status == 'published' %}is-active{% endif %}">Опубликованные</a>
+  <a href="{{ url_for('admin.posts_list', status='hidden') }}" class="{% if status == 'hidden' %}is-active{% endif %}">Скрытые</a>
+  <a href="{{ url_for('admin.posts_list', status='all') }}" class="{% if status == 'all' %}is-active{% endif %}">Все</a>
+</nav>
+
+{% if not posts %}
+<p class="admin-hint">Список пуст.</p>
+{% else %}
 <table class="admin-table">
   <thead>
     <tr><th>Заголовок</th><th>Город</th><th>Статус</th><th>Жалобы</th><th>Действия</th></tr>
@@ -9,12 +21,36 @@
   <tbody>
     {% for post in posts %}
     <tr>
-      <td><a href="{{ post_public_url(post) }}">{{ post.title[:40] }}</a></td>
+      <td>
+        <a href="{{ url_for('admin.post_preview', post_id=post.id) }}">{{ post.title[:40] }}</a>
+        {% if post.pending_revision %}
+          <span class="admin-badge-revision" title="Ожидает проверки правок">правки</span>
+        {% endif %}
+      </td>
       <td>{{ post.city }}</td>
-      <td>{{ post.status }}</td>
+      <td>{{ status_labels.get(post.status, post.status) }}</td>
       <td>{{ post.reports_count }}</td>
       <td class="actions">
-        {% if post.status == 'published' %}
+        {% if post.pending_revision %}
+        <form method="post" action="{{ url_for('admin.approve_revision', post_id=post.id) }}" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn-primary-inline">Одобрить правки</button>
+        </form>
+        <form method="post" action="{{ url_for('admin.reject_revision', post_id=post.id) }}" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">Отклонить правки</button>
+        </form>
+        {% endif %}
+        {% if post.status == 'pending' %}
+        <form method="post" action="{{ url_for('admin.publish_post', post_id=post.id) }}" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn-primary-inline">Одобрить</button>
+        </form>
+        <form method="post" action="{{ url_for('admin.hide_post', post_id=post.id) }}" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">Отклонить</button>
+        </form>
+        {% elif post.status == 'published' %}
         <form method="post" action="{{ url_for('admin.hide_post', post_id=post.id) }}" style="display:inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit">Скрыть</button>
@@ -38,4 +74,17 @@
     {% endfor %}
   </tbody>
 </table>
+
+{% if pagination.pages > 1 %}
+<nav class="admin-pagination" aria-label="Страницы">
+  {% if pagination.has_prev %}
+    <a href="{{ url_for('admin.posts_list', status=status, page=pagination.prev_num) }}">← Назад</a>
+  {% endif %}
+  <span>{{ pagination.page }} / {{ pagination.pages }}</span>
+  {% if pagination.has_next %}
+    <a href="{{ url_for('admin.posts_list', status=status, page=pagination.next_num) }}">Далее →</a>
+  {% endif %}
+</nav>
+{% endif %}
+{% endif %}
 {% endblock %}

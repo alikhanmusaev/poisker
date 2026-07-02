@@ -87,6 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (status.status === 'hidden') {
         badge.className += ' my-post-status-ended';
         badge.textContent = 'Скрыто';
+      } else if (status.status === 'pending') {
+        badge.className += ' my-post-status-active';
+        badge.textContent = 'На проверке';
       } else if (status.expired || status.status === 'expired') {
         badge.className += ' my-post-status-ended';
         badge.textContent = 'Истекло';

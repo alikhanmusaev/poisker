@@ -23,6 +23,31 @@ from app.extensions import db
 TEST_SELLER_NAME = "Ахмад"
 
 
+def make_post_payload(**overrides):
+    data = {
+        "seller_name": TEST_SELLER_NAME,
+        "title": "Тестовое объявление",
+        "body": "Подробное описание товара для автотестов и проверки логики.",
+        "category": "prodazha",
+        "city": "grozny",
+        "phone": "+79001234567",
+    }
+    data.update(overrides)
+    return data
+
+
+def create_test_post(app, *, publish=True, ip_hash="test", **overrides):
+    from app.services.posts import create_post
+
+    return create_post(make_post_payload(**overrides), ip_hash=ip_hash, publish=publish)
+
+
+@pytest.fixture
+def published_post(app):
+    with app.app_context():
+        return create_test_post(app, publish=True)
+
+
 @pytest.fixture(autouse=True)
 def noop_search_index(monkeypatch):
     def _noop_post(_post):

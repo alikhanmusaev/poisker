@@ -5,7 +5,7 @@ from app.extensions import db, limiter, login_manager
 from app.forms import AdminLoginForm
 from app.models import AdminAuditLog, AdminUser, BlockedPhone, Post, Promotion, Report, utcnow
 from app.services.audit import log_admin_action_from_request
-from app.services.posts import delete_post
+from app.services.posts import apply_pending_revision, delete_post, reject_pending_revision
 from app.services.ranking import apply_promotion, start_of_today_msk
 from app.services.search import index_post, remove_post_from_index
 
@@ -17,6 +17,9 @@ ACTION_LABELS = {
     "delete": "Удаление объявления",
     "block_phone": "Блокировка номера",
     "approve_promotion": "Одобрение продвижения",
+    "approve_revision": "Одобрение правок",
+    "reject_revision": "Отклонение правок",
+    "unblock_phone": "Разблокировка номера",
 }
 
 
@@ -52,6 +55,8 @@ def dashboard():
 
     today_start = start_of_today_msk()
     posts_today = Post.query.filter(Post.created_at >= today_start).count()
+    posts_pending = Post.query.filter_by(status="pending").count()
+    revisions_pending = Post.query.filter(Post.pending_revision.isnot(None)).count()
     reports_pending = Report.query.count()
     promos_pending = Promotion.query.filter_by(status="pending").count()
     total_posts = Post.query.filter_by(status="published").count()
@@ -61,6 +66,8 @@ def dashboard():
     return render_template(
         "admin/dashboard.html",
         posts_today=posts_today,
+        posts_pending=posts_pending,
+        revisions_pending=revisions_pending,
         reports_pending=reports_pending,
         promos_pending=promos_pending,
         total_posts=total_posts,
@@ -71,15 +78,40 @@ def dashboard():
 @bp.route("/posts")
 @login_required
 def posts_list():
-    status = request.args.get("status", "")
+    status = request.args.get("status", "pending")
     city = request.args.get("city", "")
+    page = max(request.args.get("page", 1, type=int), 1)
+    per_page = 50
     q = Post.query
-    if status:
+    if status == "revisions":
+        q = q.filter(Post.pending_revision.isnot(None))
+    elif status and status != "all":
         q = q.filter_by(status=status)
     if city:
         q = q.filter_by(city=city)
-    posts = q.order_by(Post.created_at.desc()).limit(100).all()
-    return render_template("admin/posts.html", posts=posts)
+    pagination = q.order_by(Post.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    from app.constants import POST_STATUS_LABELS
+
+    return render_template(
+        "admin/posts.html",
+        posts=pagination.items,
+        pagination=pagination,
+        status=status,
+        status_labels=POST_STATUS_LABELS,
+    )
+
+
+@bp.route("/posts/<post_id>/preview")
+@login_required
+def post_preview(post_id):
+    post = Post.query.get_or_404(post_id)
+    from app.routes.post_detail import build_show_context
+
+    ctx = build_show_context(post)
+    ctx["robots"] = "noindex, nofollow"
+    ctx["admin_preview"] = True
+    ctx["back_url"] = url_for("admin.posts_list")
+    return render_template("posts/show.html", **ctx)
 
 
 @bp.route("/posts/<post_id>/hide", methods=["POST"])
@@ -99,11 +131,13 @@ def hide_post(post_id):
 def publish_post(post_id):
     post = Post.query.get_or_404(post_id)
     post.status = "published"
+    if not post.bumped_at:
+        post.bumped_at = utcnow()
     db.session.commit()
     index_post(post)
     log_admin_action_from_request("publish", target_type="post", target_id=post_id)
     flash("Объявление опубликовано", "success")
-    return redirect(url_for("admin.posts_list"))
+    return redirect(request.referrer or url_for("admin.posts_list"))
 
 
 @bp.route("/posts/<post_id>/delete", methods=["POST"])
@@ -130,6 +164,53 @@ def block_phone(post_id):
     log_admin_action_from_request("block_phone", target_type="post", target_id=post_id)
     flash("Номер заблокирован", "success")
     return redirect(url_for("admin.posts_list"))
+
+
+@bp.route("/posts/<post_id>/approve-revision", methods=["POST"])
+@login_required
+def approve_revision(post_id):
+    post = Post.query.get_or_404(post_id)
+    if not post.pending_revision:
+        flash("Нет правок на проверке", "error")
+        return redirect(request.referrer or url_for("admin.posts_list", status="revisions"))
+    apply_pending_revision(post)
+    log_admin_action_from_request("approve_revision", target_type="post", target_id=post_id)
+    flash("Правки опубликованы", "success")
+    return redirect(request.referrer or url_for("admin.posts_list", status="revisions"))
+
+
+@bp.route("/posts/<post_id>/reject-revision", methods=["POST"])
+@login_required
+def reject_revision(post_id):
+    post = Post.query.get_or_404(post_id)
+    if not post.pending_revision:
+        flash("Нет правок на проверке", "error")
+        return redirect(request.referrer or url_for("admin.posts_list", status="revisions"))
+    reject_pending_revision(post)
+    log_admin_action_from_request("reject_revision", target_type="post", target_id=post_id)
+    flash("Правки отклонены", "success")
+    return redirect(request.referrer or url_for("admin.posts_list", status="revisions"))
+
+
+@bp.route("/blocked-phones")
+@login_required
+def blocked_phones_list():
+    page = max(request.args.get("page", 1, type=int), 1)
+    pagination = BlockedPhone.query.order_by(BlockedPhone.created_at.desc()).paginate(
+        page=page, per_page=50, error_out=False
+    )
+    return render_template("admin/blocked_phones.html", blocked=pagination.items, pagination=pagination)
+
+
+@bp.route("/blocked-phones/<int:blocked_id>/unblock", methods=["POST"])
+@login_required
+def unblock_phone(blocked_id):
+    blocked = BlockedPhone.query.get_or_404(blocked_id)
+    db.session.delete(blocked)
+    db.session.commit()
+    log_admin_action_from_request("unblock_phone", target_type="blocked_phone", target_id=blocked_id)
+    flash("Номер разблокирован", "success")
+    return redirect(url_for("admin.blocked_phones_list"))
 
 
 @bp.route("/reports")

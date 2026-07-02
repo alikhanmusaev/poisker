@@ -23,7 +23,7 @@ def test_suggest_skips_useless_photo_and_price_refinements(app):
                 "price": 45000,
                 "images": [],
             },
-            ip_hash="suggest-a",
+            ip_hash="suggest-a", publish=True,
         )
 
         items = suggest("iphone")
@@ -47,7 +47,7 @@ def test_suggest_offers_photo_refinement_when_useful(app):
                 "price": 40000,
                 "images": ["/media/posts/a.jpg"],
             },
-            ip_hash="suggest-b",
+            ip_hash="suggest-b", publish=True,
         )
         create_post(
             {
@@ -60,7 +60,7 @@ def test_suggest_offers_photo_refinement_when_useful(app):
                 "price": 35000,
                 "images": [],
             },
-            ip_hash="suggest-c",
+            ip_hash="suggest-c", publish=True,
         )
 
         items = suggest("iphone")
@@ -83,7 +83,7 @@ def test_suggest_offers_price_refinement_when_useful(app):
                 "price": 30000,
                 "images": [],
             },
-            ip_hash="suggest-d",
+            ip_hash="suggest-d", publish=True,
         )
         create_post(
             {
@@ -96,7 +96,7 @@ def test_suggest_offers_price_refinement_when_useful(app):
                 "price": 90000,
                 "images": [],
             },
-            ip_hash="suggest-e",
+            ip_hash="suggest-e", publish=True,
         )
 
         items = suggest("iphone")

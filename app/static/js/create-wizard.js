@@ -8,6 +8,8 @@
   };
 
   const TOTAL_STEPS = 5;
+  const DRAFT_KEY = 'poisker_create_draft_v1';
+  const DRAFT_FIELDS = ['title', 'body', 'category', 'city', 'price', 'seller_name', 'phone'];
 
   function readLabels() {
     const node = document.getElementById('create-wizard-labels');
@@ -114,6 +116,116 @@
       .filter(Boolean);
   }
 
+  function readCoverIndex() {
+    const field = document.getElementById('cover-index-field');
+    return field ? parseInt(field.value || '0', 10) : 0;
+  }
+
+  function setCoverIndex(index) {
+    const field = document.getElementById('cover-index-field');
+    const preview = document.querySelector('.image-picker-preview');
+    if (!field || !preview) return;
+    const items = Array.from(preview.querySelectorAll('.image-preview-item'));
+    const safe = Math.min(Math.max(index, 0), Math.max(items.length - 1, 0));
+    field.value = String(safe);
+    items.forEach((item, i) => {
+      item.classList.toggle('is-cover', i === safe);
+      let badge = item.querySelector('.image-preview-cover');
+      if (i === safe && !badge) {
+        badge = document.createElement('span');
+        badge.className = 'image-preview-cover';
+        badge.textContent = 'Обложка';
+        item.appendChild(badge);
+      } else if (i !== safe && badge) {
+        badge.remove();
+      }
+    });
+  }
+
+  function initCoverPicker() {
+    const preview = document.querySelector('.image-picker-preview');
+    if (!preview || preview.dataset.coverInit === '1') return;
+    preview.dataset.coverInit = '1';
+    preview.addEventListener('click', (event) => {
+      const item = event.target.closest('.image-preview-item');
+      if (!item) return;
+      const items = Array.from(preview.querySelectorAll('.image-preview-item'));
+      const index = items.indexOf(item);
+      if (index >= 0) setCoverIndex(index);
+    });
+    setCoverIndex(readCoverIndex());
+  }
+
+  function readDraft() {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function writeDraft() {
+    const form = document.getElementById('create-post-form');
+    if (!form) return;
+    const data = { step: 1 };
+    DRAFT_FIELDS.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) data[id] = el.value;
+    });
+    const active = form.querySelector('.post-wizard-step.is-active');
+    if (active) data.step = parseInt(active.dataset.step || '1', 10);
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+  }
+
+  function clearDraft() {
+    localStorage.removeItem(DRAFT_KEY);
+  }
+
+  function applyDraft(draft) {
+    if (!draft) return;
+    DRAFT_FIELDS.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el && draft[id] != null) el.value = draft[id];
+    });
+  }
+
+  function initDraftStorage(goToStep) {
+    const banner = document.getElementById('wizard-draft-banner');
+    const restoreBtn = document.getElementById('wizard-draft-restore');
+    const discardBtn = document.getElementById('wizard-draft-discard');
+    const form = document.getElementById('create-post-form');
+    if (!form) return;
+
+    const existing = readDraft();
+    if (existing && banner) {
+      banner.hidden = false;
+    }
+
+    restoreBtn?.addEventListener('click', () => {
+      const draft = readDraft();
+      applyDraft(draft);
+      if (draft?.step) goToStep(draft.step, { skipValidate: true, focus: false });
+      if (banner) banner.hidden = true;
+    });
+
+    discardBtn?.addEventListener('click', () => {
+      clearDraft();
+      if (banner) banner.hidden = true;
+    });
+
+    let timer = null;
+    const scheduleSave = () => {
+      clearTimeout(timer);
+      timer = setTimeout(writeDraft, 400);
+    };
+    DRAFT_FIELDS.forEach((id) => {
+      document.getElementById(id)?.addEventListener('input', scheduleSave);
+      document.getElementById(id)?.addEventListener('change', scheduleSave);
+    });
+    form.addEventListener('change', scheduleSave);
+  }
+
   function buildPreviewHtml(labels) {
     const title = fieldValue('title');
     const body = fieldValue('body');
@@ -123,9 +235,13 @@
     const phone = fieldValue('phone');
     const price = formatPrice(fieldValue('price'));
     const images = collectPreviewImages();
+    const coverIdx = readCoverIndex();
+    const ordered = images.length
+      ? [images[coverIdx] || images[0], ...images.filter((_, i) => i !== coverIdx)]
+      : [];
 
-    const gallery = images.length
-      ? `<div class="post-submit-preview-gallery">${images
+    const gallery = ordered.length
+      ? `<div class="post-submit-preview-gallery">${ordered
           .map((src) => `<img src="${src}" alt="">`)
           .join('')}</div>`
       : `<div class="post-submit-preview-placeholder"><i data-lucide="image" class="icon icon-xl" aria-hidden="true"></i><span>Без фото</span></div>`;
@@ -191,17 +307,60 @@
     panel.dataset.editUrl = data.edit_url;
     panel.dataset.postId = data.post_id;
     panel.dataset.postTitle = data.title;
-    panel.dataset.viewUrl = data.view_url;
+    panel.dataset.viewUrl = data.view_url || '';
+    panel.dataset.moderationPending = data.moderation_pending ? '1' : '0';
     delete panel.dataset.publishInit;
 
     const pageTitle = document.getElementById('wizard-page-title');
     const stepLabel = document.getElementById('wizard-step-label');
     const progressBar = document.getElementById('wizard-progress-bar');
+    const moderationPending = Boolean(data.moderation_pending);
     if (pageTitle) pageTitle.textContent = 'Готово';
-    if (stepLabel) stepLabel.textContent = 'Опубликовано';
+    if (stepLabel) {
+      stepLabel.textContent = moderationPending ? 'На проверке' : 'Опубликовано';
+    }
     if (progressBar) progressBar.style.width = '100%';
 
-    document.body.classList.add('publish-success-gate');
+    const headline = panel.querySelector('[data-success-headline]');
+    const lead = panel.querySelector('[data-success-lead]');
+    const openBtn = panel.querySelector('#open-post-btn');
+    const openLabel = openBtn?.querySelector('span');
+    const openIcon = openBtn?.querySelector('.icon');
+    const editBtn = panel.querySelector('#edit-post-btn');
+
+    if (headline) {
+      headline.textContent = moderationPending
+        ? 'Отправлено на проверку'
+        : 'Объявление опубликовано';
+    }
+    if (lead) {
+      lead.textContent = moderationPending
+        ? 'Сейчас объявление видите только вы. После одобрения оно появится в каталоге.'
+        : 'Объявление уже в каталоге. Сохраните ссылку — без неё редактировать не получится.';
+    }
+    if (openBtn && data.view_url) {
+      openBtn.href = data.view_url;
+      openBtn.hidden = false;
+    }
+    if (openLabel) {
+      openLabel.textContent = moderationPending ? 'Посмотреть объявление' : 'Открыть объявление';
+    }
+    if (openIcon) {
+      openIcon.setAttribute('data-lucide', moderationPending ? 'eye' : 'external-link');
+    }
+    if (editBtn && data.edit_url) {
+      editBtn.href = data.edit_url;
+    }
+
+    const iconWrap = panel.querySelector('.publish-success-icon');
+    const heroIcon = panel.querySelector('.publish-success-icon .icon');
+    if (iconWrap) {
+      iconWrap.classList.toggle('publish-success-icon--pending', moderationPending);
+      iconWrap.classList.toggle('publish-success-icon--published', !moderationPending);
+    }
+    if (heroIcon) {
+      heroIcon.setAttribute('data-lucide', moderationPending ? 'clock' : 'check-circle-2');
+    }
 
     if (window.initPublishSuccess) window.initPublishSuccess(panel);
     if (window.refreshIcons) window.refreshIcons();
@@ -248,6 +407,13 @@
       if (currentStep === TOTAL_STEPS && previewRoot) {
         previewRoot.innerHTML = buildPreviewHtml(labels);
         if (window.refreshIcons) window.refreshIcons();
+      }
+
+      if (currentStep === 4) {
+        window.requestAnimationFrame(() => {
+          initCoverPicker();
+          setCoverIndex(readCoverIndex());
+        });
       }
 
       const activeSection = steps.find((section) => parseInt(section.dataset.step, 10) === currentStep);
@@ -310,11 +476,21 @@
 
         const data = await response.json();
         if (data.ok) {
+          clearDraft();
           showSuccessStep(data);
           return;
         }
 
         showSubmitErrors(data.errors || ['Не удалось опубликовать']);
+        if (data.captcha_question) {
+          const question = document.querySelector('.captcha-question');
+          const answer = document.querySelector('.captcha-answer-input');
+          if (question) question.textContent = data.captcha_question;
+          if (answer) {
+            answer.value = '';
+            answer.focus();
+          }
+        }
         goToStep(TOTAL_STEPS, { skipValidate: true, scroll: false });
       } catch (e) {
         showSubmitErrors(['Ошибка сети. Попробуйте ещё раз.']);
@@ -328,6 +504,17 @@
     });
 
     goToStep(currentStep, { skipValidate: true, focus: false });
+    initDraftStorage(goToStep);
+    const previewRootEl = document.querySelector('.image-picker-preview');
+    if (previewRootEl && typeof MutationObserver !== 'undefined') {
+      new MutationObserver(() => {
+        initCoverPicker();
+        const count = previewRootEl.querySelectorAll('.image-preview-item').length;
+        const cover = readCoverIndex();
+        if (cover >= count) setCoverIndex(0);
+        else setCoverIndex(cover);
+      }).observe(previewRootEl, { childList: true });
+    }
   }
 
   document.addEventListener('DOMContentLoaded', initWizard);

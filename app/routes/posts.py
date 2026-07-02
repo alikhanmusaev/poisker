@@ -4,8 +4,7 @@ from app.constants import CATEGORIES, CATEGORY_LABELS, CITIES
 from app.extensions import contact_post_rate_key, contact_rate_key, limiter
 from app.forms import EditPostForm, PostForm
 from app.models import Post
-from app.routes.post_detail import render_show_page
-from app.services.captcha import extract_captcha_response, verify_captcha
+from app.services.captcha import extract_captcha_response, new_captcha_question, verify_captcha
 from app.services.phone import hash_value
 from app.services.posts import (
     BlockedPhoneError,
@@ -14,15 +13,28 @@ from app.services.posts import (
     create_post,
     delete_post,
     get_post_by_token,
-    get_public_post,
+    get_viewable_post,
     increment_contact_clicks,
+    is_post_publicly_visible,
     reveal_post_phone,
     update_post,
 )
 from app.services.seo import post_public_url
+from app.utils.post_display import form_values_for_edit, has_pending_revision, ordered_images
 from app.services.storage import upload_image
 
 bp = Blueprint("posts", __name__, url_prefix="/posts")
+
+
+def _owner_view_url(post, *, external: bool = False) -> str:
+    if is_post_publicly_visible(post):
+        return post_public_url(post, external=external)
+    return url_for(
+        "posts.show",
+        post_id=post.id,
+        token=post.edit_token,
+        _external=external,
+    )
 
 
 def _ajax_request():
@@ -39,7 +51,7 @@ def create():
     if form.validate_on_submit():
         token = extract_captcha_response()
         if not verify_captcha(token, request.remote_addr):
-            errors.append("Подтвердите, что вы не робот")
+            errors.append("Неверный ответ на проверочный вопрос")
         else:
             try:
                 images = []
@@ -47,6 +59,9 @@ def create():
                 for f in files[:5]:
                     if f and f.filename:
                         images.append(upload_image(f))
+                cover_index = request.form.get("cover_index", type=int)
+                if cover_index is None:
+                    cover_index = 0
                 data = {
                     "title": form.title.data,
                     "seller_name": form.seller_name.data,
@@ -56,6 +71,7 @@ def create():
                     "phone": form.phone.data,
                     "price": form.price.data,
                     "images": images,
+                    "cover_index": cover_index,
                 }
                 ip_hash = hash_value(request.remote_addr or "unknown")
                 post = create_post(data, ip_hash=ip_hash)
@@ -65,8 +81,10 @@ def create():
                         "ok": True,
                         "post_id": post.id,
                         "edit_url": edit_url,
-                        "view_url": post_public_url(post, external=True),
+                        "view_url": _owner_view_url(post, external=True),
                         "title": post.title,
+                        "status": post.status,
+                        "moderation_pending": post.status == "pending",
                     }
                 return redirect(url_for("posts.success", post_id=post.id, token=post.edit_token))
             except PostLimitError:
@@ -85,7 +103,10 @@ def create():
             for field_errors in form.errors.values():
                 errors.extend(field_errors)
         if is_ajax:
-            return {"ok": False, "errors": errors or ["Проверьте поля формы"]}, 400
+            payload = {"ok": False, "errors": errors or ["Проверьте поля формы"]}
+            if any("проверочный вопрос" in err.lower() for err in errors):
+                payload["captcha_question"] = new_captcha_question()
+            return payload, 400
 
     return render_template(
         "posts/create.html",
@@ -108,7 +129,7 @@ def success(post_id):
     if not post:
         return render_template("errors/404.html"), 404
     edit_url = url_for("posts.edit", post_id=post.id, token=token, _external=True)
-    view_url = post_public_url(post, external=True)
+    view_url = _owner_view_url(post, external=True)
     return render_template(
         "posts/success.html",
         post=post,
@@ -116,6 +137,7 @@ def success(post_id):
         title=post.title,
         edit_url=edit_url,
         view_url=view_url,
+        moderation_pending=post.status == "pending",
     )
 
 
@@ -153,14 +175,30 @@ def meta(post_id):
 @bp.route("/<post_id>")
 @limiter.limit("120 per minute")
 def show(post_id):
-    post = get_public_post(post_id)
+    token = request.args.get("token", "")
+    post = get_viewable_post(post_id, token=token or None)
     if not post:
         from flask import abort
 
         abort(404)
-    if post.slug:
+
+    owner_preview = post.status in ("pending", "hidden") or bool(
+        token and post.edit_token == token and not is_post_publicly_visible(post)
+    )
+
+    if is_post_publicly_visible(post) and post.slug:
         return redirect(post_public_url(post), code=301)
-    return render_show_page(post)
+
+    from app.routes.post_detail import build_show_context
+
+    ctx = build_show_context(post, owner_preview=owner_preview, owner_token=token or None)
+    if owner_preview:
+        ctx["robots"] = "noindex, nofollow"
+    if is_post_publicly_visible(post):
+        from app.services.posts import increment_views
+
+        increment_views(post)
+    return render_template("posts/show.html", **ctx)
 
 
 @bp.route("/<post_id>/contact", methods=["GET", "POST"])
@@ -170,8 +208,13 @@ def contact(post_id):
     if request.method == "GET":
         return {"error": "Используйте POST для раскрытия телефона"}, 405
 
-    post = get_public_post(post_id)
+    token = request.args.get("token", "") or request.form.get("token", "")
+    post = get_viewable_post(post_id, token=token or None)
     if not post:
+        from flask import abort
+
+        abort(404)
+    if post.status == "pending" and not (token and get_post_by_token(post_id, token)):
         from flask import abort
 
         abort(404)
@@ -191,8 +234,18 @@ def edit(post_id):
     if not post:
         return render_template("errors/404.html"), 404
 
-    form = EditPostForm(obj=post)
+    form = EditPostForm()
+    edit_values = form_values_for_edit(post)
+    if request.method == "GET":
+        form.title.data = edit_values["title"]
+        form.body.data = edit_values["body"]
+        form.seller_name.data = post.seller_name
+        form.category.data = post.category
+        form.city.data = post.city
+        form.price.data = post.price
+
     errors = []
+    moderation_notice = False
     if request.method == "POST" and form.validate_on_submit():
         try:
             images = list(post.images or [])
@@ -204,6 +257,16 @@ def edit(post_id):
             for f in files[:remaining_slots]:
                 if f and f.filename:
                     images.append(upload_image(f))
+
+            image_order = [u for u in request.form.getlist("image_order") if u]
+            if image_order:
+                ordered = [u for u in image_order if u in images]
+                images = ordered + [u for u in images if u not in ordered]
+
+            cover_index = request.form.get("cover_index", type=int)
+            if cover_index is None:
+                cover_index = edit_values["cover_index"]
+
             data = {
                 "title": form.title.data,
                 "seller_name": form.seller_name.data,
@@ -212,14 +275,22 @@ def edit(post_id):
                 "city": form.city.data,
                 "price": form.price.data,
                 "images": images,
+                "cover_index": cover_index,
             }
             update_post(post, data)
-            flash("Объявление обновлено", "success")
+            moderation_notice = has_pending_revision(post)
+            flash(
+                "Изменения отправлены на проверку. Объявление остаётся онлайн."
+                if moderation_notice
+                else "Объявление обновлено",
+                "success",
+            )
             return redirect(url_for("posts.edit", post_id=post.id, token=token))
         except ValidationError as e:
             errors.append(str(e))
 
     owner_phone = reveal_post_phone(post)
+    display_images = ordered_images(post)
 
     return render_template(
         "posts/edit.html",
@@ -230,6 +301,11 @@ def edit(post_id):
         errors=errors,
         cities=CITIES,
         categories=CATEGORY_LABELS,
+        edit_images=edit_values["images"],
+        cover_index=edit_values["cover_index"],
+        pending_revision=post.pending_revision,
+        moderation_notice=has_pending_revision(post),
+        display_images=display_images,
     )
 
 

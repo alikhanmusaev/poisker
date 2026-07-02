@@ -23,17 +23,23 @@ function viewUrlForPostId(postId) {
 
 function viewUrlForPost(item) {
   if (!item) return '';
-  if (item.viewUrl) return item.viewUrl;
-  const fromId = viewUrlForPostId(item.postId);
-  if (fromId) return fromId;
-  if (!item.url) return '';
-  try {
-    const parsed = new URL(item.url, window.location.origin);
-    const match = parsed.pathname.match(/^\/posts\/([^/]+)\/edit\/?$/);
-    if (match) {
-      return `${parsed.origin}/posts/${match[1]}`;
+  let token = '';
+  if (item.url) {
+    try {
+      token = new URL(item.url, window.location.origin).searchParams.get('token') || '';
+    } catch (e) {}
+  }
+  if (item.viewUrl) {
+    if (token && !item.viewUrl.includes('token=')) {
+      const joiner = item.viewUrl.includes('?') ? '&' : '?';
+      return `${item.viewUrl}${joiner}token=${encodeURIComponent(token)}`;
     }
-  } catch (e) {}
+    return item.viewUrl;
+  }
+  if (item.postId) {
+    const base = `${window.location.origin}/posts/${item.postId}`;
+    return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+  }
   return '';
 }
 

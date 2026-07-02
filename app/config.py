@@ -115,19 +115,6 @@ class ProductionConfig(Config):
                 ", ".join(weak),
             )
             raise RuntimeError(f"Production requires strong values for: {', '.join(weak)}")
-        if app.config["REQUIRE_CAPTCHA"]:
-            provider = app.config.get("CAPTCHA_PROVIDER", "builtin").lower()
-            if provider == "yandex" and (
-                not app.config.get("SMARTCAPTCHA_SITE_KEY") or not app.config.get("SMARTCAPTCHA_SECRET_KEY")
-            ):
-                raise RuntimeError(
-                    "Production requires SMARTCAPTCHA_SITE_KEY and SMARTCAPTCHA_SECRET_KEY "
-                    "(get keys at https://console.yandex.cloud/folders/*/smartcaptcha)"
-                )
-            if provider == "turnstile" and (
-                not app.config.get("TURNSTILE_SITE_KEY") or not app.config.get("TURNSTILE_SECRET_KEY")
-            ):
-                raise RuntimeError("Production requires TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY")
 
 
 config_by_name = {

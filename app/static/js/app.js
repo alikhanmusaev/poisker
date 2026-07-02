@@ -1,7 +1,9 @@
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    const staticVersion = document.querySelector('meta[name="static-version"]')?.content;
+    const swUrl = staticVersion ? `/sw.js?v=${encodeURIComponent(staticVersion)}` : '/sw.js';
     navigator.serviceWorker
-      .register('/sw.js')
+      .register(swUrl)
       .then((reg) => {
         reg.addEventListener('updatefound', () => {
           const worker = reg.installing;

@@ -1,10 +1,15 @@
-"""Generate PWA / Google Play icons (any + maskable safe zone)."""
+"""Generate PWA / Google Play icons from brand assets."""
 
 import os
 
 from PIL import Image, ImageDraw, ImageFont
 
 ICONS_DIR = os.path.join(os.path.dirname(__file__), "app", "static", "icons")
+BRAND_DIR = os.path.join(os.path.dirname(__file__), "app", "static", "brand")
+BRAND_ICON_SOURCE = os.path.join(BRAND_DIR, "icon-source.png")
+BRAND_LOGO_SOURCE = os.path.join(BRAND_DIR, "logo-source.png")
+BRAND_ICON = os.path.join(BRAND_DIR, "icon.png")
+BRAND_LOGO = os.path.join(BRAND_DIR, "logo.png")
 DEMO_DIR = os.path.join(os.path.dirname(__file__), "app", "static", "demo")
 
 DEMO_COLORS = {
@@ -27,8 +32,8 @@ DEMO_COLORS = {
     "drugoe": "#6b7280",
 }
 
-
 BRAND = "#b91c1c"
+BRAND_RGB = (185, 28, 28)
 
 
 def _demo_image(slug: str, label: str) -> None:
@@ -66,50 +71,107 @@ def _font(size: int):
         return ImageFont.load_default()
 
 
-def _render(size: int, maskable: bool) -> Image.Image:
-    img = Image.new("RGBA", (size, size), BRAND)
-    draw = ImageDraw.Draw(img)
+def _is_dark_pixel(r: int, g: int, b: int, a: int) -> bool:
+    if a < 20:
+        return False
+    return max(r, g, b) < 64
 
-    if maskable:
-        safe = int(size * 0.8)
-        offset = (size - safe) // 2
-        draw.rounded_rectangle(
-            [offset, offset, offset + safe, offset + safe],
-            radius=safe // 8,
-            fill="#ffffff",
-        )
-    else:
-        margin = size // 6
-        draw.rounded_rectangle(
-            [margin, margin, size - margin, size - margin],
-            radius=size // 10,
-            fill="#ffffff",
-        )
 
-    text = "П"
-    font = _font(size // 4)
-    bbox = draw.textbbox((0, 0), text, font=font)
-    tw = bbox[2] - bbox[0]
-    th = bbox[3] - bbox[1]
-    draw.text(
-        ((size - tw) / 2, (size - th) / 2 - size * 0.02),
-        text,
-        fill=BRAND,
-        font=font,
-    )
-    return img
+def tint_logo_to_brand(image: Image.Image) -> Image.Image:
+    source = image.convert("RGBA")
+    tinted = Image.new("RGBA", source.size)
+    src_px = source.load()
+    out_px = tinted.load()
+    for y in range(source.height):
+        for x in range(source.width):
+            r, g, b, a = src_px[x, y]
+            if a < 20:
+                out_px[x, y] = (0, 0, 0, 0)
+            elif _is_dark_pixel(r, g, b, a):
+                out_px[x, y] = (*BRAND_RGB, a)
+            else:
+                out_px[x, y] = (r, g, b, a)
+    return tinted
+
+
+def tint_icon_to_brand(image: Image.Image) -> Image.Image:
+    """Red app icon with a white lightning cutout."""
+    source = image.convert("RGBA")
+    tinted = Image.new("RGBA", source.size, (*BRAND_RGB, 255))
+    src_px = source.load()
+    out_px = tinted.load()
+    for y in range(source.height):
+        for x in range(source.width):
+            _r, _g, _b, a = src_px[x, y]
+            if a >= 250:
+                continue
+            if a < 20:
+                out_px[x, y] = (255, 255, 255, 255)
+                continue
+            t = 1.0 - (a / 255.0)
+            out_px[x, y] = (
+                int(255 * t + BRAND_RGB[0] * (1 - t)),
+                int(255 * t + BRAND_RGB[1] * (1 - t)),
+                int(255 * t + BRAND_RGB[2] * (1 - t)),
+                255,
+            )
+    return tinted
+
+
+def _resolve_source(path: str, fallback: str) -> str:
+    if os.path.isfile(path):
+        return path
+    if os.path.isfile(fallback):
+        return fallback
+    raise FileNotFoundError(f"Brand asset not found: {path}")
+
+
+def prepare_brand_assets():
+    os.makedirs(BRAND_DIR, exist_ok=True)
+    icon_source = _resolve_source(BRAND_ICON_SOURCE, BRAND_ICON)
+    logo_source = _resolve_source(BRAND_LOGO_SOURCE, BRAND_LOGO)
+    tint_icon_to_brand(Image.open(icon_source)).save(BRAND_ICON, "PNG")
+    tint_logo_to_brand(Image.open(logo_source)).save(BRAND_LOGO, "PNG")
+
+
+def _load_brand_icon() -> Image.Image:
+    if not os.path.isfile(BRAND_ICON):
+        prepare_brand_assets()
+    return Image.open(BRAND_ICON).convert("RGBA")
+
+
+def _render(size: int) -> Image.Image:
+    source = _load_brand_icon()
+    return source.resize((size, size), Image.Resampling.LANCZOS)
+
+
+def _render_maskable(size: int) -> Image.Image:
+    """Keep the lightning inside Android's 80% safe zone."""
+    source = _load_brand_icon()
+    canvas = Image.new("RGBA", (size, size), (*BRAND_RGB, 255))
+    inner = int(size * 0.8)
+    offset = (size - inner) // 2
+    scaled = source.resize((inner, inner), Image.Resampling.LANCZOS)
+    canvas.paste(scaled, (offset, offset), scaled)
+    return canvas
 
 
 def generate():
+    prepare_brand_assets()
     os.makedirs(ICONS_DIR, exist_ok=True)
-    for size, maskable, name in (
-        (192, False, "icon-192.png"),
-        (512, False, "icon-512.png"),
-        (192, True, "icon-maskable-192.png"),
-        (512, True, "icon-maskable-512.png"),
+    for size, name in (
+        (32, "favicon-32.png"),
+        (180, "icon-180.png"),
+        (192, "icon-192.png"),
+        (512, "icon-512.png"),
     ):
-        _render(size, maskable).save(os.path.join(ICONS_DIR, name), "PNG")
-    print("Icons generated (any + maskable)")
+        _render(size).save(os.path.join(ICONS_DIR, name), "PNG")
+    for size, name in (
+        (192, "icon-maskable-192.png"),
+        (512, "icon-maskable-512.png"),
+    ):
+        _render_maskable(size).save(os.path.join(ICONS_DIR, name), "PNG")
+    print("Icons generated from brand/icon.png")
     try:
         generate_demo_images()
     except Exception as e:

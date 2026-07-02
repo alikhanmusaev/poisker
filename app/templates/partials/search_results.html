@@ -4,31 +4,7 @@
     {% for item in results %}
       {% set post = item.post %}
       {% set highlight = item.highlight %}
-      <article class="post-card" data-post-card data-post-id="{{ post.id }}">
-        <a href="{{ post_public_url(post) }}" class="post-card-link">
-          {% if post.images and post.images[0] %}
-            <img src="{{ image_url(post.images[0]) }}" alt="" class="post-card-img" loading="lazy">
-          {% else %}
-            <div class="post-card-img post-card-img-placeholder">📷</div>
-          {% endif %}
-          <div class="post-card-body">
-            {% if post.is_promoted %}
-              <span class="badge badge-promoted">Поднято</span>
-            {% endif %}
-            <h3 class="post-card-title">
-              {% if highlight.title %}{{ highlight.title|safe }}{% else %}{{ post.title }}{% endif %}
-            </h3>
-            {% if post.price is not none %}
-              <p class="post-card-price">{{ "{:,}".format(post.price).replace(",", " ") }} ₽</p>
-            {% endif %}
-            <p class="post-card-meta">{{ cities.get(post.city, post.city) }}</p>
-          </div>
-        </a>
-        <a href="#" class="post-card-edit btn btn-secondary btn-sm" data-post-card-edit data-post-id="{{ post.id }}" hidden>
-          <i data-lucide="pencil" class="icon icon-sm" aria-hidden="true"></i>
-          <span>Редактировать</span>
-        </a>
-      </article>
+      {% include "partials/post_card.html" %}
     {% endfor %}
   </div>
 {% elif query %}

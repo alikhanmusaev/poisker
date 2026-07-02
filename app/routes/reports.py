@@ -18,7 +18,7 @@ def report_post(post_id):
     if form.validate_on_submit():
         token = extract_captcha_response()
         if not verify_captcha(token, request.remote_addr):
-            flash("Подтвердите, что вы не робот", "error")
+            flash("Неверный ответ на проверочный вопрос", "error")
         else:
             ip_hash = hash_value(request.remote_addr or "unknown")
             existing = Report.query.filter_by(post_id=post_id, ip_hash=ip_hash).first()
