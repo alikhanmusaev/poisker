@@ -121,6 +121,8 @@ def listing_canonical_url(**ctx) -> str:
             ctx.get("query"),
             ctx.get("price_min"),
             ctx.get("price_max"),
+            ctx.get("with_photo"),
+            ctx.get("with_price"),
             page > 1,
         ]
     )
@@ -143,6 +145,10 @@ def listing_canonical_url(**ctx) -> str:
         params["price_min"] = ctx["price_min"]
     if ctx.get("price_max"):
         params["price_max"] = ctx["price_max"]
+    if ctx.get("with_photo"):
+        params["with_photo"] = 1
+    if ctx.get("with_price"):
+        params["with_price"] = 1
     if ctx.get("sort"):
         params["sort"] = ctx["sort"]
     if page > 1:

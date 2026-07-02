@@ -3,7 +3,8 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from app.extensions import limiter
 from app.forms import ReportForm
 from app.models import Post, Report
-from app.services.captcha import extract_captcha_response, verify_captcha
+from app.services.captcha import captcha_error_message, extract_captcha_response, verify_captcha
+from app.services.phone import hash_value
 from app.services.ranking import maybe_auto_hide
 from app.services.seo import post_public_url
 
@@ -18,7 +19,7 @@ def report_post(post_id):
     if form.validate_on_submit():
         token = extract_captcha_response()
         if not verify_captcha(token, request.remote_addr):
-            flash("Неверный ответ на проверочный вопрос", "error")
+            flash(captcha_error_message(), "error")
         else:
             ip_hash = hash_value(request.remote_addr or "unknown")
             existing = Report.query.filter_by(post_id=post_id, ip_hash=ip_hash).first()

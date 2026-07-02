@@ -75,6 +75,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
   syncImageOrder();
 
+  function readLimits() {
+    return {
+      titleMin: parseInt(editForm?.dataset.titleMin || '5', 10),
+      titleMax: parseInt(editForm?.dataset.titleMax || '100', 10),
+      bodyMin: parseInt(editForm?.dataset.bodyMin || '20', 10),
+      bodyMax: parseInt(editForm?.dataset.bodyMax || '3000', 10),
+    };
+  }
+
+  function validateEditForm() {
+    if (!editForm) return true;
+    const { titleMin, titleMax, bodyMin, bodyMax } = readLimits();
+    const title = editForm.querySelector('[name="title"]');
+    const body = editForm.querySelector('[name="body"]');
+    const titleVal = title?.value.trim() || '';
+    const bodyVal = body?.value.trim() || '';
+    if (titleVal.length < titleMin) {
+      window.alert(`Заголовок — минимум ${titleMin} символов`);
+      title?.focus();
+      return false;
+    }
+    if (titleVal.length > titleMax) {
+      window.alert(`Заголовок — максимум ${titleMax} символов`);
+      title?.focus();
+      return false;
+    }
+    if (bodyVal.length < bodyMin) {
+      window.alert(`Описание — минимум ${bodyMin} символов`);
+      body?.focus();
+      return false;
+    }
+    if (bodyVal.length > bodyMax) {
+      window.alert(`Описание — максимум ${bodyMax} символов`);
+      body?.focus();
+      return false;
+    }
+    return true;
+  }
+
   editForm?.addEventListener('submit', async (event) => {
     syncImageOrder();
     if (editForm.dataset.confirmed === '1') {
@@ -82,6 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     event.preventDefault();
+    if (!validateEditForm()) return;
     const ok = await confirmDialog({
       title: 'Сохранить изменения?',
       message: 'Изменения заголовка, описания или фото отправятся на проверку. Остальные поля применятся сразу.',

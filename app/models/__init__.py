@@ -37,6 +37,8 @@ class Post(db.Model):
     paid_boost = db.Column(db.Float, nullable=False, default=1.0)
     bumped_at = db.Column(db.DateTime(timezone=True), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, index=True)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    deleted_at = db.Column(db.DateTime(timezone=True), nullable=True)
     expires_at = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
 
     reports = db.relationship("Report", backref="post", lazy="dynamic", cascade="all, delete-orphan")

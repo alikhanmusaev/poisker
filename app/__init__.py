@@ -93,7 +93,17 @@ def create_app(config_name=None):
     def inject_globals():
         from datetime import timezone
 
-        from app.constants import CATEGORIES, CATEGORY_ICONS, CATEGORY_LABELS, CITIES, SORT_OPTIONS
+        from app.constants import (
+            CATEGORIES,
+            CATEGORY_ICONS,
+            CATEGORY_LABELS,
+            CITIES,
+            POST_BODY_MAX_LEN,
+            POST_BODY_MIN_LEN,
+            POST_TITLE_MAX_LEN,
+            POST_TITLE_MIN_LEN,
+            SORT_OPTIONS,
+        )
         from app.models import utcnow
         from app.routes.media import resolve_image_url
 
@@ -124,6 +134,7 @@ def create_app(config_name=None):
 
         from app.services.captcha import (
             captcha_enabled,
+            captcha_prompt,
             captcha_provider,
             captcha_site_key,
             ensure_captcha_challenge,
@@ -146,6 +157,7 @@ def create_app(config_name=None):
             "captcha_provider": provider,
             "captcha_site_key": captcha_site_key(),
             "captcha_question": ensure_captcha_challenge() if captcha_enabled() else "",
+            "captcha_prompt": captcha_prompt() if captcha_enabled() else "",
             "support_email": app.config.get("SUPPORT_EMAIL", ""),
             "app_domain": app.config.get("APP_DOMAIN", ""),
             "site_name": site_name(),
@@ -156,6 +168,10 @@ def create_app(config_name=None):
             "ordered_images": ordered_images,
             "cover_image": cover_image,
             "relative_time": relative_time,
+            "post_title_min_len": POST_TITLE_MIN_LEN,
+            "post_title_max_len": POST_TITLE_MAX_LEN,
+            "post_body_min_len": POST_BODY_MIN_LEN,
+            "post_body_max_len": POST_BODY_MAX_LEN,
         }
 
     @app.errorhandler(404)

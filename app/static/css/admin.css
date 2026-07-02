@@ -63,11 +63,5 @@
   vertical-align: middle;
 }
 .admin-preview-banner {
-  margin: 0 0 16px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-  color: #9a3412;
-  font-size: 14px;
+  margin-bottom: 16px;
 }

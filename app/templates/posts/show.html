@@ -16,14 +16,23 @@
 {% endblock %}
 {% block content %}
 {% if admin_preview %}
-<p class="admin-preview-banner" role="status">
-  Предпросмотр для администратора.
-  {% if post.status == 'pending' %}Объявление ожидает модерации.{% endif %}
-</p>
+<div class="admin-preview-banner" role="status">
+  <i data-lucide="shield-alert" class="icon admin-preview-banner-icon" aria-hidden="true"></i>
+  <div class="admin-preview-banner-text">
+    <strong class="admin-preview-banner-title">Предпросмотр для администратора</strong>
+    {% if post.status == 'pending' %}
+    <span class="admin-preview-banner-desc">Объявление ожидает модерации.</span>
+    {% endif %}
+  </div>
+</div>
 {% elif owner_preview and post.status == 'pending' %}
-<p class="admin-preview-banner" role="status">
-  Объявление на модерации. Так его видите только вы — после одобрения оно появится в общем каталоге.
-</p>
+<div class="admin-preview-banner admin-preview-banner-owner" role="status">
+  <i data-lucide="clock" class="icon admin-preview-banner-icon" aria-hidden="true"></i>
+  <div class="admin-preview-banner-text">
+    <strong class="admin-preview-banner-title">Объявление на модерации</strong>
+    <span class="admin-preview-banner-desc">Так его видите только вы — после одобрения оно появится в общем каталоге.</span>
+  </div>
+</div>
 {% endif %}
 <article class="page-card post-detail"
          data-post-detail
@@ -142,6 +151,19 @@
       Показать телефон
     </button>
     <p id="contact-error" class="flash flash-error" role="alert" hidden></p>
+    <div id="contact-captcha" class="contact-captcha" hidden>
+      <label class="field-label" for="captcha-answer-contact">
+        <span class="captcha-prompt">Проверка</span>
+        <strong class="captcha-question" id="contact-question"></strong>
+      </label>
+      <input
+        type="text"
+        class="field-input captcha-answer-input"
+        name="captcha_answer"
+        id="captcha-answer-contact"
+        autocomplete="off"
+        aria-label="Ответ на проверочный вопрос">
+    </div>
     <p id="phone-display" class="phone-display hidden">
       <a id="phone-link" class="phone-link" href="#">
         <i data-lucide="phone" class="icon" aria-hidden="true"></i>

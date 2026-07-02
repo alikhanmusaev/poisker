@@ -21,6 +21,10 @@ bp = Blueprint("main", __name__)
 PER_PAGE = 20
 
 
+def _flag_enabled(name: str) -> bool:
+    return request.args.get(name, "").lower() in ("1", "true", "yes", "on")
+
+
 def _normalize_price(value: int | None) -> int | None:
     if value is None or value < 0:
         return None
@@ -36,8 +40,8 @@ def _listing_context(*, fixed_city: str | None = None, fixed_category: str | Non
     price_max = _normalize_price(request.args.get("price_max", type=int) or parsed["price_max"])
     if price_min is not None and price_max is not None and price_min > price_max:
         price_min, price_max = price_max, price_min
-    with_photo = False
-    with_price = False
+    with_photo = _flag_enabled("with_photo")
+    with_price = _flag_enabled("with_price")
     sort = request.args.get("sort", "")
     if sort not in SORT_OPTIONS:
         sort = DEFAULT_SEARCH_SORT if parsed["text"] else DEFAULT_SORT

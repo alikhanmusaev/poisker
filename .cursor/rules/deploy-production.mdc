@@ -1,0 +1,46 @@
+---
+description: После изменений — push в master и деплой на poisker.ru
+alwaysApply: true
+---
+
+# Деплой: GitHub master + production
+
+После завершения любой задачи с изменениями в коде Poisker **обязательно**:
+
+1. Прогнать `pytest`
+2. Закоммитить изменения
+3. Влить в `master` и выполнить `git push origin master`
+4. Задеплоить на production-сервер
+
+## Production
+
+- Сервер: `root@161.104.51.103`
+- Путь: `/opt/poisker`
+- Домен: `https://poisker.ru`
+- Репозиторий: `https://github.com/alikhanmusaev/poisker.git` (ветка `master`)
+
+## Команды деплоя
+
+```bash
+# Синхронизация кода (не перезаписывать .env на сервере)
+rsync -az --delete \
+  --exclude '.venv' --exclude '__pycache__' --exclude '.pytest_cache' \
+  --exclude '.git' --exclude '*.db' --exclude '.env' \
+  ./ root@161.104.51.103:/opt/poisker/
+
+# Пересборка и перезапуск
+ssh root@161.104.51.103 'cd /opt/poisker && \
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache web scheduler && \
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d web scheduler nginx'
+```
+
+Миграции применяются автоматически при старте `web` (`RUN_DB_UPGRADE=true`).
+
+## В конце ответа пользователю
+
+Кратко сообщить:
+- что запушено в `master` (коммит/хеш)
+- что задеплоено на production
+- если деплой не удался — почему и что сделать вручную
+
+Не оставлять изменения только локально, если задача завершена.

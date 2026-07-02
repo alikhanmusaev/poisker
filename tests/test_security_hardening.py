@@ -1,5 +1,7 @@
 """Regression tests for production hardening."""
 
+import time
+
 
 def test_suggest_partial_has_no_inline_click_handler(client):
     res = client.get("/suggest?q=iphone", headers={"HX-Request": "true"})
@@ -130,28 +132,52 @@ def test_captcha_skipped_when_not_required(app):
         assert verify_captcha("", None) is True
 
 
-def test_builtin_captcha_verify(app):
-    from app.services.captcha import ensure_captcha_challenge, verify_captcha
+def test_builtin_captcha_verify(app, client):
+    from app.services.captcha import verify_captcha
 
+    with app.app_context():
+        app.config["REQUIRE_CAPTCHA"] = True
     with app.test_request_context("/"):
+        from flask import session
+
+        session["captcha_challenge"] = {
+            "answer": "9",
+            "question": "4 + 5",
+            "prompt": "Сколько будет",
+            "kind": "math_digits",
+            "expires": time.time() + 600,
+        }
         with app.app_context():
-            app.config["REQUIRE_CAPTCHA"] = True
-            question = ensure_captcha_challenge()
-            answer = str(sum(int(x) for x in question.split(" + ")))
             assert verify_captcha("999") is False
-            assert verify_captcha(answer) is True
-
-
-def test_builtin_captcha_single_use(app):
-    from app.services.captcha import ensure_captcha_challenge, verify_captcha
-
-    with app.test_request_context("/"):
+        session["captcha_challenge"] = {
+            "answer": "9",
+            "question": "4 + 5",
+            "prompt": "Сколько будет",
+            "kind": "math_digits",
+            "expires": time.time() + 600,
+        }
         with app.app_context():
-            app.config["REQUIRE_CAPTCHA"] = True
-            question = ensure_captcha_challenge()
-            answer = str(sum(int(x) for x in question.split(" + ")))
-            assert verify_captcha(answer) is True
-            assert verify_captcha(answer) is False
+            assert verify_captcha("9") is True
+
+
+def test_builtin_captcha_single_use(app, client):
+    from app.services.captcha import verify_captcha
+
+    with app.app_context():
+        app.config["REQUIRE_CAPTCHA"] = True
+    with app.test_request_context("/"):
+        from flask import session
+
+        session["captcha_challenge"] = {
+            "answer": "9",
+            "question": "4 + 5",
+            "prompt": "Сколько будет",
+            "kind": "math_digits",
+            "expires": time.time() + 600,
+        }
+        with app.app_context():
+            assert verify_captcha("9") is True
+            assert verify_captcha("9") is False
 
 
 def test_security_headers_builtin_captcha_has_no_external_scripts(app, client):

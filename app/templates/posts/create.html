@@ -33,6 +33,10 @@
         class="form post-wizard-form"
         id="create-post-form"
         data-initial-step="{{ 5 if errors else 1 }}"
+        data-title-min="{{ post_title_min_len }}"
+        data-title-max="{{ post_title_max_len }}"
+        data-body-min="{{ post_body_min_len }}"
+        data-body-max="{{ post_body_max_len }}"
         novalidate>
     {{ form.hidden_tag() }}
 
@@ -40,11 +44,13 @@
       <h2 class="post-wizard-step-title" id="wizard-step-1-title">Что предлагаете?</h2>
       <div class="field">
         <label class="field-label" for="title">{{ form.title.label.text }}</label>
-        {{ form.title(class="input", id="title", placeholder="Например: Продам холодильник", required=true, minlength="5", maxlength="200") }}
+        {{ form.title(class="input", id="title", placeholder="Например: Продам холодильник", required=true, minlength=post_title_min_len, maxlength=post_title_max_len) }}
+        <p class="field-help">От {{ post_title_min_len }} до {{ post_title_max_len }} символов</p>
       </div>
       <div class="field">
         <label class="field-label" for="body">{{ form.body.label.text }}</label>
-        {{ form.body(class="input textarea", id="body", rows=6, placeholder="Опишите состояние, комплект, район…", required=true, minlength="20", maxlength="5000") }}
+        {{ form.body(class="input textarea", id="body", rows=6, placeholder="Опишите состояние, комплект, район…", required=true, minlength=post_body_min_len, maxlength=post_body_max_len) }}
+        <p class="field-help">От {{ post_body_min_len }} до {{ post_body_max_len }} символов</p>
       </div>
       <div class="post-wizard-nav">
         <button type="button" class="btn btn-primary btn-block wizard-next" data-next="2">Далее</button>

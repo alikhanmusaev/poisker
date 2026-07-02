@@ -8,6 +8,7 @@
   <a href="{{ url_for('admin.posts_list', status='revisions') }}" class="{% if status == 'revisions' %}is-active{% endif %}">Правки</a>
   <a href="{{ url_for('admin.posts_list', status='published') }}" class="{% if status == 'published' %}is-active{% endif %}">Опубликованные</a>
   <a href="{{ url_for('admin.posts_list', status='hidden') }}" class="{% if status == 'hidden' %}is-active{% endif %}">Скрытые</a>
+  <a href="{{ url_for('admin.posts_list', status='deleted') }}" class="{% if status == 'deleted' %}is-active{% endif %}">Удалённые</a>
   <a href="{{ url_for('admin.posts_list', status='all') }}" class="{% if status == 'all' %}is-active{% endif %}">Все</a>
 </nav>
 

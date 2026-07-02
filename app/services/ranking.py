@@ -128,6 +128,7 @@ def apply_promotion(post: Post, promo_type: str):
     post.bumped_at = now
     post.paid_until = now + timedelta(hours=hours)
     post.rank_score = calculate_rank_score(post)
+    post.updated_at = now
     db.session.commit()
 
 

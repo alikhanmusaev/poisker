@@ -4,7 +4,17 @@ from app.constants import CATEGORIES, CATEGORY_LABELS, CITIES
 from app.extensions import contact_post_rate_key, contact_rate_key, limiter
 from app.forms import EditPostForm, PostForm
 from app.models import Post
-from app.services.captcha import extract_captcha_response, new_captcha_question, verify_captcha
+from app.services.captcha import (
+    captcha_error_message,
+    contact_needs_captcha,
+    ensure_captcha_challenge,
+    extract_captcha_response,
+    is_captcha_locked,
+    mark_contact_revealed,
+    new_captcha_question,
+    verify_captcha,
+    verify_captcha_or_error,
+)
 from app.services.phone import hash_value
 from app.services.posts import (
     BlockedPhoneError,
@@ -51,7 +61,7 @@ def create():
     if form.validate_on_submit():
         token = extract_captcha_response()
         if not verify_captcha(token, request.remote_addr):
-            errors.append("Неверный ответ на проверочный вопрос")
+            errors.append(captcha_error_message())
         else:
             try:
                 images = []
@@ -104,8 +114,8 @@ def create():
                 errors.extend(field_errors)
         if is_ajax:
             payload = {"ok": False, "errors": errors or ["Проверьте поля формы"]}
-            if any("проверочный вопрос" in err.lower() for err in errors):
-                payload["captcha_question"] = new_captcha_question()
+            if any("робот" in err.lower() or "попыток" in err.lower() for err in errors):
+                payload["captcha_question"] = ensure_captcha_challenge() if not is_captcha_locked() else ""
             return payload, 400
 
     return render_template(
@@ -152,6 +162,8 @@ def meta(post_id):
     post = Post.query.filter_by(id=post_id).first()
     if not post:
         return {"ok": False}, 404
+    if post.status == "deleted":
+        return {"ok": False, "deleted": True}, 410
 
     can_edit = bool(token and get_post_by_token(post_id, token))
     if post.status != "published" and not can_edit:
@@ -205,26 +217,39 @@ def show(post_id):
 @limiter.limit(lambda: current_app.config["CONTACT_RATE_LIMIT"], key_func=contact_rate_key, methods=["POST"])
 @limiter.limit("20 per hour", key_func=contact_post_rate_key, methods=["POST"])
 def contact(post_id):
+    from flask import abort, jsonify
+
     if request.method == "GET":
         return {"error": "Используйте POST для раскрытия телефона"}, 405
 
     token = request.args.get("token", "") or request.form.get("token", "")
     post = get_viewable_post(post_id, token=token or None)
     if not post:
-        from flask import abort
-
         abort(404)
     if post.status == "pending" and not (token and get_post_by_token(post_id, token)):
-        from flask import abort
-
         abort(404)
+
+    if contact_needs_captcha(post_id):
+        answer = extract_captcha_response()
+        ok, error, question = verify_captcha_or_error(answer, request.remote_addr)
+        if not ok:
+            payload = {
+                "error": error or captcha_error_message(),
+                "captcha_required": True,
+            }
+            if question:
+                payload["captcha_question"] = question
+            elif not is_captcha_locked():
+                payload["captcha_question"] = ensure_captcha_challenge()
+            return jsonify(payload), 403
 
     phone = reveal_post_phone(post)
     if not phone:
-        return {"error": "Телефон недоступен для этого объявления"}, 404
+        return jsonify({"error": "Телефон недоступен для этого объявления"}), 404
 
+    mark_contact_revealed(post_id)
     increment_contact_clicks(post)
-    return {"phone": phone}
+    return jsonify({"phone": phone})
 
 
 @bp.route("/<post_id>/edit", methods=["GET", "POST"])

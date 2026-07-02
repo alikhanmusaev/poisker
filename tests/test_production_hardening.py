@@ -71,7 +71,10 @@ def test_delete_with_valid_token(client, app):
     with app.app_context():
         from app.models import Post
 
-        assert Post.query.get(post["id"]) is None
+        deleted = Post.query.get(post["id"])
+        assert deleted is not None
+        assert deleted.status == "deleted"
+        assert deleted.deleted_at is not None
 
 
 def test_delete_with_wrong_token_denied(client, app):

@@ -143,7 +143,13 @@ REPORT_REASONS = {
     "other": "Другое",
 }
 
-POST_STATUSES = ("draft", "pending", "published", "hidden", "expired")
+POST_STATUSES = ("draft", "pending", "published", "hidden", "expired", "deleted")
+
+POST_TITLE_MIN_LEN = 5
+POST_TITLE_MAX_LEN = 100
+POST_BODY_MIN_LEN = 20
+POST_BODY_MAX_LEN = 3000
+POST_TITLE_DB_MAX_LEN = 200
 
 POST_STATUS_LABELS = {
     "draft": "Черновик",
@@ -151,6 +157,7 @@ POST_STATUS_LABELS = {
     "published": "Опубликовано",
     "hidden": "Скрыто",
     "expired": "Истекло",
+    "deleted": "Удалено",
 }
 
 PROMOTION_TYPES = {

@@ -2,13 +2,29 @@ from flask_wtf import FlaskForm
 from wtforms import IntegerField, PasswordField, SelectField, StringField, TextAreaField
 from wtforms.validators import DataRequired, Length, Optional
 
-from app.constants import CATEGORIES, CATEGORY_LABELS, CITIES, REPORT_REASONS
+from app.constants import (
+    CATEGORIES,
+    CATEGORY_LABELS,
+    CITIES,
+    POST_BODY_MAX_LEN,
+    POST_BODY_MIN_LEN,
+    POST_TITLE_DB_MAX_LEN,
+    POST_TITLE_MAX_LEN,
+    POST_TITLE_MIN_LEN,
+    REPORT_REASONS,
+)
 
 
 class PostForm(FlaskForm):
-    title = StringField("Заголовок", validators=[DataRequired(), Length(min=5, max=200)])
+    title = StringField(
+        "Заголовок",
+        validators=[DataRequired(), Length(min=POST_TITLE_MIN_LEN, max=POST_TITLE_MAX_LEN)],
+    )
     seller_name = StringField("Имя", validators=[DataRequired(), Length(min=2, max=80)])
-    body = TextAreaField("Описание", validators=[DataRequired(), Length(min=20, max=5000)])
+    body = TextAreaField(
+        "Описание",
+        validators=[DataRequired(), Length(min=POST_BODY_MIN_LEN, max=POST_BODY_MAX_LEN)],
+    )
     category = SelectField(
         "Категория",
         choices=[(k, v) for k, v in CATEGORY_LABELS.items()],
@@ -24,9 +40,15 @@ class PostForm(FlaskForm):
 
 
 class EditPostForm(FlaskForm):
-    title = StringField("Заголовок", validators=[DataRequired(), Length(min=5, max=200)])
+    title = StringField(
+        "Заголовок",
+        validators=[DataRequired(), Length(min=POST_TITLE_MIN_LEN, max=POST_TITLE_DB_MAX_LEN)],
+    )
     seller_name = StringField("Имя", validators=[DataRequired(), Length(min=2, max=80)])
-    body = TextAreaField("Описание", validators=[DataRequired(), Length(min=20, max=5000)])
+    body = TextAreaField(
+        "Описание",
+        validators=[DataRequired(), Length(min=POST_BODY_MIN_LEN, max=POST_BODY_MAX_LEN)],
+    )
     category = SelectField(
         "Категория",
         choices=[(k, v) for k, v in CATEGORY_LABELS.items()],

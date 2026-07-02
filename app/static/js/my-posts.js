@@ -28,6 +28,12 @@ async function fetchPostStatus(item) {
       if (token) url += `?token=${encodeURIComponent(token)}`;
     }
     const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (res.status === 410) {
+      try {
+        const data = await res.json();
+        if (data.deleted) return { active: false, deleted: true };
+      } catch (e) {}
+    }
     if (!res.ok) return { active: false };
     const data = await res.json();
     return {
@@ -59,6 +65,17 @@ document.addEventListener('DOMContentLoaded', () => {
     listEl.hidden = false;
 
     const statuses = await Promise.all(items.map((item) => fetchPostStatus(item)));
+
+    const deletedUrls = items
+      .filter((item, index) => statuses[index]?.deleted)
+      .map((item) => item.url);
+    if (deletedUrls.length) {
+      deletedUrls.forEach((url) => {
+        if (typeof removeSavedPost === 'function') removeSavedPost(url);
+      });
+      render();
+      return;
+    }
 
     items.forEach((item, index) => {
       const viewUrl = typeof viewUrlForPost === 'function' ? viewUrlForPost(item) : '';

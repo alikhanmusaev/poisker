@@ -2,7 +2,7 @@ from datetime import timedelta, timezone
 
 from flask import current_app, session
 
-from app.constants import CATEGORIES, CITIES
+from app.constants import CATEGORIES, CITIES, POST_BODY_MAX_LEN, POST_BODY_MIN_LEN, POST_TITLE_DB_MAX_LEN, POST_TITLE_MAX_LEN, POST_TITLE_MIN_LEN
 from app.extensions import db
 from app.models import BlockedPhone, PhoneDailyPublish, Post, utcnow
 from app.services.phone import generate_edit_token, hash_phone, mask_phone, validate_phone
@@ -65,7 +65,7 @@ def get_public_post(post_id: str) -> Post | None:
 def get_viewable_post(post_id: str, token: str | None = None) -> Post | None:
     """Public posts for everyone; pending/hidden posts for owner with edit token."""
     post = Post.query.filter_by(id=post_id).first()
-    if not post:
+    if not post or post.status == "deleted":
         return None
     if post.status == "expired" or is_post_expired(post):
         if token and post.edit_token == token:
@@ -110,8 +110,23 @@ class ValidationError(Exception):
 
 def has_post_today(phone_hash: str) -> bool:
     today = today_msk_date()
-    if PhoneDailyPublish.query.filter_by(phone_hash=phone_hash, publish_date=today).first():
-        return True
+    daily = PhoneDailyPublish.query.filter_by(phone_hash=phone_hash, publish_date=today).first()
+    if daily:
+        if daily.post_id:
+            linked = Post.query.filter_by(id=daily.post_id).first()
+            if linked and linked.status != "deleted":
+                return True
+        else:
+            start = start_of_today_msk()
+            active_today = Post.query.filter(
+                Post.phone_hash == phone_hash,
+                Post.created_at >= start,
+                Post.status.in_(["published", "hidden", "pending"]),
+            ).first()
+            if active_today:
+                return True
+        db.session.delete(daily)
+        db.session.flush()
     start = start_of_today_msk()
     return (
         Post.query.filter(
@@ -121,6 +136,14 @@ def has_post_today(phone_hash: str) -> bool:
         ).first()
         is not None
     )
+
+
+def release_daily_publish_slot(post: Post) -> None:
+    today = today_msk_date()
+    PhoneDailyPublish.query.filter_by(
+        phone_hash=post.phone_hash,
+        publish_date=today,
+    ).delete(synchronize_session=False)
 
 
 def record_phone_publish(phone_hash: str, post_id: str):
@@ -150,19 +173,41 @@ def _validate_seller_name(value: str | None) -> str:
     return seller_name
 
 
+def _validate_post_text(
+    title: str,
+    body: str,
+    *,
+    current_title: str | None = None,
+    current_body: str | None = None,
+) -> tuple[str, str]:
+    title = (title or "").strip()
+    body = (body or "").strip()
+    prev_title = (current_title or "").strip()
+    prev_body = (current_body or "").strip()
+
+    if len(title) < POST_TITLE_MIN_LEN:
+        raise ValidationError("Заголовок слишком короткий")
+    if title != prev_title and len(title) > POST_TITLE_MAX_LEN:
+        raise ValidationError(f"Заголовок слишком длинный (макс. {POST_TITLE_MAX_LEN} символов)")
+    if len(title) > POST_TITLE_DB_MAX_LEN:
+        raise ValidationError(f"Заголовок слишком длинный (макс. {POST_TITLE_DB_MAX_LEN} символов)")
+
+    if len(body) < POST_BODY_MIN_LEN:
+        raise ValidationError("Описание слишком короткое")
+    if body != prev_body and len(body) > POST_BODY_MAX_LEN:
+        raise ValidationError(f"Описание слишком длинное (макс. {POST_BODY_MAX_LEN} символов)")
+
+    return title, body
+
+
 def create_post(data: dict, ip_hash: str | None = None, *, publish: bool = False) -> Post:
     if data.get("city") not in CITIES:
         raise ValidationError("Выберите город из списка")
     if data.get("category") not in CATEGORIES:
         raise ValidationError("Выберите категорию")
 
-    title = (data.get("title") or "").strip()
-    body = (data.get("body") or "").strip()
+    title, body = _validate_post_text(data.get("title", ""), data.get("body", ""))
     seller_name = _validate_seller_name(data.get("seller_name"))
-    if len(title) < 5:
-        raise ValidationError("Заголовок слишком короткий")
-    if len(body) < 20:
-        raise ValidationError("Описание слишком короткое")
 
     phone = validate_phone(data.get("phone", ""))
     phone_hash = hash_phone(phone)
@@ -220,7 +265,11 @@ def create_post(data: dict, ip_hash: str | None = None, *, publish: bool = False
 
 
 def get_post_by_token(post_id: str, token: str) -> Post | None:
-    return Post.query.filter_by(id=post_id, edit_token=token).first()
+    return (
+        Post.query.filter_by(id=post_id, edit_token=token)
+        .filter(Post.status != "deleted")
+        .first()
+    )
 
 
 def reveal_post_phone(post: Post) -> str | None:
@@ -233,13 +282,13 @@ def update_post(post: Post, data: dict) -> Post:
     if data.get("city") not in CITIES:
         raise ValidationError("Выберите город из списка")
 
-    title = (data.get("title") or "").strip()
-    body = (data.get("body") or "").strip()
+    title, body = _validate_post_text(
+        data.get("title", ""),
+        data.get("body", ""),
+        current_title=post.title,
+        current_body=post.body,
+    )
     seller_name = _validate_seller_name(data.get("seller_name"))
-    if len(title) < 5:
-        raise ValidationError("Заголовок слишком короткий")
-    if len(body) < 20:
-        raise ValidationError("Описание слишком короткое")
 
     price = data.get("price")
     if price is not None and price != "":
@@ -283,6 +332,7 @@ def update_post(post: Post, data: dict) -> Post:
         }
 
     post.rank_score = calculate_rank_score(post)
+    post.updated_at = utcnow()
     db.session.commit()
     if post.status == "published" and not is_post_expired(post):
         index_post(post)
@@ -315,6 +365,7 @@ def apply_pending_revision(post: Post) -> bool:
         delete_stored_images(list(removed))
 
     post.rank_score = calculate_rank_score(post)
+    post.updated_at = utcnow()
     db.session.commit()
     if post.status == "published" and not is_post_expired(post):
         index_post(post)
@@ -332,11 +383,23 @@ def reject_pending_revision(post: Post) -> bool:
         delete_stored_image(url)
 
     post.pending_revision = None
+    post.updated_at = utcnow()
     db.session.commit()
     return True
 
 
 def delete_post(post: Post):
+    remove_post_from_index(post.id)
+    post.status = "deleted"
+    now = utcnow()
+    post.deleted_at = now
+    post.updated_at = now
+    release_daily_publish_slot(post)
+    db.session.commit()
+
+
+def hard_delete_post(post: Post):
+    """Physical delete — not used in normal user/admin flows."""
     remove_post_from_index(post.id)
     delete_stored_images(post.images or [])
     db.session.delete(post)

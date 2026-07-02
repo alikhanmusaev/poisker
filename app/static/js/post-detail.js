@@ -12,9 +12,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   const phoneLink = document.getElementById('phone-link');
   const sharePost = document.getElementById('share-post');
   const contactError = document.getElementById('contact-error');
+  const contactCaptcha = document.getElementById('contact-captcha');
 
   function csrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.content || '';
+  }
+
+  function captchaAnswerValue() {
+    const input = contactCaptcha?.querySelector('.captcha-answer-input');
+    return input?.value.trim() || '';
+  }
+
+  function showCaptchaBlock(question, prompt) {
+    if (!contactCaptcha) return;
+    contactCaptcha.hidden = false;
+    const questionEl = contactCaptcha.querySelector('.captcha-question');
+    const promptEl = contactCaptcha.querySelector('.captcha-prompt');
+    if (questionEl && question) questionEl.textContent = question;
+    if (promptEl && prompt) promptEl.textContent = prompt;
+    contactCaptcha.querySelector('.captcha-answer-input')?.focus();
+    if (window.refreshIcons) refreshIcons();
   }
 
   async function requestContact() {
@@ -22,7 +39,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       Accept: 'application/json',
       'X-CSRFToken': csrfToken(),
     };
-    const res = await fetch(contactUrl, { method: 'POST', headers });
+    const answer = captchaAnswerValue();
+    const body = new URLSearchParams();
+    if (answer) body.set('captcha_answer', answer);
+    const res = await fetch(contactUrl, { method: 'POST', headers, body });
     let data = {};
     try {
       data = await res.json();
@@ -51,6 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     phoneDisplay?.classList.remove('hidden');
     if (button) button.hidden = true;
+    if (contactCaptcha) contactCaptcha.hidden = true;
     if (window.refreshIcons) refreshIcons();
   }
 
@@ -79,6 +100,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { res, data } = await requestContact();
     if (res.ok && data.phone) {
       showPhoneResult(data.phone, this);
+      return;
+    }
+    if (data.captcha_required) {
+      showCaptchaBlock(data.captcha_question, 'Проверка');
+      showContactError(data.error || 'Подтвердите, что вы не робот');
       return;
     }
     if (res.status === 429) {

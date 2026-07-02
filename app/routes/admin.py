@@ -119,6 +119,7 @@ def post_preview(post_id):
 def hide_post(post_id):
     post = Post.query.get_or_404(post_id)
     post.status = "hidden"
+    post.updated_at = utcnow()
     db.session.commit()
     remove_post_from_index(post.id)
     log_admin_action_from_request("hide", target_type="post", target_id=post_id)
@@ -133,6 +134,7 @@ def publish_post(post_id):
     post.status = "published"
     if not post.bumped_at:
         post.bumped_at = utcnow()
+    post.updated_at = utcnow()
     db.session.commit()
     index_post(post)
     log_admin_action_from_request("publish", target_type="post", target_id=post_id)
@@ -159,6 +161,7 @@ def block_phone(post_id):
         blocked = BlockedPhone(phone_hash=post.phone_hash, reason=f"Blocked via post {post_id}")
         db.session.add(blocked)
         post.status = "hidden"
+        post.updated_at = utcnow()
         db.session.commit()
         remove_post_from_index(post.id)
     log_admin_action_from_request("block_phone", target_type="post", target_id=post_id)

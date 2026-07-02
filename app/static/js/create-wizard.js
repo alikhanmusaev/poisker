@@ -49,20 +49,39 @@
     form.querySelectorAll('input, textarea, select').forEach((field) => field.setCustomValidity(''));
   }
 
+  function limits() {
+    const form = document.getElementById('create-post-form');
+    return {
+      titleMin: parseInt(form?.dataset.titleMin || '5', 10),
+      titleMax: parseInt(form?.dataset.titleMax || '100', 10),
+      bodyMin: parseInt(form?.dataset.bodyMin || '20', 10),
+      bodyMax: parseInt(form?.dataset.bodyMax || '3000', 10),
+    };
+  }
+
   function validateStep(step, form) {
     clearFieldErrors(form);
 
     if (step === 1) {
+      const { titleMin, titleMax, bodyMin, bodyMax } = limits();
       const title = document.getElementById('title');
       const body = document.getElementById('body');
       const titleVal = fieldValue('title');
       const bodyVal = fieldValue('body');
-      if (titleVal.length < 5) {
-        showFieldError(title, 'Заголовок — минимум 5 символов');
+      if (titleVal.length < titleMin) {
+        showFieldError(title, `Заголовок — минимум ${titleMin} символов`);
         return false;
       }
-      if (bodyVal.length < 20) {
-        showFieldError(body, 'Описание — минимум 20 символов');
+      if (titleVal.length > titleMax) {
+        showFieldError(title, `Заголовок — максимум ${titleMax} символов`);
+        return false;
+      }
+      if (bodyVal.length < bodyMin) {
+        showFieldError(body, `Описание — минимум ${bodyMin} символов`);
+        return false;
+      }
+      if (bodyVal.length > bodyMax) {
+        showFieldError(body, `Описание — максимум ${bodyMax} символов`);
         return false;
       }
       return true;
