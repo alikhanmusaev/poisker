@@ -22,6 +22,7 @@ from app.services.admin_panel import (
     filter_posts_query,
     filter_promotions_query,
     filter_reports_query,
+    hide_active_posts_for_phone,
     paginate_query,
     revision_diff,
 )
@@ -101,6 +102,7 @@ def _posts_filters_from_request():
         "has_reports": request.args.get("has_reports") in ("1", "true", "yes"),
         "date_from": request.args.get("date_from", ""),
         "date_to": request.args.get("date_to", ""),
+        "phone": request.args.get("phone", ""),
         "page": max(request.args.get("page", 1, type=int), 1),
     }
 
@@ -120,7 +122,7 @@ def login():
     return render_template("admin/login.html", form=form)
 
 
-@bp.route("/logout")
+@bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
     logout_user()
@@ -147,9 +149,15 @@ def dashboard():
 @login_required
 def posts_list():
     filters = _posts_filters_from_request()
+    if filters["phone"].strip():
+        try:
+            validate_phone(filters["phone"])
+        except ValueError:
+            flash("Некорректный номер телефона", "error")
     query = filter_posts_query(
         status=filters["status"],
         q=filters["q"],
+        phone=filters["phone"],
         city=filters["city"],
         category=filters["category"],
         has_photo=filters["has_photo"],
@@ -230,6 +238,7 @@ def post_preview(post_id):
     ctx = build_show_context(post)
     ctx["robots"] = "noindex, nofollow"
     ctx["admin_preview"] = True
+    ctx["status_labels"] = POST_STATUS_LABELS
     ctx["back_url"] = url_for("admin.posts_list")
     return render_template("posts/show.html", **ctx)
 
@@ -276,19 +285,13 @@ def delete_post_admin(post_id):
 @login_required
 def block_phone(post_id):
     post = Post.query.get_or_404(post_id)
-    existing = BlockedPhone.query.filter_by(phone_hash=post.phone_hash).first()
-    if not existing:
+    if not BlockedPhone.query.filter_by(phone_hash=post.phone_hash).first():
         blocked = BlockedPhone(phone_hash=post.phone_hash, reason=f"Заблокировано через объявление {post_id[:8]}")
         db.session.add(blocked)
-    if post.status != "deleted":
-        post.status = "hidden"
-        post.updated_at = utcnow()
-        db.session.commit()
-        remove_post_from_index(post.id)
-    else:
-        db.session.commit()
+    hidden_count = hide_active_posts_for_phone(post.phone_hash)
+    db.session.commit()
     log_admin_action_from_request("block_phone", target_type="post", target_id=post_id)
-    flash("Номер заблокирован", "success")
+    flash(f"Номер заблокирован, скрыто объявлений: {hidden_count}", "success")
     return _redirect_back("admin.posts_list")
 
 

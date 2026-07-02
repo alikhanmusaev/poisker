@@ -24,7 +24,6 @@
     <nav class="admin-sidebar__nav" aria-label="Админ-навигация">
       {% for endpoint, label, icon in admin_nav %}
       <a href="{{ url_for(endpoint) }}" class="admin-sidebar__link{% if request.endpoint == endpoint %} is-active{% endif %}">
-        <i data-lucide="{{ icon }}" class="admin-sidebar__icon" aria-hidden="true"></i>
         <span>{{ label }}</span>
       </a>
       {% endfor %}
@@ -32,7 +31,10 @@
     <div class="admin-sidebar__footer">
       <span class="admin-sidebar__user">{{ current_user.username }}</span>
       <a href="{{ url_for('main.index') }}" class="admin-sidebar__link admin-sidebar__link--muted" target="_blank" rel="noopener">На сайт</a>
-      <a href="{{ url_for('admin.logout') }}" class="admin-sidebar__link admin-sidebar__link--logout">Выход</a>
+      <form method="post" action="{{ url_for('admin.logout') }}" class="admin-logout-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="admin-sidebar__link admin-sidebar__link--logout">Выход</button>
+      </form>
     </div>
   </aside>
   {% endif %}
@@ -59,9 +61,7 @@
   </div>
 
   {% if current_user.is_authenticated %}
-  <script src="{{ static_url('vendor/lucide.min.js') }}"></script>
   <script src="{{ static_url('js/admin.js') }}"></script>
-  <script>if (window.lucide) lucide.createIcons();</script>
   {% endif %}
 </body>
 </html>

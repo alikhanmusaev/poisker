@@ -19,10 +19,21 @@
 <div class="admin-preview-banner" role="status">
   <i data-lucide="shield-alert" class="icon admin-preview-banner-icon" aria-hidden="true"></i>
   <div class="admin-preview-banner-text">
-    <strong class="admin-preview-banner-title">Предпросмотр для администратора</strong>
-    {% if post.status == 'pending' %}
-    <span class="admin-preview-banner-desc">Объявление ожидает модерации.</span>
-    {% endif %}
+    <strong class="admin-preview-banner-title">Админ-предпросмотр</strong>
+    <span class="admin-preview-banner-desc">
+      Статус: {{ status_labels.get(post.status, post.status) }}.
+      {% if post.status == 'deleted' %}
+      Это удалённое объявление. Пользователи его не видят.
+      {% elif post.status == 'hidden' %}
+      Это скрытое объявление. Пользователи его не видят.
+      {% elif post.status == 'pending' %}
+      Это объявление на модерации. Пользователи его не видят.
+      {% elif post.status == 'expired' %}
+      Срок публикации истёк. Пользователи его не видят.
+      {% elif post.status == 'published' %}
+      Объявление опубликовано и видно в каталоге.
+      {% endif %}
+    </span>
   </div>
 </div>
 {% elif owner_preview and post.status == 'pending' %}

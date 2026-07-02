@@ -139,6 +139,16 @@ body.admin-shell {
 }
 .admin-sidebar__user { font-size: 13px; color: #94a3b8; margin-bottom: 4px; }
 
+.admin-logout-form { margin: 0; }
+.admin-logout-form .admin-sidebar__link--logout {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
 .admin-content {
   margin-left: var(--admin-sidebar-width);
   min-height: 100vh;

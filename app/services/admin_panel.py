@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from sqlalchemy import or_
 
 from app.extensions import db
-from app.models import BlockedPhone, Post, Promotion, Report
+from app.models import BlockedPhone, Post, Promotion, Report, utcnow
 
 
 def parse_admin_date(value: str | None) -> datetime | None:
@@ -24,6 +24,7 @@ def filter_posts_query(
     *,
     status: str | None = None,
     q: str | None = None,
+    phone: str | None = None,
     city: str | None = None,
     category: str | None = None,
     has_photo: bool = False,
@@ -37,6 +38,16 @@ def filter_posts_query(
         query = query.filter(Post.pending_revision.isnot(None))
     elif status and status != "all":
         query = query.filter_by(status=status)
+
+    phone_term = (phone or "").strip()
+    if phone_term:
+        from app.services.phone import hash_phone, validate_phone
+
+        try:
+            phone_hash = hash_phone(validate_phone(phone_term))
+            query = query.filter(Post.phone_hash == phone_hash)
+        except ValueError:
+            query = query.filter(db.false())
 
     term = (q or "").strip()
     if term:
@@ -144,3 +155,22 @@ def revision_diff(post: Post) -> dict | None:
             }
         )
     return {"revision": revision, "changes": changes}
+
+
+ACTIVE_POST_STATUSES_FOR_HIDE = ("published", "pending", "hidden")
+
+
+def hide_active_posts_for_phone(phone_hash: str) -> int:
+    """Hide all non-deleted active posts for a phone hash. Caller commits."""
+    from app.services.search import remove_post_from_index
+
+    now = utcnow()
+    posts = Post.query.filter(
+        Post.phone_hash == phone_hash,
+        Post.status.in_(ACTIVE_POST_STATUSES_FOR_HIDE),
+    ).all()
+    for post in posts:
+        post.status = "hidden"
+        post.updated_at = now
+        remove_post_from_index(post.id)
+    return len(posts)

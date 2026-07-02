@@ -5,7 +5,10 @@
 {% block content %}
 <form class="admin-filters" method="get" action="{{ url_for('admin.posts_list') }}">
   <label>Поиск
-    <input class="admin-input" type="search" name="q" value="{{ filters.q }}" placeholder="Заголовок, описание, телефон">
+    <input class="admin-input" type="search" name="q" value="{{ filters.q }}" placeholder="Заголовок, описание, маска телефона">
+  </label>
+  <label>Телефон
+    <input class="admin-input" type="search" name="phone" value="{{ filters.phone }}" placeholder="Телефон полностью" autocomplete="off">
   </label>
   <label>Статус
     <select class="admin-select" name="status">
