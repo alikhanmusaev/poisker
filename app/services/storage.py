@@ -200,7 +200,7 @@ def _apply_watermark(img: Image.Image) -> Image.Image:
     return Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
 
 
-def _validate_and_resize_image(file: FileStorage, *, category: str | None = None) -> bytes:
+def _validate_and_resize_image(file: FileStorage) -> bytes:
     max_pixels = current_app.config.get("MAX_IMAGE_PIXELS", 20_000_000)
     Image.MAX_IMAGE_PIXELS = max_pixels
     try:
@@ -223,11 +223,6 @@ def _validate_and_resize_image(file: FileStorage, *, category: str | None = None
     img = img.convert("RGB")
     img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
 
-    if current_app.config.get("PLATE_BLUR_ENABLED", True):
-        from app.services.image_privacy import blur_license_plates
-
-        img = blur_license_plates(img, category=category)
-
     img = _apply_watermark(img)
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=JPEG_QUALITY, optimize=True, progressive=True)
@@ -235,13 +230,13 @@ def _validate_and_resize_image(file: FileStorage, *, category: str | None = None
     return buf.read()
 
 
-def upload_image(file: FileStorage, *, category: str | None = None) -> str:
+def upload_image(file: FileStorage) -> str:
     ext = (file.filename or "").rsplit(".", 1)[-1].lower()
     if ext not in current_app.config["ALLOWED_EXTENSIONS"]:
         raise ValueError("Допустимые форматы: jpg, png, webp")
 
     _check_file_size(file)
-    data = _validate_and_resize_image(file, category=category)
+    data = _validate_and_resize_image(file)
     key = f"posts/{uuid.uuid4().hex}.jpg"
     bucket = current_app.config["S3_BUCKET"]
     client = _client()

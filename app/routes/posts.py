@@ -70,7 +70,7 @@ def create():
                 files = request.files.getlist("images")
                 for f in files[:5]:
                     if f and f.filename:
-                        images.append(upload_image(f, category=form.category.data))
+                        images.append(upload_image(f))
                 cover_index = request.form.get("cover_index", type=int)
                 if cover_index is None:
                     cover_index = 0
@@ -281,7 +281,7 @@ def edit(post_id):
             remaining_slots = max(0, 5 - len(images))
             for f in files[:remaining_slots]:
                 if f and f.filename:
-                    images.append(upload_image(f, category=form.category.data or post.category))
+                    images.append(upload_image(f))
 
             image_order = [u for u in request.form.getlist("image_order") if u]
             if image_order:
