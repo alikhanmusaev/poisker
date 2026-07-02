@@ -8,6 +8,13 @@
     <span>Телефон: {{ owner_phone or post.phone_masked }}. Изменить нельзя.</span>
   </p>
 
+  {% if moderation_notice or pending_revision %}
+  <p class="moderation-notice" role="status">
+    <i data-lucide="clock" class="icon icon-sm" aria-hidden="true"></i>
+    <span>Изменения заголовка, описания или фото на проверке. Объявление остаётся онлайн с прежним текстом и фото.</span>
+  </p>
+  {% endif %}
+
   {% if errors %}
     <div class="errors">{% for e in errors %}<p class="error"><i data-lucide="alert-circle" class="icon icon-sm"></i>{{ e }}</p>{% endfor %}</div>
   {% endif %}
@@ -21,6 +28,7 @@
         data-view-url="{{ post_public_url(post, external=True) }}">
     {{ form.hidden_tag() }}
     <input type="hidden" name="token" value="{{ token }}">
+    <input type="hidden" name="cover_index" id="cover-index-field" value="{{ cover_index }}">
     <div class="field">
       <label class="field-label">{{ form.title.label.text }}</label>
       {{ form.title(class="input") }}
@@ -47,25 +55,34 @@
       <label class="field-label">{{ form.price.label.text }}</label>
       {{ form.price(class="input", min="0", inputmode="numeric") }}
     </div>
-    {% if post.images %}
-      <div class="current-images">
-        {% for img in post.images %}
-          <label class="current-image-item">
-            <img src="{{ image_url(img) }}" alt="" class="thumb">
-            <span class="current-image-remove">
-              <input type="checkbox" name="remove_images" value="{{ img }}">
-              Удалить
-            </span>
-          </label>
-        {% endfor %}
+    {% if edit_images %}
+      <div class="field">
+        <label class="field-label">Фотографии</label>
+        <p class="field-help">Нажмите «Обложка», чтобы выбрать главное фото на карточке.</p>
+        <div class="current-images" id="edit-current-images">
+          {% for img in edit_images %}
+            <div class="current-image-item{% if loop.index0 == cover_index %} is-cover{% endif %}" data-image-url="{{ img }}">
+              <img src="{{ image_url(img) }}" alt="" class="thumb">
+              <input type="hidden" name="image_order" value="{{ img }}">
+              <button type="button" class="cover-select-btn{% if loop.index0 == cover_index %} is-active{% endif %}" data-cover-select aria-pressed="{{ 'true' if loop.index0 == cover_index else 'false' }}">
+                <i data-lucide="star" class="icon icon-xs" aria-hidden="true"></i>
+                Обложка
+              </button>
+              <label class="current-image-remove">
+                <input type="checkbox" name="remove_images" value="{{ img }}">
+                Удалить
+              </label>
+            </div>
+          {% endfor %}
+        </div>
       </div>
     {% endif %}
     <div class="field">
       <label class="field-label">Добавить фото</label>
-      {% set remaining_images = 5 - (post.images|length if post.images else 0) %}
+      {% set remaining_images = 5 - (edit_images|length if edit_images else 0) %}
       <div class="image-picker"
            data-total-max="5"
-           data-existing-count="{{ post.images|length if post.images else 0 }}"
+           data-existing-count="{{ edit_images|length if edit_images else 0 }}"
            data-max-bytes="{{ config.MAX_UPLOAD_SIZE }}">
         <input type="file"
                name="images"
@@ -98,10 +115,6 @@
   </form>
 
   <div class="edit-actions">
-    <a href="{{ url_for('promotions.promote', post_id=post.id, token=token) }}" class="btn btn-secondary btn-block">
-      <i data-lucide="zap" class="icon" aria-hidden="true"></i>
-      Поднять объявление
-    </a>
     <form method="post" action="{{ url_for('posts.remove', post_id=post.id) }}" id="delete-post-form">
       <input type="hidden" name="token" value="{{ token }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -123,5 +136,5 @@
 </div>
 {% endblock %}
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/edit-post.js') }}"></script>
+<script src="{{ static_url('js/edit-post.js') }}"></script>
 {% endblock %}

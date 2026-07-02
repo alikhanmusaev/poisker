@@ -5,9 +5,10 @@ from flask import render_template, request, url_for
 from app.constants import CATEGORIES, CATEGORY_LABELS, CITIES
 from app.services.posts import increment_views
 from app.services.seo import post_json_ld, post_og_image, post_public_url, site_name
+from app.utils.post_display import ordered_images
 
 
-def build_show_context(post):
+def build_show_context(post, *, owner_preview: bool = False, owner_token: str | None = None):
     referrer = request.referrer or ""
     parsed_referrer = urlparse(referrer)
     back_url = url_for("main.index")
@@ -22,6 +23,9 @@ def build_show_context(post):
 
     return {
         "post": post,
+        "gallery_images": ordered_images(post),
+        "owner_preview": owner_preview,
+        "owner_token": owner_token,
         "back_url": back_url,
         "cities": CITIES,
         "categories": CATEGORIES,
@@ -37,4 +41,4 @@ def build_show_context(post):
 
 def render_show_page(post):
     increment_views(post)
-    return render_template("posts/show.html", **build_show_context(post))
+    return render_template("posts/show.html", **build_show_context(post, owner_preview=False))

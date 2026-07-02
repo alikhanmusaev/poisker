@@ -2,33 +2,76 @@
      {% if edit_url is defined and edit_url %}data-edit-url="{{ edit_url }}"{% endif %}
      {% if post_id is defined and post_id %}data-post-id="{{ post_id }}"{% endif %}
      {% if title is defined and title %}data-post-title="{{ title }}"{% endif %}
-     {% if view_url is defined and view_url %}data-view-url="{{ view_url }}"{% endif %}>
-  <p class="publish-success-badge">
-    <i data-lucide="check" class="icon icon-sm" aria-hidden="true"></i>
-    <span>Опубликовано</span>
-  </p>
-  <h2 class="publish-success-title">Сохраните ссылку</h2>
-  <p class="publish-success-note">Профиля нет — сохраните ссылку в заметки или отправьте себе</p>
+     {% if view_url is defined and view_url %}data-view-url="{{ view_url }}"{% endif %}
+     data-moderation-pending="{{ '1' if moderation_pending else '0' }}">
+
+  <div class="publish-success-hero">
+    <div class="publish-success-icon{% if moderation_pending %} publish-success-icon--pending{% else %} publish-success-icon--published{% endif %}" aria-hidden="true">
+      <i data-lucide="{% if moderation_pending %}clock{% else %}check-circle-2{% endif %}" class="icon icon-xl"></i>
+    </div>
+    <h2 class="publish-success-headline" data-success-headline>
+      {% if moderation_pending %}Отправлено на проверку{% else %}Объявление опубликовано{% endif %}
+    </h2>
+    <p class="publish-success-lead" data-success-lead>
+      {% if moderation_pending %}
+        Сейчас объявление видите только вы. После одобрения оно появится в каталоге.
+      {% else %}
+        Объявление уже в каталоге. Сохраните ссылку — без неё редактировать не получится.
+      {% endif %}
+    </p>
+  </div>
+
+  <div class="publish-success-timeline" data-success-timeline>
+    <div class="publish-success-timeline-item is-done">
+      <span class="publish-success-timeline-dot" aria-hidden="true"></span>
+      <span>Добавлено в «Мои объявления» на этом устройстве</span>
+    </div>
+    <div class="publish-success-timeline-item{% if moderation_pending %} is-active{% else %} is-done{% endif %}">
+      <span class="publish-success-timeline-dot" aria-hidden="true"></span>
+      <span>{% if moderation_pending %}Ожидает проверки модератором{% else %}Опубликовано в каталоге{% endif %}</span>
+    </div>
+    {% if moderation_pending %}
+    <div class="publish-success-timeline-item">
+      <span class="publish-success-timeline-dot" aria-hidden="true"></span>
+      <span>Появится для всех пользователей</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="publish-success-link-card">
+    <p class="publish-success-link-label">Ссылка для редактирования</p>
+    <div class="publish-success-link-row">
+      <code class="publish-success-link-url" id="publish-success-url" translate="no"></code>
+      <button type="button" class="btn btn-secondary btn-sm publish-success-copy-inline" id="copy-edit-btn" aria-label="Скопировать ссылку">
+        <i data-lucide="copy" class="icon icon-sm" aria-hidden="true"></i>
+      </button>
+    </div>
+    <p class="publish-success-feedback" id="edit-url-hint" hidden role="status"></p>
+  </div>
 
   <div class="publish-success-actions">
-    <button type="button" class="btn btn-primary btn-block publish-success-copy" id="copy-edit-btn">
-      <i data-lucide="copy" class="icon" aria-hidden="true"></i>
-      <span>Скопировать</span>
-    </button>
-    <button type="button" class="btn btn-secondary btn-block publish-success-share" id="share-edit-btn">
+    <a href="{{ view_url if view_url is defined and view_url else '#' }}"
+       class="btn btn-primary btn-block publish-success-view"
+       id="open-post-btn"
+       data-success-primary
+       {% if not (view_url is defined and view_url) %}hidden{% endif %}>
+      <i data-lucide="{% if moderation_pending %}eye{% else %}external-link{% endif %}" class="icon" aria-hidden="true"></i>
+      <span>{% if moderation_pending %}Посмотреть объявление{% else %}Открыть объявление{% endif %}</span>
+    </a>
+    <a href="{{ edit_url if edit_url is defined else '#' }}"
+       class="btn btn-secondary btn-block publish-success-edit"
+       id="edit-post-btn"
+       data-success-edit>
+      <i data-lucide="pencil" class="icon" aria-hidden="true"></i>
+      <span>Редактировать</span>
+    </a>
+    <button type="button" class="btn btn-secondary publish-success-share" id="share-edit-btn">
       <i data-lucide="share-2" class="icon" aria-hidden="true"></i>
       <span>Поделиться</span>
     </button>
-  </div>
-
-  <p class="publish-success-feedback" id="edit-url-hint" hidden role="status"></p>
-  <p class="publish-success-saved" id="autosave-msg" hidden>Добавлено в «Мои»</p>
-
-  <div class="publish-success-links">
-    <a href="{{ view_url if view_url is defined else '#' }}"
-       class="btn btn-secondary publish-success-view is-disabled"
-       id="open-post-btn"
-       {% if not view_url %}aria-disabled="true" tabindex="-1"{% endif %}>Открыть объявление</a>
-    <a href="{{ url_for('posts.my_posts') }}" class="btn btn-secondary publish-success-my">Мои объявления</a>
+    <a href="{{ url_for('posts.my_posts') }}" class="btn btn-secondary publish-success-my">
+      <i data-lucide="bookmark" class="icon" aria-hidden="true"></i>
+      <span>Мои объявления</span>
+    </a>
   </div>
 </div>

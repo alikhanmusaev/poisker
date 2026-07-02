@@ -72,6 +72,8 @@ def test_create_post_ajax_json(client):
     assert data["edit_url"].startswith("http")
     assert data["view_url"].startswith("http")
     assert data["title"] == "Тестовое объявление"
+    assert data["status"] == "pending"
+    assert data["moderation_pending"] is True
 
 
 def test_success_page_uses_publish_panel(client, app):
@@ -88,6 +90,7 @@ def test_success_page_uses_publish_panel(client, app):
                 "phone": "+79001112233",
             },
             ip_hash="test",
+            publish=False,
         )
         token = post.edit_token
 
@@ -95,7 +98,8 @@ def test_success_page_uses_publish_panel(client, app):
     text = res.get_data(as_text=True)
     assert res.status_code == 200
     assert 'class="publish-success"' in text
-    assert "Сохраните ссылку" in text
+    assert "Отправлено на проверку" in text
+    assert "Посмотреть объявление" in text
     assert "publish-success.js" in text
     assert "Не закрывайте страницу" not in text
 
@@ -141,7 +145,7 @@ def test_load_more_partial(client, app):
                     "price": 1000 + i,
                     "images": [],
                 },
-                ip_hash=f"test-{i}",
+                ip_hash=f"test-{i}", publish=True,
             )
 
     with patch("app.services.search._typesense_search", side_effect=RuntimeError("test")):
@@ -170,7 +174,7 @@ def test_create_post_requires_seller_name(app):
                     "price": 5000,
                     "images": [],
                 },
-                ip_hash="no-name",
+                ip_hash="no-name", publish=True,
             )
 
 
@@ -187,7 +191,7 @@ def test_create_post_and_limit(app):
                 "price": 5000,
                 "images": [],
             },
-            ip_hash="test",
+            ip_hash="test", publish=True,
         )
         assert post.id
         with pytest.raises(PostLimitError):
@@ -217,7 +221,7 @@ def test_post_detail_has_back_link(client, app):
                 "price": 9000,
                 "images": [],
             },
-            ip_hash="detail-back",
+            ip_hash="detail-back", publish=True,
         )
         path = post_public_path(post)
 
@@ -255,7 +259,7 @@ def test_price_filter(client, app):
                 "price": 15000,
                 "images": ["/static/demo/elektronika.jpg"],
             },
-            ip_hash="filter-a",
+            ip_hash="filter-a", publish=True,
         )
         create_post(
             {
@@ -268,7 +272,7 @@ def test_price_filter(client, app):
                 "price": 5000,
                 "images": [],
             },
-            ip_hash="filter-b",
+            ip_hash="filter-b", publish=True,
         )
 
     with patch("app.services.search._typesense_search", side_effect=RuntimeError("test")):
@@ -293,7 +297,7 @@ def test_smart_query_extracts_price_and_category():
                 "price": 1000,
                 "images": [],
             },
-            ip_hash="meta",
+            ip_hash="meta", publish=True,
         )
         post_id = post.id
 
@@ -317,7 +321,7 @@ def test_post_detail_has_og_tags(client, app):
                 "price": 2000,
                 "images": ["/static/demo/prodazha.jpg"],
             },
-            ip_hash="og",
+            ip_hash="og", publish=True,
         )
         path = post_public_path(post)
 
@@ -343,7 +347,7 @@ def test_post_detail_has_image_gallery(client, app):
                 "price": 25000,
                 "images": ["/static/demo/elektronika.jpg", "/static/demo/prodazha.jpg"],
             },
-            ip_hash="gallery",
+            ip_hash="gallery", publish=True,
         )
         path = post_public_path(post)
 
@@ -386,7 +390,7 @@ def test_sitemap_xml_lists_posts(client, app):
                 "price": 3000,
                 "images": [],
             },
-            ip_hash="sitemap",
+            ip_hash="sitemap", publish=True,
         )
         path = post_public_path(post)
 
@@ -409,7 +413,7 @@ def test_legacy_slug_url_redirects_to_canonical(client, app):
                 "price": 5000,
                 "images": [],
             },
-            ip_hash="legacy-slug",
+            ip_hash="legacy-slug", publish=True,
         )
         path = post_public_path(post)
         slug = post.slug
@@ -432,7 +436,7 @@ def test_wrong_city_category_redirects(client, app):
                 "price": 6000,
                 "images": [],
             },
-            ip_hash="wrong-path",
+            ip_hash="wrong-path", publish=True,
         )
         path = post_public_path(post)
         slug = post.slug
@@ -455,7 +459,7 @@ def test_legacy_post_url_redirects_to_slug(client, app):
                 "price": 4000,
                 "images": [],
             },
-            ip_hash="redirect",
+            ip_hash="redirect", publish=True,
         )
         post_id = post.id
         path = post_public_path(post)
@@ -478,7 +482,7 @@ def test_meta_can_edit_with_valid_token(client, app):
                 "price": 7000,
                 "images": [],
             },
-            ip_hash="can-edit",
+            ip_hash="can-edit", publish=True,
         )
         post_id = post.id
         token = post.edit_token
@@ -514,7 +518,7 @@ def test_update_post_rejects_negative_price(app):
                 "price": 1000,
                 "images": [],
             },
-            ip_hash="test-update",
+            ip_hash="test-update", publish=True,
         )
         with pytest.raises(ValidationError):
             update_post(
@@ -553,7 +557,7 @@ def test_search_falls_back_when_index_is_empty(app):
                 "price": 12000,
                 "images": [],
             },
-            ip_hash="test-empty-index",
+            ip_hash="test-empty-index", publish=True,
         )
 
         with patch(
@@ -613,7 +617,7 @@ def test_post_meta_endpoint(client, app):
                 "price": 1000,
                 "images": [],
             },
-            ip_hash="meta",
+            ip_hash="meta", publish=True,
         )
         post_id = post.id
 
@@ -639,7 +643,7 @@ def test_home_smart_query_filters_results(client, app):
                 "price": 45000,
                 "images": [],
             },
-            ip_hash="smart-a",
+            ip_hash="smart-a", publish=True,
         )
         create_post(
             {
@@ -652,7 +656,7 @@ def test_home_smart_query_filters_results(client, app):
                 "price": 45000,
                 "images": [],
             },
-            ip_hash="smart-b",
+            ip_hash="smart-b", publish=True,
         )
 
     with patch("app.services.search._typesense_search", side_effect=RuntimeError("test")):
@@ -670,10 +674,30 @@ def test_legal_pages(client):
     assert client.get("/guidelines").status_code == 200
 
 
+def test_index_static_assets_are_versioned(client):
+    res = client.get("/")
+    text = res.get_data(as_text=True)
+    assert res.status_code == 200
+    assert "/static/css/style.css?v=" in text
+    assert 'name="static-version"' in text
+
+
+def test_web_manifest_has_versioned_icons(client):
+    res = client.get("/manifest.webmanifest")
+    text = res.get_data(as_text=True)
+    assert res.status_code == 200
+    assert "manifest+json" in res.content_type
+    assert res.headers.get("Cache-Control") == "no-cache"
+    assert "/static/icons/icon-192.png?v=" in text
+    assert "/static/icons/icon-maskable-192.png?v=" in text
+
+
 def test_service_worker(client):
     res = client.get("/sw.js")
     assert res.status_code == 200
     assert "javascript" in res.content_type
+    assert "poisker-" in res.get_data(as_text=True)
+    assert res.headers.get("Cache-Control") == "no-cache"
 
 
 def test_assetlinks_empty_without_config(client):
@@ -697,7 +721,7 @@ def test_negative_price_filters_ignored(client, app):
                 "price": 500,
                 "images": [],
             },
-            ip_hash="neg-price",
+            ip_hash="neg-price", publish=True,
         )
 
     with patch("app.services.search._typesense_search", side_effect=RuntimeError("test")):
@@ -725,7 +749,7 @@ def test_feed_sorts_by_rank_score(app):
                 "price": 1000,
                 "images": [],
             },
-            ip_hash="rank-low",
+            ip_hash="rank-low", publish=True,
         )
         high = create_post(
             {
@@ -738,7 +762,7 @@ def test_feed_sorts_by_rank_score(app):
                 "price": 1000,
                 "images": [],
             },
-            ip_hash="rank-high",
+            ip_hash="rank-high", publish=True,
         )
         high.rank_score = 10.0
         low.rank_score = 0.1
@@ -756,6 +780,8 @@ def test_feed_sorts_by_rank_score(app):
 def test_update_post_can_remove_images(app):
     from unittest.mock import patch
 
+    from app.services.posts import apply_pending_revision
+
     with app.app_context():
         post = create_post(
             {
@@ -768,7 +794,7 @@ def test_update_post_can_remove_images(app):
                 "price": 1000,
                 "images": ["/media/posts/a.jpg", "/media/posts/b.jpg"],
             },
-            ip_hash="remove-img",
+            ip_hash="remove-img", publish=True,
         )
         with patch("app.services.posts.delete_stored_images") as delete_mock:
             update_post(
@@ -781,8 +807,15 @@ def test_update_post_can_remove_images(app):
                     "city": post.city,
                     "price": post.price,
                     "images": ["/media/posts/b.jpg"],
+                    "cover_index": 0,
                 },
             )
+            delete_mock.assert_not_called()
+        assert post.images == ["/media/posts/a.jpg", "/media/posts/b.jpg"]
+        assert post.pending_revision["images"] == ["/media/posts/b.jpg"]
+
+        with patch("app.services.posts.delete_stored_images") as delete_mock:
+            apply_pending_revision(post)
             delete_mock.assert_called_once_with(["/media/posts/a.jpg"])
         assert post.images == ["/media/posts/b.jpg"]
 
@@ -846,7 +879,7 @@ def test_hybrid_feed_sorts_by_rank_score(app):
                 "price": 1000,
                 "images": [],
             },
-            ip_hash="hybrid-low",
+            ip_hash="hybrid-low", publish=True,
         )
         high = create_post(
             {
@@ -859,7 +892,7 @@ def test_hybrid_feed_sorts_by_rank_score(app):
                 "price": 1000,
                 "images": [],
             },
-            ip_hash="hybrid-high",
+            ip_hash="hybrid-high", publish=True,
         )
         high.rank_score = 0.95
         low.rank_score = 0.05
@@ -891,7 +924,7 @@ def test_search_expanded_terms_match_brand_alias(app):
                 "price": 40000,
                 "images": [],
             },
-            ip_hash="brand-alias",
+            ip_hash="brand-alias", publish=True,
         )
 
     with patch("app.services.search._typesense_search", side_effect=RuntimeError("test")):
@@ -918,7 +951,7 @@ def test_feed_total_matches_rendered_cards(client, app):
                     "price": 1000 + i,
                     "images": [],
                 },
-                ip_hash=f"counter-{i}",
+                ip_hash=f"counter-{i}", publish=True,
             )
 
     with patch("app.services.search._typesense_search", side_effect=RuntimeError("test")):

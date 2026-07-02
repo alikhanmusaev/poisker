@@ -143,7 +143,15 @@ REPORT_REASONS = {
     "other": "Другое",
 }
 
-POST_STATUSES = ("draft", "published", "hidden", "expired")
+POST_STATUSES = ("draft", "pending", "published", "hidden", "expired")
+
+POST_STATUS_LABELS = {
+    "draft": "Черновик",
+    "pending": "На модерации",
+    "published": "Опубликовано",
+    "hidden": "Скрыто",
+    "expired": "Истекло",
+}
 
 PROMOTION_TYPES = {
     "boost_24h": ("Поднять на 24 часа", 1.5, 24),

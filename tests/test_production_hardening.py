@@ -22,6 +22,7 @@ def _create_post(app, phone="+79001234567", title="Тестовое объявл
                 "images": [],
             },
             ip_hash="hardening-test",
+            publish=True,
         )
         return {"id": post.id, "edit_token": post.edit_token, "slug": post.slug}
 

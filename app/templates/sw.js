@@ -1,16 +1,25 @@
-const CACHE_NAME = 'poisker-v15';
+const CACHE_NAME = 'poisker-{{ static_version }}';
+const STATIC_VERSION = '{{ static_version }}';
+
+function staticAsset(path) {
+  return `${path}?v=${STATIC_VERSION}`;
+}
+
 const PRECACHE = [
   '/offline',
-  '/static/css/style.css',
-  '/static/fonts/inter/inter.css',
+  staticAsset('/static/css/style.css'),
+  staticAsset('/static/fonts/inter/inter.css'),
   '/static/fonts/inter/inter-cyrillic-400-normal.woff2',
   '/static/fonts/inter/inter-latin-400-normal.woff2',
-  '/static/js/app.js',
-  '/static/js/image-picker.js',
-  '/static/vendor/htmx.min.js',
-  '/static/vendor/lucide.min.js',
-  '/static/icons/icon-192.png',
-  '/static/icons/icon-maskable-192.png',
+  staticAsset('/static/js/app.js'),
+  staticAsset('/static/js/image-picker.js'),
+  staticAsset('/static/vendor/htmx.min.js'),
+  staticAsset('/static/vendor/lucide.min.js'),
+  staticAsset('/static/icons/favicon-32.png'),
+  staticAsset('/static/icons/icon-180.png'),
+  staticAsset('/static/icons/icon-192.png'),
+  staticAsset('/static/icons/icon-512.png'),
+  staticAsset('/static/icons/icon-maskable-192.png'),
 ];
 
 const SENSITIVE_PREFIXES = [
@@ -54,13 +63,15 @@ self.addEventListener('fetch', (event) => {
 
   if (url.pathname.startsWith('/static/')) {
     event.respondWith(
-      caches.match(request).then((cached) => cached || fetch(request).then((res) => {
-        if (res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-        }
-        return res;
-      }))
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }

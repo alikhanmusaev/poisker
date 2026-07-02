@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Поискер",
-  "short_name": "Поискер",
-  "description": "Доска объявлений Чеченской Республики на poisker.ru — без регистрации, с умным поиском",
+  "name": "{{ site_name }}",
+  "short_name": "{{ site_name }}",
+  "description": "{{ site_description }}",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
@@ -16,25 +16,31 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/static/icons/icon-192.png",
+      "src": "{{ static_url('icons/icon-180.png') }}",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "{{ static_url('icons/icon-192.png') }}",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/icons/icon-512.png",
+      "src": "{{ static_url('icons/icon-512.png') }}",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/icons/icon-maskable-192.png",
+      "src": "{{ static_url('icons/icon-maskable-192.png') }}",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/static/icons/icon-maskable-512.png",
+      "src": "{{ static_url('icons/icon-maskable-512.png') }}",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -46,13 +52,13 @@
       "short_name": "Подать",
       "description": "Создать новое объявление",
       "url": "/posts/new?source=shortcut",
-      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "{{ static_url('icons/icon-192.png') }}", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Главная",
       "short_name": "Главная",
       "url": "/?source=shortcut",
-      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "{{ static_url('icons/icon-192.png') }}", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

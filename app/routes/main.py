@@ -1,10 +1,10 @@
-from flask import Blueprint, current_app, jsonify, redirect, render_template, request, send_from_directory, url_for
+from flask import Blueprint, current_app, jsonify, make_response, redirect, render_template, request, send_from_directory, url_for
 
 from app.constants import CATEGORIES, CITIES, DEFAULT_SEARCH_SORT, DEFAULT_SORT, SORT_OPTIONS
 from app.extensions import limiter
 from app.models import Post, utcnow
 from app.routes.post_detail import render_show_page
-from app.services.posts import get_published_post_by_slug
+from app.services.posts import get_published_post_by_slug, get_viewable_post_by_slug
 from app.services.search import search_posts, suggest
 from app.services.seo import (
     absolute_url,
@@ -107,11 +107,23 @@ def _render_listing(**kwargs):
 @bp.route("/obyavlenie/<city_slug>/<category_slug>/<slug>")
 @limiter.limit("120 per minute")
 def post_public(city_slug, category_slug, slug):
-    post = get_published_post_by_slug(slug)
+    token = request.args.get("token", "")
+    post = get_viewable_post_by_slug(
+        slug,
+        city_slug=city_slug,
+        category_slug=category_slug,
+        token=token or None,
+    )
     if not post:
         from flask import render_template
 
         return render_template("errors/404.html"), 404
+    if post.status == "pending" or (token and post.status == "hidden"):
+        from app.routes.post_detail import build_show_context
+
+        ctx = build_show_context(post, owner_preview=True, owner_token=token or None)
+        ctx["robots"] = "noindex, nofollow"
+        return render_template("posts/show.html", **ctx)
     if city_slug != post.city or category_slug != post.category:
         return redirect(post_public_url(post), code=301)
     return render_show_page(post)
@@ -156,7 +168,7 @@ def sitemap_xml():
     for city_slug in CITIES:
         urls.append({"loc": absolute_url(city_category_path(city_slug))})
     for category_slug in CATEGORIES:
-        urls.append({"loc": absolute_url(url_for("main.index", category=category_slug))})
+        urls.append({"loc": absolute_url(url_for("main.category_page", category_slug=category_slug))})
         for city_slug in CITIES:
             urls.append(
                 {
@@ -192,6 +204,16 @@ def sitemap_xml():
 @bp.route("/")
 @limiter.limit(lambda: current_app.config["RATELIMIT_INDEX"])
 def index():
+    category = request.args.get("category", "")
+    if (
+        category in CATEGORIES
+        and not request.args.get("q")
+        and not request.args.get("city")
+        and not request.args.get("price_min")
+        and not request.args.get("price_max")
+        and max(request.args.get("page", 1, type=int), 1) == 1
+    ):
+        return redirect(url_for("main.category_page", category_slug=category), code=301)
     return _render_listing()
 
 
@@ -207,6 +229,14 @@ def suggest_view():
     if request.headers.get("HX-Request"):
         return render_template("partials/suggest.html", items=items, query=query)
     return {"suggestions": items}
+
+
+@bp.route("/kategoriya/<category_slug>")
+@limiter.limit(lambda: current_app.config["RATELIMIT_INDEX"])
+def category_page(category_slug):
+    if category_slug not in CATEGORIES:
+        return render_template("errors/404.html"), 404
+    return _render_listing(fixed_category=category_slug)
 
 
 @bp.route("/gorod/<city_slug>")
@@ -245,13 +275,22 @@ def guidelines():
     return render_template("guidelines.html")
 
 
+@bp.route("/manifest.webmanifest")
+def web_manifest():
+    response = make_response(render_template("manifest.webmanifest"))
+    response.headers["Content-Type"] = "application/manifest+json; charset=utf-8"
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 @bp.route("/sw.js")
 def service_worker():
-    return send_from_directory(
-        current_app.static_folder,
-        "sw.js",
-        mimetype="application/javascript",
+    response = make_response(
+        render_template("sw.js", static_version=current_app.config.get("STATIC_VERSION", "1"))
     )
+    response.headers["Content-Type"] = "application/javascript; charset=utf-8"
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @bp.route("/.well-known/assetlinks.json")

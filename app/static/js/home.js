@@ -160,10 +160,17 @@
     }
   }
 
+  function categoryFromPath() {
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    if (parts[0] === 'kategoriya' && parts[1]) return parts[1];
+    if (parts[0] === 'gorod' && parts[2]) return parts[2];
+    return '';
+  }
+
   function syncControlsFromUrl() {
     if (window.refreshIcons) refreshIcons();
     const params = new URLSearchParams(window.location.search);
-    const cat = params.get('category') || '';
+    const cat = params.get('category') || categoryFromPath() || '';
     document.querySelectorAll('.category-chip').forEach((chip) => {
       const active = (chip.dataset.category || '') === cat;
       chip.classList.toggle('is-active', active);

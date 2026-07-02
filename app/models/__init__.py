@@ -25,6 +25,8 @@ class Post(db.Model):
     slug = db.Column(db.String(120), nullable=True, unique=True, index=True)
     status = db.Column(db.String(20), nullable=False, default="published", index=True)
     images = db.Column(db.JSON, nullable=False, default=list)
+    cover_index = db.Column(db.Integer, nullable=False, default=0)
+    pending_revision = db.Column(db.JSON, nullable=True)
     ip_hash = db.Column(db.String(64), nullable=True)
     views = db.Column(db.Integer, nullable=False, default=0)
     contact_clicks = db.Column(db.Integer, nullable=False, default=0)

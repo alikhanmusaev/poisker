@@ -10,7 +10,7 @@ from app.services.phone_crypto import decrypt_phone, encrypt_phone
 from app.services.ranking import calculate_rank_score, start_of_today_msk, today_msk_date
 from app.services.search import index_post, remove_post_from_index
 from app.services.slug import make_unique_slug
-from app.services.storage import delete_stored_images
+from app.services.storage import delete_stored_image, delete_stored_images
 
 
 def _normalize_expires_at(expires_at):
@@ -62,6 +62,40 @@ def get_public_post(post_id: str) -> Post | None:
     return post
 
 
+def get_viewable_post(post_id: str, token: str | None = None) -> Post | None:
+    """Public posts for everyone; pending/hidden posts for owner with edit token."""
+    post = Post.query.filter_by(id=post_id).first()
+    if not post:
+        return None
+    if post.status == "expired" or is_post_expired(post):
+        if token and post.edit_token == token:
+            return post
+        return None
+    if is_post_publicly_visible(post):
+        return post
+    if token and post.edit_token == token and post.status in ("pending", "hidden"):
+        return post
+    return None
+
+
+def get_viewable_post_by_slug(
+    slug: str,
+    *,
+    city_slug: str | None = None,
+    category_slug: str | None = None,
+    token: str | None = None,
+) -> Post | None:
+    post = get_published_post_by_slug(slug)
+    if post:
+        return post
+    if not token:
+        return None
+    post = Post.query.filter_by(slug=slug, edit_token=token).first()
+    if not post or post.status not in ("pending", "hidden"):
+        return None
+    return post
+
+
 class PostLimitError(Exception):
     pass
 
@@ -83,7 +117,7 @@ def has_post_today(phone_hash: str) -> bool:
         Post.query.filter(
             Post.phone_hash == phone_hash,
             Post.created_at >= start,
-            Post.status.in_(["published", "hidden"]),
+            Post.status.in_(["published", "hidden", "pending"]),
         ).first()
         is not None
     )
@@ -116,7 +150,7 @@ def _validate_seller_name(value: str | None) -> str:
     return seller_name
 
 
-def create_post(data: dict, ip_hash: str | None = None) -> Post:
+def create_post(data: dict, ip_hash: str | None = None, *, publish: bool = False) -> Post:
     if data.get("city") not in CITIES:
         raise ValidationError("Выберите город из списка")
     if data.get("category") not in CATEGORIES:
@@ -165,10 +199,11 @@ def create_post(data: dict, ip_hash: str | None = None) -> Post:
         phone_masked=mask_phone(phone),
         phone_encrypted=encrypt_phone(phone),
         edit_token=generate_edit_token(),
-        status="published",
+        status="published" if publish else "pending",
         images=images,
         ip_hash=ip_hash,
         has_photo=bool(images),
+        cover_index=int(data.get("cover_index", 0) or 0),
         created_at=now,
         expires_at=now + timedelta(days=expiry_days),
         bumped_at=now,
@@ -179,7 +214,8 @@ def create_post(data: dict, ip_hash: str | None = None) -> Post:
     post.rank_score = calculate_rank_score(post)
     record_phone_publish(phone_hash, post.id)
     db.session.commit()
-    index_post(post)
+    if publish:
+        index_post(post)
     return post
 
 
@@ -216,29 +252,88 @@ def update_post(post: Post, data: dict) -> Post:
     else:
         price = None
 
-    images = data.get("images")
-    title_changed = title != post.title
-    city_changed = data["city"] != post.city
-    post.title = title
+    images = list(data.get("images") if data.get("images") is not None else (post.images or []))
+    cover_index = int(data.get("cover_index", getattr(post, "cover_index", 0) or 0))
+    if images:
+        cover_index = min(max(cover_index, 0), len(images) - 1)
+    else:
+        cover_index = 0
+
+    live_images = list(post.images or [])
+    live_cover = getattr(post, "cover_index", 0) or 0
+    sensitive_changed = (
+        title != post.title
+        or body != post.body
+        or images != live_images
+        or cover_index != live_cover
+    )
+
     post.seller_name = seller_name
-    post.body = body
     post.category = data["category"]
     post.city = data["city"]
     post.price = price
-    if title_changed:
-        post.slug = make_unique_slug(title, post.id, current_slug=post.slug)
-    if images is not None:
-        removed = set(post.images or []) - set(images)
-        if removed:
-            delete_stored_images(list(removed))
-        post.images = images
-        post.has_photo = bool(images)
+
+    if sensitive_changed:
+        post.pending_revision = {
+            "title": title,
+            "body": body,
+            "images": images,
+            "cover_index": cover_index,
+            "submitted_at": utcnow().isoformat(),
+        }
 
     post.rank_score = calculate_rank_score(post)
     db.session.commit()
     if post.status == "published" and not is_post_expired(post):
         index_post(post)
+    elif post.status != "published":
+        remove_post_from_index(post.id)
     return post
+
+
+def apply_pending_revision(post: Post) -> bool:
+    revision = post.pending_revision
+    if not revision:
+        return False
+
+    old_images = set(post.images or [])
+    new_images = list(revision.get("images", post.images or []))
+    title_changed = revision.get("title", post.title) != post.title
+
+    post.title = revision.get("title", post.title)
+    post.body = revision.get("body", post.body)
+    post.images = new_images
+    post.cover_index = int(revision.get("cover_index", 0) or 0)
+    post.has_photo = bool(new_images)
+    post.pending_revision = None
+
+    if title_changed:
+        post.slug = make_unique_slug(post.title, post.id, current_slug=post.slug)
+
+    removed = old_images - set(new_images)
+    if removed:
+        delete_stored_images(list(removed))
+
+    post.rank_score = calculate_rank_score(post)
+    db.session.commit()
+    if post.status == "published" and not is_post_expired(post):
+        index_post(post)
+    return True
+
+
+def reject_pending_revision(post: Post) -> bool:
+    revision = post.pending_revision
+    if not revision:
+        return False
+
+    live_images = set(post.images or [])
+    pending_images = set(revision.get("images", []))
+    for url in pending_images - live_images:
+        delete_stored_image(url)
+
+    post.pending_revision = None
+    db.session.commit()
+    return True
 
 
 def delete_post(post: Post):

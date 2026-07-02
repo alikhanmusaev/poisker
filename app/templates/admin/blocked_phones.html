@@ -1,0 +1,43 @@
+{% extends "admin/base.html" %}
+{% block title %}Заблокированные номера{% endblock %}
+{% block content %}
+<h1>Заблокированные номера</h1>
+
+{% if not blocked %}
+<p class="admin-hint">Список пуст.</p>
+{% else %}
+<table class="admin-table">
+  <thead>
+    <tr><th>ID</th><th>Хэш</th><th>Причина</th><th>Дата</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for item in blocked %}
+    <tr>
+      <td>{{ item.id }}</td>
+      <td><code>{{ item.phone_hash[:16] }}…</code></td>
+      <td>{{ item.reason or '—' }}</td>
+      <td>{{ item.created_at.strftime('%d.%m.%Y %H:%M') if item.created_at else '—' }}</td>
+      <td class="actions">
+        <form method="post" action="{{ url_for('admin.unblock_phone', blocked_id=item.id) }}" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">Разблокировать</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if pagination.pages > 1 %}
+<nav class="admin-pagination" aria-label="Страницы">
+  {% if pagination.has_prev %}
+    <a href="{{ url_for('admin.blocked_phones_list', page=pagination.prev_num) }}">← Назад</a>
+  {% endif %}
+  <span>{{ pagination.page }} / {{ pagination.pages }}</span>
+  {% if pagination.has_next %}
+    <a href="{{ url_for('admin.blocked_phones_list', page=pagination.next_num) }}">Далее →</a>
+  {% endif %}
+</nav>
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -42,7 +42,7 @@ https://developers.google.com/digital-asset-links/tools/generator
 
 ```bash
 npm install -g @bubblewrap/cli
-bubblewrap init --manifest https://poisker.ru/static/manifest.webmanifest
+bubblewrap init --manifest https://poisker.ru/manifest.webmanifest
 bubblewrap build
 ```
 

@@ -15,22 +15,32 @@
   <script type="application/ld+json">{{ json_ld | tojson }}</script>
 {% endblock %}
 {% block content %}
+{% if admin_preview %}
+<p class="admin-preview-banner" role="status">
+  Предпросмотр для администратора.
+  {% if post.status == 'pending' %}Объявление ожидает модерации.{% endif %}
+</p>
+{% elif owner_preview and post.status == 'pending' %}
+<p class="admin-preview-banner" role="status">
+  Объявление на модерации. Так его видите только вы — после одобрения оно появится в общем каталоге.
+</p>
+{% endif %}
 <article class="page-card post-detail"
          data-post-detail
          data-post-id="{{ post.id }}"
-         data-contact-url="{{ url_for('posts.contact', post_id=post.id) }}"
+         data-contact-url="{{ url_for('posts.contact', post_id=post.id, token=owner_token) if owner_token else url_for('posts.contact', post_id=post.id) }}"
          data-meta-url="{{ url_for('posts.meta', post_id=post.id) }}">
   <a href="{{ back_url }}" class="back-link">
     <i data-lucide="arrow-left" class="icon icon-sm" aria-hidden="true"></i>
     Назад к объявлениям
   </a>
-  {% if post.images %}
+  {% if gallery_images %}
     <div class="post-gallery" data-post-gallery>
       <div class="post-gallery-viewport" data-gallery-viewport tabindex="0" aria-roledescription="carousel" aria-label="Фотографии объявления">
         <div class="post-gallery-track" data-gallery-track>
-          {% for img in post.images %}
+          {% for img in gallery_images %}
             <div class="post-gallery-slide" data-gallery-slide aria-hidden="{{ 'false' if loop.first else 'true' }}">
-              <button type="button" class="post-gallery-open" data-gallery-open aria-label="Увеличить фото {{ loop.index }} из {{ post.images|length }}">
+              <button type="button" class="post-gallery-open" data-gallery-open aria-label="Увеличить фото {{ loop.index }} из {{ gallery_images|length }}">
                 <img src="{{ image_url(img) }}" alt="" loading="{{ 'eager' if loop.first else 'lazy' }}" width="800" height="600">
                 <span class="post-gallery-zoom-hint" aria-hidden="true">
                   <i data-lucide="zoom-in" class="icon icon-sm"></i>
@@ -39,19 +49,19 @@
             </div>
           {% endfor %}
         </div>
-        {% if post.images|length > 1 %}
+        {% if gallery_images|length > 1 %}
           <button type="button" class="post-gallery-nav post-gallery-prev" data-gallery-prev aria-label="Предыдущее фото">
             <i data-lucide="chevron-left" class="icon" aria-hidden="true"></i>
           </button>
           <button type="button" class="post-gallery-nav post-gallery-next" data-gallery-next aria-label="Следующее фото">
             <i data-lucide="chevron-right" class="icon" aria-hidden="true"></i>
           </button>
-          <span class="post-gallery-counter" data-gallery-counter>1 / {{ post.images|length }}</span>
+          <span class="post-gallery-counter" data-gallery-counter>1 / {{ gallery_images|length }}</span>
         {% endif %}
       </div>
-      {% if post.images|length > 1 %}
+      {% if gallery_images|length > 1 %}
         <div class="post-gallery-dots" data-gallery-dots role="tablist" aria-label="Выбор фото">
-          {% for img in post.images %}
+          {% for img in gallery_images %}
             <button type="button" role="tab" aria-label="Фото {{ loop.index }}" aria-selected="{{ 'true' if loop.first else 'false' }}" class="post-gallery-dot{% if loop.first %} is-active{% endif %}"></button>
           {% endfor %}
         </div>
@@ -150,6 +160,6 @@
 </article>
 {% endblock %}
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/post-gallery.js') }}"></script>
-<script src="{{ url_for('static', filename='js/post-detail.js') }}"></script>
+<script src="{{ static_url('js/post-gallery.js') }}"></script>
+<script src="{{ static_url('js/post-detail.js') }}"></script>
 {% endblock %}
