@@ -1,18 +1,95 @@
 {% extends "admin/base.html" %}
+{% from "admin/_macros.html" import status_badge, pagination_nav, empty_state, post_actions with context %}
 {% block title %}Жалобы{% endblock %}
+{% block page_title %}Жалобы{% endblock %}
 {% block content %}
-<h1>Жалобы</h1>
-<table class="admin-table">
-  <thead><tr><th>Дата</th><th>Объявление</th><th>Причина</th><th>Комментарий</th></tr></thead>
-  <tbody>
-    {% for r in reports %}
-    <tr>
-      <td>{{ r.created_at.strftime('%d.%m.%Y') }}</td>
-      <td><a href="{{ post_public_url(r.post) if r.post else url_for('posts.show', post_id=r.post_id) }}">{{ r.post.title[:30] if r.post else r.post_id }}</a></td>
-      <td>{{ r.reason }}</td>
-      <td>{{ r.comment or '—' }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<form class="admin-filters" method="get">
+  <label>Статус
+    <select class="admin-select" name="status">
+      <option value="new" {% if status == 'new' %}selected{% endif %}>Новые</option>
+      <option value="reviewed" {% if status == 'reviewed' %}selected{% endif %}>Рассмотренные</option>
+      <option value="all" {% if status == 'all' %}selected{% endif %}>Все</option>
+    </select>
+  </label>
+  <label>Причина
+    <select class="admin-select" name="reason">
+      <option value="">Все</option>
+      {% for key, label in report_reasons.items() %}
+      <option value="{{ key }}" {% if reason == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Дата от
+    <input class="admin-input" type="date" name="date_from" value="{{ date_from }}">
+  </label>
+  <button type="submit" class="admin-btn admin-btn--primary">Применить</button>
+</form>
+
+{% if not reports %}
+{{ empty_state('Нет жалоб') }}
+{% else %}
+<div class="admin-table-wrap">
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>Дата</th>
+        <th>Статус</th>
+        <th>Причина</th>
+        <th>Комментарий</th>
+        <th>Объявление</th>
+        <th>Статус объявления</th>
+        <th>Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in reports %}
+      <tr>
+        <td class="admin-table__muted">{{ r.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+        <td>{{ status_badge(r.status, report_status_labels) }}</td>
+        <td>{{ report_reasons.get(r.reason, r.reason) }}</td>
+        <td class="admin-table__clip">{{ r.comment or '—' }}</td>
+        <td>
+          {% if r.post %}
+          <a class="admin-table__title" href="{{ url_for('admin.post_preview', post_id=r.post.id) }}">{{ r.post.title[:40] }}</a>
+          {% else %}
+          <span class="admin-table__muted">{{ r.post_id }}</span>
+          {% endif %}
+        </td>
+        <td>{% if r.post %}{{ status_badge(r.post.status, status_labels) }}{% else %}—{% endif %}</td>
+        <td>
+          <div class="admin-actions">
+            {% if r.post %}
+            <a class="admin-btn admin-btn--ghost admin-btn--sm" href="{{ url_for('admin.post_preview', post_id=r.post.id) }}">Открыть</a>
+            {% if r.post.status != 'hidden' and r.post.status != 'deleted' %}
+            <form method="post" action="{{ url_for('admin.hide_post', post_id=r.post.id) }}" class="admin-inline-form" data-confirm="Скрыть объявление?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="admin-btn admin-btn--warning admin-btn--sm">Скрыть</button>
+            </form>
+            {% endif %}
+            {% if r.post.status != 'deleted' %}
+            <form method="post" action="{{ url_for('admin.delete_post_admin', post_id=r.post.id) }}" class="admin-inline-form" data-confirm="Удалить объявление?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="admin-btn admin-btn--danger admin-btn--sm">Удалить</button>
+            </form>
+            <form method="post" action="{{ url_for('admin.block_phone', post_id=r.post.id) }}" class="admin-inline-form" data-confirm="Заблокировать номер?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="admin-btn admin-btn--danger admin-btn--sm">Блок номера</button>
+            </form>
+            {% endif %}
+            {% endif %}
+            {% if r.status != 'reviewed' %}
+            <form method="post" action="{{ url_for('admin.mark_report_reviewed', report_id=r.id) }}" class="admin-inline-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="admin-btn admin-btn--primary admin-btn--sm">Рассмотрена</button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{{ pagination_nav(pagination, 'admin.reports_list') }}
+{% endif %}
 {% endblock %}

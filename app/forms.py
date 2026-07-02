@@ -74,3 +74,8 @@ class ReportForm(FlaskForm):
 class AdminLoginForm(FlaskForm):
     username = StringField("Логин", validators=[DataRequired()])
     password = PasswordField("Пароль", validators=[DataRequired()])
+
+
+class BlockPhoneForm(FlaskForm):
+    phone = StringField("Телефон", validators=[DataRequired(), Length(min=10, max=20)])
+    reason = StringField("Причина", validators=[Optional(), Length(max=200)])

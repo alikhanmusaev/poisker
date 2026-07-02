@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Админ{% endblock %} — Poisker</title>
+  <link rel="stylesheet" href="{{ static_url('fonts/inter/inter.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/admin.css') }}">
+</head>
+<body class="admin-shell{% if not current_user.is_authenticated %} admin-shell--guest{% endif %}">
+  {% if current_user.is_authenticated %}
+  <button type="button" class="admin-mobile-toggle" id="admin-menu-toggle" aria-expanded="false" aria-controls="admin-sidebar">
+    <span class="admin-mobile-toggle__bar"></span>
+    <span class="admin-mobile-toggle__bar"></span>
+    <span class="admin-mobile-toggle__bar"></span>
+    <span class="sr-only">Меню</span>
+  </button>
+  <div class="admin-overlay" id="admin-overlay" hidden></div>
+  <aside class="admin-sidebar" id="admin-sidebar">
+    <div class="admin-sidebar__brand">
+      <a href="{{ url_for('admin.dashboard') }}" class="admin-sidebar__logo">Poisker</a>
+      <span class="admin-sidebar__subtitle">Админ-панель</span>
+    </div>
+    <nav class="admin-sidebar__nav" aria-label="Админ-навигация">
+      {% for endpoint, label, icon in admin_nav %}
+      <a href="{{ url_for(endpoint) }}" class="admin-sidebar__link{% if request.endpoint == endpoint %} is-active{% endif %}">
+        <i data-lucide="{{ icon }}" class="admin-sidebar__icon" aria-hidden="true"></i>
+        <span>{{ label }}</span>
+      </a>
+      {% endfor %}
+    </nav>
+    <div class="admin-sidebar__footer">
+      <span class="admin-sidebar__user">{{ current_user.username }}</span>
+      <a href="{{ url_for('main.index') }}" class="admin-sidebar__link admin-sidebar__link--muted" target="_blank" rel="noopener">На сайт</a>
+      <a href="{{ url_for('admin.logout') }}" class="admin-sidebar__link admin-sidebar__link--logout">Выход</a>
+    </div>
+  </aside>
+  {% endif %}
+
+  <div class="admin-content">
+    {% if current_user.is_authenticated %}
+    <header class="admin-topbar">
+      <h1 class="admin-topbar__title">{% block page_title %}{% endblock %}</h1>
+    </header>
+    {% endif %}
+
+    <main class="admin-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="admin-flashes" aria-live="polite">
+          {% for category, message in messages %}
+          <div class="admin-flash admin-flash--{{ category }}" role="alert">{{ message }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  {% if current_user.is_authenticated %}
+  <script src="{{ static_url('vendor/lucide.min.js') }}"></script>
+  <script src="{{ static_url('js/admin.js') }}"></script>
+  <script>if (window.lucide) lucide.createIcons();</script>
+  {% endif %}
+</body>
+</html>

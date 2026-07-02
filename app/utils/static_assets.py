@@ -12,6 +12,7 @@ def _watched_static_files(static_root: Path) -> list[Path]:
         "css/style.css",
         "css/admin.css",
         "js/app.js",
+        "js/admin.js",
         "js/home.js",
         "brand/logo.png",
         "brand/icon.png",

@@ -1,43 +1,57 @@
 {% extends "admin/base.html" %}
+{% from "admin/_macros.html" import pagination_nav, empty_state with context %}
 {% block title %}Заблокированные номера{% endblock %}
+{% block page_title %}Заблокированные номера{% endblock %}
 {% block content %}
-<h1>Заблокированные номера</h1>
+<div class="admin-card">
+  <h2 class="admin-card__title">Заблокировать номер вручную</h2>
+  <form method="post" class="admin-filters" style="position:static" data-confirm="Заблокировать этот номер?">
+    {{ form.hidden_tag() }}
+    <label>Телефон
+      {{ form.phone(class_='admin-input', placeholder='+7 900 000-00-00') }}
+    </label>
+    <label>Причина
+      {{ form.reason(class_='admin-input', placeholder='Спам, мошенничество…') }}
+    </label>
+    <button type="submit" class="admin-btn admin-btn--danger">Заблокировать</button>
+  </form>
+</div>
 
-{% if not blocked %}
-<p class="admin-hint">Список пуст.</p>
+{% if not rows %}
+{{ empty_state('Нет заблокированных номеров') }}
 {% else %}
-<table class="admin-table">
-  <thead>
-    <tr><th>ID</th><th>Хэш</th><th>Причина</th><th>Дата</th><th></th></tr>
-  </thead>
-  <tbody>
-    {% for item in blocked %}
-    <tr>
-      <td>{{ item.id }}</td>
-      <td><code>{{ item.phone_hash[:16] }}…</code></td>
-      <td>{{ item.reason or '—' }}</td>
-      <td>{{ item.created_at.strftime('%d.%m.%Y %H:%M') if item.created_at else '—' }}</td>
-      <td class="actions">
-        <form method="post" action="{{ url_for('admin.unblock_phone', blocked_id=item.id) }}" style="display:inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit">Разблокировать</button>
-        </form>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-{% if pagination.pages > 1 %}
-<nav class="admin-pagination" aria-label="Страницы">
-  {% if pagination.has_prev %}
-    <a href="{{ url_for('admin.blocked_phones_list', page=pagination.prev_num) }}">← Назад</a>
-  {% endif %}
-  <span>{{ pagination.page }} / {{ pagination.pages }}</span>
-  {% if pagination.has_next %}
-    <a href="{{ url_for('admin.blocked_phones_list', page=pagination.next_num) }}">Далее →</a>
-  {% endif %}
-</nav>
-{% endif %}
+<div class="admin-table-wrap">
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Хеш номера</th>
+        <th>Причина</th>
+        <th>Объявлений</th>
+        <th>Дата</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      {% set blocked = row.blocked %}
+      <tr>
+        <td>{{ blocked.id }}</td>
+        <td><code>{{ blocked.phone_hash[:16] }}…</code></td>
+        <td>{{ blocked.reason or '—' }}</td>
+        <td>{{ row.posts_count }}</td>
+        <td class="admin-table__muted">{{ blocked.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin.unblock_phone', blocked_id=blocked.id) }}" class="admin-inline-form" data-confirm="Разблокировать номер?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="admin-btn admin-btn--ghost admin-btn--sm">Разблокировать</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{{ pagination_nav(pagination, 'admin.blocked_phones_list') }}
 {% endif %}
 {% endblock %}

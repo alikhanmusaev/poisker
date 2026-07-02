@@ -1,32 +1,37 @@
 {% extends "admin/base.html" %}
-{% block title %}Журнал действий — Админ{% endblock %}
+{% from "admin/_macros.html" import pagination_nav, empty_state with context %}
+{% block title %}Логи{% endblock %}
+{% block page_title %}Журнал действий{% endblock %}
 {% block content %}
-<h1>Журнал действий</h1>
-<p class="admin-hint">Последние 100 действий администраторов.</p>
-{% if logs %}
-<table class="admin-table">
-  <thead>
-    <tr>
-      <th>Время</th>
-      <th>Админ</th>
-      <th>Действие</th>
-      <th>Объект</th>
-      <th>ID</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for log in logs %}
-    <tr>
-      <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M') if log.created_at else '—' }}</td>
-      <td>{{ admins.get(log.admin_id, log.admin_id) }}</td>
-      <td>{{ action_labels.get(log.action, log.action) }}</td>
-      <td>{{ log.target_type }}</td>
-      <td><code>{{ log.target_id }}</code></td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+{% if not logs %}
+{{ empty_state('Журнал пуст') }}
 {% else %}
-<p>Записей пока нет.</p>
+<div class="admin-table-wrap">
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>Дата</th>
+        <th>Админ</th>
+        <th>Действие</th>
+        <th>Объект</th>
+        <th>ID</th>
+        <th>IP hash</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td class="admin-table__muted">{{ log.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</td>
+        <td>{{ admins.get(log.admin_id, log.admin_id) }}</td>
+        <td>{{ action_labels.get(log.action, log.action) }}</td>
+        <td>{{ log.target_type }}</td>
+        <td><code>{{ log.target_id }}</code></td>
+        <td class="admin-table__muted">{% if log.ip_hash %}{{ log.ip_hash[:12] }}…{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{{ pagination_nav(pagination, 'admin.audit_list') }}
 {% endif %}
 {% endblock %}

@@ -1,0 +1,79 @@
+{% macro status_badge(status, labels) %}
+<span class="admin-badge admin-badge--{{ status|replace(' ', '-') }}">{{ labels.get(status, status) }}</span>
+{% endmacro %}
+
+{% macro post_thumb(post) %}
+{% set img = cover_image(post) or (ordered_images(post)[0] if ordered_images(post) else '') %}
+{% if img %}
+<img src="{{ image_url(img) }}" alt="" class="admin-thumb" loading="lazy" width="48" height="48">
+{% else %}
+<span class="admin-thumb admin-thumb--empty" aria-hidden="true">—</span>
+{% endif %}
+{% endmacro %}
+
+{% macro pagination_nav(pagination, endpoint) %}
+{% if pagination.pages > 1 %}
+<nav class="admin-pagination" aria-label="Страницы">
+  {% if pagination.has_prev %}
+  <a class="admin-btn admin-btn--ghost" href="{{ admin_page_url(pagination.prev_num) }}">← Назад</a>
+  {% endif %}
+  <span class="admin-pagination__info">{{ pagination.page }} / {{ pagination.pages }}</span>
+  {% if pagination.has_next %}
+  <a class="admin-btn admin-btn--ghost" href="{{ admin_page_url(pagination.next_num) }}">Далее →</a>
+  {% endif %}
+</nav>
+{% endif %}
+{% endmacro %}
+
+{% macro empty_state(title, hint='') %}
+<div class="admin-empty">
+  <p class="admin-empty__title">{{ title }}</p>
+  {% if hint %}<p class="admin-empty__hint">{{ hint }}</p>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro post_actions(post, back='admin.posts_list') %}
+<div class="admin-actions">
+  <a class="admin-btn admin-btn--ghost admin-btn--sm" href="{{ url_for('admin.post_preview', post_id=post.id) }}" target="_blank" rel="noopener">Просмотр</a>
+  {% if post.status == 'pending' %}
+  <form method="post" action="{{ url_for('admin.publish_post', post_id=post.id) }}" class="admin-inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="admin-btn admin-btn--success admin-btn--sm">Опубликовать</button>
+  </form>
+  <form method="post" action="{{ url_for('admin.hide_post', post_id=post.id) }}" class="admin-inline-form" data-confirm="Скрыть объявление?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="admin-btn admin-btn--warning admin-btn--sm">Скрыть</button>
+  </form>
+  {% elif post.status == 'published' %}
+  <form method="post" action="{{ url_for('admin.hide_post', post_id=post.id) }}" class="admin-inline-form" data-confirm="Скрыть объявление?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="admin-btn admin-btn--warning admin-btn--sm">Скрыть</button>
+  </form>
+  {% elif post.status != 'deleted' %}
+  <form method="post" action="{{ url_for('admin.publish_post', post_id=post.id) }}" class="admin-inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="admin-btn admin-btn--success admin-btn--sm">Опубликовать</button>
+  </form>
+  {% endif %}
+  {% if post.pending_revision %}
+  <form method="post" action="{{ url_for('admin.approve_revision', post_id=post.id) }}" class="admin-inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="admin-btn admin-btn--primary admin-btn--sm">Одобрить правки</button>
+  </form>
+  <form method="post" action="{{ url_for('admin.reject_revision', post_id=post.id) }}" class="admin-inline-form" data-confirm="Отклонить правки?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="admin-btn admin-btn--ghost admin-btn--sm">Отклонить правки</button>
+  </form>
+  {% endif %}
+  <form method="post" action="{{ url_for('admin.block_phone', post_id=post.id) }}" class="admin-inline-form" data-confirm="Заблокировать номер и скрыть объявление?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="admin-btn admin-btn--danger admin-btn--sm">Блок номера</button>
+  </form>
+  {% if post.status != 'deleted' %}
+  <form method="post" action="{{ url_for('admin.delete_post_admin', post_id=post.id) }}" class="admin-inline-form" data-confirm="Удалить объявление? Это действие необратимо.">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="admin-btn admin-btn--danger admin-btn--sm">Удалить</button>
+  </form>
+  {% endif %}
+</div>
+{% endmacro %}

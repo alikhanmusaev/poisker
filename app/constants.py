@@ -124,6 +124,11 @@ REPORT_REASONS = {
     "other": "Другое",
 }
 
+REPORT_STATUS_LABELS = {
+    "new": "Новая",
+    "reviewed": "Рассмотрена",
+}
+
 POST_STATUSES = ("draft", "pending", "published", "hidden", "expired", "deleted")
 
 POST_TITLE_MIN_LEN = 5

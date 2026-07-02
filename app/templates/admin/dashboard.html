@@ -1,14 +1,27 @@
 {% extends "admin/base.html" %}
-{% block title %}Дашборд{% endblock %}
+{% from "admin/_macros.html" import empty_state with context %}
+{% block title %}Обзор{% endblock %}
+{% block page_title %}Обзор{% endblock %}
 {% block content %}
-<h1>Дашборд</h1>
-<div class="stats-grid">
-  <div class="stat-card"><span class="stat-value">{{ posts_today }}</span><span class="stat-label">Сегодня</span></div>
-  <div class="stat-card"><span class="stat-value">{{ total_posts }}</span><span class="stat-label">Активных</span></div>
-  <div class="stat-card"><span class="stat-value">{{ posts_pending }}</span><span class="stat-label">На модерации</span></div>
-  <div class="stat-card"><span class="stat-value">{{ revisions_pending }}</span><span class="stat-label">Правки</span></div>
-  <div class="stat-card"><span class="stat-value">{{ reports_pending }}</span><span class="stat-label">Жалоб</span></div>
-  <div class="stat-card"><span class="stat-value">{{ promos_pending }}</span><span class="stat-label">Ожидают оплаты</span></div>
-  <div class="stat-card"><span class="stat-value">{{ revenue }} ₽</span><span class="stat-label">Доход</span></div>
+<div class="admin-stats">
+  <div class="admin-stat"><span class="admin-stat__value">{{ status_counts.get('total', 0) }}</span><span class="admin-stat__label">Всего объявлений</span></div>
+  <div class="admin-stat"><span class="admin-stat__value">{{ status_counts.get('published', 0) }}</span><span class="admin-stat__label">Опубликовано</span></div>
+  <div class="admin-stat"><span class="admin-stat__value">{{ status_counts.get('pending', 0) }}</span><span class="admin-stat__label">На модерации</span></div>
+  <div class="admin-stat"><span class="admin-stat__value">{{ status_counts.get('hidden', 0) }}</span><span class="admin-stat__label">Скрыто</span></div>
+  <div class="admin-stat"><span class="admin-stat__value">{{ status_counts.get('deleted', 0) }}</span><span class="admin-stat__label">Удалено</span></div>
+  <div class="admin-stat"><span class="admin-stat__value">{{ reports_total }}</span><span class="admin-stat__label">Жалоб всего</span></div>
+  <div class="admin-stat"><span class="admin-stat__value">{{ reports_new }}</span><span class="admin-stat__label">Новых жалоб</span></div>
+  <div class="admin-stat"><span class="admin-stat__value">{{ promos_pending }}</span><span class="admin-stat__label">Поднятий в ожидании</span></div>
+  <div class="admin-stat"><span class="admin-stat__value">{{ posts_today }}</span><span class="admin-stat__label">Объявлений за сегодня</span></div>
+</div>
+
+<div class="admin-card">
+  <h2 class="admin-card__title">Быстрые действия</h2>
+  <div class="admin-quick-actions">
+    <a href="{{ url_for('admin.moderation_list') }}">Модерация</a>
+    <a href="{{ url_for('admin.reports_list') }}">Жалобы</a>
+    <a href="{{ url_for('admin.posts_list') }}">Объявления</a>
+    <a href="{{ url_for('admin.deleted_list') }}">Удалённые</a>
+  </div>
 </div>
 {% endblock %}
