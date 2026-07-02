@@ -59,15 +59,30 @@ def opencv_available():
     pytest.importorskip("cv2")
 
 
-def test_blur_license_plates_finds_rectangular_region(app, opencv_available):
+def test_blur_license_plates_does_not_blur_plain_car_photo(app, opencv_available):
+    import numpy as np
+
+    from app.services.image_privacy import blur_license_plates
+
+    # Uniform car body without a plate-like rectangle — should stay unchanged.
+    arr = np.full((600, 800, 3), 145, dtype=np.uint8)
+    img = Image.fromarray(arr)
+
+    with app.app_context():
+        result = blur_license_plates(img, category="avto")
+
+    assert np.array_equal(np.array(img), np.array(result))
+
+
+def test_blur_license_plates_only_blurs_small_plate_region(app, opencv_available):
     import cv2
     import numpy as np
 
     from app.services.image_privacy import blur_license_plates
 
-    arr = np.full((480, 640, 3), 140, dtype=np.uint8)
-    cv2.rectangle(arr, (220, 360), (420, 400), (245, 245, 245), -1)
-    cv2.putText(arr, "A123BC95", (235, 392), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (20, 20, 20), 2)
+    arr = np.full((600, 800, 3), 145, dtype=np.uint8)
+    cv2.rectangle(arr, (330, 500), (470, 530), (245, 245, 245), -1)
+    cv2.putText(arr, "A123BC95", (340, 524), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (25, 25, 25), 2)
     img = Image.fromarray(arr)
 
     with app.app_context():
@@ -75,4 +90,26 @@ def test_blur_license_plates_finds_rectangular_region(app, opencv_available):
 
     orig = np.array(img)
     blurred = np.array(result)
-    assert not np.array_equal(orig[360:400, 220:420], blurred[360:400, 220:420])
+    # Plate area changed
+    assert not np.array_equal(orig[495:535, 325:475], blurred[495:535, 325:475])
+    # Upper part of the car unchanged
+    assert np.array_equal(orig[100:300, 200:600], blurred[100:300, 200:600])
+
+
+def test_blur_license_plates_finds_rectangular_region(app, opencv_available):
+    import cv2
+    import numpy as np
+
+    from app.services.image_privacy import blur_license_plates
+
+    arr = np.full((600, 800, 3), 145, dtype=np.uint8)
+    cv2.rectangle(arr, (330, 500), (470, 530), (245, 245, 245), -1)
+    cv2.putText(arr, "A123BC95", (340, 524), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (25, 25, 25), 2)
+    img = Image.fromarray(arr)
+
+    with app.app_context():
+        result = blur_license_plates(img, category="avto")
+
+    orig = np.array(img)
+    blurred = np.array(result)
+    assert not np.array_equal(orig[495:535, 325:475], blurred[495:535, 325:475])
