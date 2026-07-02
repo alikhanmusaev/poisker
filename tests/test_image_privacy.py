@@ -14,6 +14,25 @@ def _image_file(fmt: str, name: str, *, size=(800, 600), color=(120, 120, 120)) 
     return FileStorage(stream=buf, filename=name, content_type=f"image/{fmt.lower()}")
 
 
+def test_watermark_font_supports_cyrillic():
+    from PIL import ImageFont
+
+    from app.services.storage import _WATERMARK_FONT_PATH, _watermark_font
+
+    assert _WATERMARK_FONT_PATH.is_file()
+    font = _watermark_font(20)
+    assert isinstance(font, ImageFont.FreeTypeFont)
+
+
+def test_watermark_label_includes_site_and_domain(app):
+    from app.services.storage import _watermark_label
+
+    with app.app_context():
+        label = _watermark_label()
+    assert "Поискер" in label
+    assert "poisker.ru" in label
+
+
 def test_prepare_watermark_logo_removes_red_background():
     from app.services.storage import _prepare_watermark_logo
 

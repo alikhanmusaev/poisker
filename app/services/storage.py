@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 JPEG_QUALITY = 82
 MAX_DIMENSION = 1200
 _WATERMARK_LOGO_PATH = Path(__file__).resolve().parent.parent / "static" / "brand" / "icon.png"
+_WATERMARK_FONT_PATH = (
+    Path(__file__).resolve().parent.parent / "static" / "fonts" / "watermark" / "DejaVuSans-Bold.ttf"
+)
 
 
 def extract_s3_key(url: str) -> str | None:
@@ -85,12 +88,30 @@ def _check_file_size(file: FileStorage) -> None:
 
 
 def _watermark_font(size: int):
-    for name in ("DejaVuSans-Bold.ttf", "DejaVuSans.ttf", "arialbd.ttf", "arial.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"):
+    if _WATERMARK_FONT_PATH.is_file():
+        try:
+            return ImageFont.truetype(str(_WATERMARK_FONT_PATH), size)
+        except OSError:
+            logger.warning("Failed to load bundled watermark font")
+    for name in (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "DejaVuSans-Bold.ttf",
+        "DejaVuSans.ttf",
+    ):
         try:
             return ImageFont.truetype(name, size)
         except OSError:
             continue
     return ImageFont.load_default()
+
+
+def _watermark_label() -> str:
+    site = (current_app.config.get("SITE_NAME") or "Поискер").strip()
+    domain = (current_app.config.get("APP_DOMAIN") or "poisker.ru").strip().lower()
+    if domain and domain not in site.lower():
+        return f"{site} · {domain}"
+    return site
 
 
 @lru_cache(maxsize=1)
@@ -129,15 +150,15 @@ def _scaled_logo(height: int) -> Image.Image | None:
 
 
 def _apply_watermark(img: Image.Image) -> Image.Image:
-    site = (current_app.config.get("SITE_NAME") or "Поискер").strip()
+    label = _watermark_label()
     short_side = min(img.size)
     logo_h = max(18, min(42, short_side // 16))
-    font_size = max(13, min(30, short_side // 22))
+    font_size = max(14, min(28, short_side // 24))
     font = _watermark_font(font_size)
 
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
-    bbox = draw.textbbox((0, 0), site, font=font)
+    bbox = draw.textbbox((0, 0), label, font=font)
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
 
@@ -174,7 +195,7 @@ def _apply_watermark(img: Image.Image) -> Image.Image:
         text_x = x0 + pad_x
 
     text_y = y0 + (badge_h - text_h) // 2 - bbox[1]
-    draw.text((text_x, text_y), site, fill=(255, 255, 255, 245), font=font)
+    draw.text((text_x, text_y), label, fill=(255, 255, 255, 245), font=font)
 
     return Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
 
