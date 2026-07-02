@@ -63,6 +63,7 @@
     init() {
       if (!this.input || this.root.dataset.pickerInit === '1') return;
       this.root.dataset.pickerInit = '1';
+      this.root._imagePicker = this;
 
       this.input.addEventListener('change', this.onChange);
       this.addBtn?.addEventListener('click', this.onAddClick);
@@ -288,6 +289,13 @@
     });
   }
 
+  function syncFormImagePickers(form) {
+    form?.querySelectorAll('.image-picker').forEach((root) => {
+      root._imagePicker?.syncInput();
+    });
+  }
+
   window.initImagePickers = initImagePickers;
+  window.syncFormImagePickers = syncFormImagePickers;
   document.addEventListener('DOMContentLoaded', () => initImagePickers());
 })();

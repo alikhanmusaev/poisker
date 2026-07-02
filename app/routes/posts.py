@@ -6,6 +6,7 @@ from app.forms import EditPostForm, PostForm
 from app.models import Post
 from app.services.captcha import (
     captcha_error_message,
+    captcha_challenge_meta,
     contact_needs_captcha,
     ensure_captcha_challenge,
     extract_captcha_response,
@@ -106,6 +107,7 @@ def create():
             except ValueError as e:
                 errors.append(str(e))
             except Exception:
+                current_app.logger.exception("Post create failed")
                 errors.append("Ошибка загрузки. Попробуйте позже.")
 
     if request.method == "POST":
@@ -115,7 +117,7 @@ def create():
         if is_ajax:
             payload = {"ok": False, "errors": errors or ["Проверьте поля формы"]}
             if any("робот" in err.lower() or "попыток" in err.lower() for err in errors):
-                payload["captcha_question"] = ensure_captcha_challenge() if not is_captcha_locked() else ""
+                payload.update(captcha_challenge_meta())
             return payload, 400
 
     return render_template(
@@ -231,16 +233,13 @@ def contact(post_id):
 
     if contact_needs_captcha(post_id):
         answer = extract_captcha_response()
-        ok, error, question = verify_captcha_or_error(answer, request.remote_addr)
+        ok, error, _question = verify_captcha_or_error(answer, request.remote_addr)
         if not ok:
             payload = {
                 "error": error or captcha_error_message(),
                 "captcha_required": True,
             }
-            if question:
-                payload["captcha_question"] = question
-            elif not is_captcha_locked():
-                payload["captcha_question"] = ensure_captcha_challenge()
+            payload.update(captcha_challenge_meta())
             return jsonify(payload), 403
 
     phone = reveal_post_phone(post)

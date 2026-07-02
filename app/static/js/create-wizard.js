@@ -324,6 +324,16 @@
       .replace(/"/g, '&quot;');
   }
 
+  function updateCaptchaWidget(meta) {
+    if (!meta) return;
+    const question = document.querySelector('.captcha-question');
+    const prompt = document.querySelector('.captcha-prompt');
+    if (question && meta.captcha_question) question.textContent = meta.captcha_question;
+    if (prompt && meta.captcha_prompt) prompt.textContent = meta.captcha_prompt;
+    const answer = document.querySelector('.captcha-answer-input');
+    if (answer) answer.value = '';
+  }
+
   function showSubmitErrors(errors) {
     const box = document.getElementById('wizard-submit-errors');
     if (!box || !errors?.length) return;
@@ -506,6 +516,8 @@
         submitBtn.setAttribute('aria-busy', 'true');
       }
 
+      if (window.syncFormImagePickers) window.syncFormImagePickers(form);
+
       try {
         const response = await fetch(form.action || window.location.pathname, {
           method: 'POST',
@@ -524,14 +536,9 @@
         }
 
         showSubmitErrors(data.errors || ['Не удалось опубликовать']);
-        if (data.captcha_question) {
-          const question = document.querySelector('.captcha-question');
-          const answer = document.querySelector('.captcha-answer-input');
-          if (question) question.textContent = data.captcha_question;
-          if (answer) {
-            answer.value = '';
-            answer.focus();
-          }
+        if (data.captcha_question || data.captcha_prompt) {
+          updateCaptchaWidget(data);
+          document.querySelector('.captcha-answer-input')?.focus();
         }
         goToStep(TOTAL_STEPS, { skipValidate: true, scroll: false });
       } catch (e) {

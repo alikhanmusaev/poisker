@@ -10,29 +10,6 @@ CONTACT_REVEALS_KEY = "contact_revealed_posts"
 MAX_FAILURES = 5
 FAILURE_WINDOW = 600
 
-NUM_WORDS = {
-    "ноль": 0,
-    "один": 1,
-    "одна": 1,
-    "два": 2,
-    "две": 2,
-    "три": 3,
-    "четыре": 4,
-    "пять": 5,
-    "шесть": 6,
-    "семь": 7,
-    "восемь": 8,
-    "девять": 9,
-    "десять": 10,
-    "одиннадцать": 11,
-    "двенадцать": 12,
-    "тринадцать": 13,
-    "четырнадцать": 14,
-    "пятнадцать": 15,
-}
-
-WORD_ANSWERS = ("поискер", "рынок")
-
 
 def captcha_provider() -> str:
     return "builtin"
@@ -84,45 +61,35 @@ def captcha_error_message() -> str:
 
 def captcha_prompt() -> str:
     challenge = session.get(SESSION_KEY) or {}
-    return challenge.get("prompt", "Проверка")
-
-
-def _number_to_words(n: int) -> str:
-    for word, value in NUM_WORDS.items():
-        if value == n:
-            return word
-    return str(n)
+    return challenge.get("prompt", "Сколько будет")
 
 
 def generate_builtin_challenge() -> dict:
-    kind = random.choice(("math_digits", "math_words", "number_word", "word"))
-    if kind == "math_digits":
-        a, b = random.randint(2, 12), random.randint(2, 12)
-        op = random.choice(("+", "-"))
-        if op == "-" and b > a:
-            a, b = b, a
-        answer = str(a + b if op == "+" else a - b)
-        question = f"{a} {op} {b}"
-        prompt = "Сколько будет"
-    elif kind == "math_words":
-        a, b = random.randint(2, 12), random.randint(2, 12)
-        op = random.choice(("+", "-"))
-        if op == "-" and b > a:
-            a, b = b, a
-        answer = str(a + b if op == "+" else a - b)
-        op_word = "плюс" if op == "+" else "минус"
-        question = f"{_number_to_words(a)} {op_word} {_number_to_words(b)}"
-        prompt = "Сколько будет"
-    elif kind == "number_word":
-        n = random.randint(0, 15)
-        answer = str(n)
-        question = _number_to_words(n)
-        prompt = "Введите цифрами число:"
-    else:
-        answer = random.choice(WORD_ANSWERS)
-        question = answer
-        prompt = "Введите слово:"
-    return {"question": question, "answer": answer, "prompt": prompt, "kind": kind}
+    a, b = random.randint(2, 12), random.randint(2, 12)
+    op = random.choice(("+", "-"))
+    if op == "-" and b > a:
+        a, b = b, a
+    answer = str(a + b if op == "+" else a - b)
+    question = f"{a} {op} {b}"
+    return {
+        "question": question,
+        "answer": answer,
+        "prompt": "Сколько будет",
+        "kind": "math_digits",
+    }
+
+
+def captcha_challenge_meta() -> dict:
+    if is_captcha_locked():
+        return {"captcha_question": "", "captcha_prompt": captcha_error_message()}
+    challenge = session.get(SESSION_KEY) or {}
+    if not _challenge_valid(challenge):
+        ensure_captcha_challenge(force_new=True)
+        challenge = session.get(SESSION_KEY) or {}
+    return {
+        "captcha_question": challenge.get("question", ""),
+        "captcha_prompt": challenge.get("prompt", "Сколько будет"),
+    }
 
 
 def _store_challenge(challenge: dict) -> None:
@@ -153,12 +120,12 @@ def new_captcha_question() -> str:
 
 def _normalize_answer(value: str, kind: str) -> str:
     text = (value or "").strip()
+    digits = re.sub(r"\D", "", text)
+    if kind in ("math_digits", "math_words", "number", "number_word"):
+        return digits or text
     if kind == "word":
         return text.casefold()
-    if kind == "number":
-        digits = re.sub(r"\D", "", text)
-        return digits
-    return text
+    return digits or text
 
 
 def _verify_builtin(answer: str) -> bool:

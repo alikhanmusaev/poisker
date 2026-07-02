@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     if (data.captcha_required) {
-      showCaptchaBlock(data.captcha_question, 'Проверка');
+      showCaptchaBlock(data.captcha_question, data.captcha_prompt || 'Сколько будет');
       showContactError(data.error || 'Подтвердите, что вы не робот');
       return;
     }
