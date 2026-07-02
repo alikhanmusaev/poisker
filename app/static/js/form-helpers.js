@@ -75,7 +75,7 @@
   function matchCities(query, citiesMap, limit = 8) {
     const entries = Object.entries(citiesMap || {});
     const q = String(query || '').trim().toLowerCase();
-    if (!q) return entries.slice(0, limit);
+    if (!q) return [];
     return entries
       .filter(([slug, label]) => {
         const name = String(label).toLowerCase();
@@ -129,12 +129,16 @@
     }
 
     function openList() {
-      const items = matchCities(input.value, citiesMap);
+      const query = String(input.value || '').trim();
+      if (!query) {
+        closeList();
+        return;
+      }
+      const items = matchCities(query, citiesMap);
       activeIndex = -1;
       renderList(items);
     }
 
-    input.addEventListener('focus', openList);
     input.addEventListener('input', () => {
       hiddenInput.value = '';
       openList();

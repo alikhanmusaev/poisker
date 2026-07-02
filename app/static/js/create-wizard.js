@@ -183,6 +183,14 @@
     }
   }
 
+  function draftHasContent(data) {
+    if (!data) return false;
+    return DRAFT_FIELDS.some((id) => {
+      const value = data[id];
+      return value != null && String(value).trim() !== '';
+    });
+  }
+
   function writeDraft() {
     const form = document.getElementById('create-post-form');
     if (!form) return;
@@ -193,6 +201,10 @@
     });
     const active = form.querySelector('.post-wizard-step.is-active');
     if (active) data.step = parseInt(active.dataset.step || '1', 10);
+    if (!draftHasContent(data)) {
+      clearDraft();
+      return;
+    }
     localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
   }
 
@@ -238,7 +250,9 @@
     if (!form) return;
 
     const existing = readDraft();
-    if (existing && banner) {
+    if (existing && !draftHasContent(existing)) {
+      clearDraft();
+    } else if (existing && draftHasContent(existing) && banner) {
       banner.hidden = false;
     }
 

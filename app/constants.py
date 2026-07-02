@@ -1,25 +1,6 @@
-CITIES = {
-    "grozny": "Грозный",
-    "gudermes": "Гудермес",
-    "argun": "Аргун",
-    "urus-martan": "Урус-Мартан",
-    "shali": "Шали",
-    "kurchaloy": "Курчалой",
-    "naurskaya": "Наурская",
-    "vedeno": "Ведено",
-    "shatoy": "Шатой",
-    "nozhay-yurt": "Ножай-Юрт",
-    "shelkovskaya": "Шелковская",
-    "goyty": "Гойты",
-    "achkhoy-martan": "Ачхой-Мартан",
-    "tsentoroy": "Центорой",
-    "starye-atagi": "Старые Атаги",
-    "katar-yurt": "Катар-Юрт",
-    "gekhi": "Гехи",
-    "samashki": "Самашки",
-    "alleroi": "Аллерой",
-    "benoy": "Бено́й",
-}
+from app.data.chechnya_settlements import CHECHNYA_SETTLEMENTS
+
+CITIES = CHECHNYA_SETTLEMENTS
 
 # Предложный падеж для SEO-заголовков («в Грозном»)
 CITY_LOCATIVE = {
