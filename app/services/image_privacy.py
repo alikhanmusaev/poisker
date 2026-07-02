@@ -15,6 +15,7 @@ _PLATE_ASPECT_IDEAL = 3.8
 _MAX_BLUR_REGIONS = 1
 _MIN_SCORE = 0.55
 _MIN_TEXTURE = 0.32
+_EARLY_EXIT_SCORE = 0.72
 
 
 def blur_license_plates(img: Image.Image, *, category: str | None = None) -> Image.Image:
@@ -57,8 +58,15 @@ def _find_plate_boxes(rgb) -> list[tuple[int, int, int, int]]:
     for box in _contour_candidates(rgb, int(height * 0.52), 0, width, limits):
         candidates.append(_evaluate_candidate(box, width, height, rgb))
 
-    candidates.append(_scan_plate_window(rgb, limits, coarse=True))
-    candidates.append(_scan_plate_window(rgb, limits, coarse=False))
+    coarse = _scan_plate_window(rgb, limits, coarse=True)
+    if coarse[1]:
+        candidates.append(coarse)
+
+    best_score = max((score for score, box in candidates if box), default=0.0)
+    if best_score < 0.6:
+        fine = _scan_plate_window(rgb, limits, coarse=False)
+        if fine[1]:
+            candidates.append(fine)
 
     candidates = [(score, box) for score, box in candidates if box and score >= _MIN_SCORE]
     if not candidates:
@@ -115,6 +123,8 @@ def _scan_plate_window(rgb, limits: dict[str, int], *, coarse: bool) -> tuple[fl
                     if candidate and score > best_score:
                         best_score = score
                         best_box = candidate
+                        if best_score >= _EARLY_EXIT_SCORE:
+                            return best_score, best_box
 
     return best_score, best_box
 

@@ -41,7 +41,6 @@ def init_scheduler(app):
         hour=3,
         minute=30,
         id="cleanup_deleted_posts",
-        replace_existing=True,
         timezone=timezone,
     )
     def cleanup_deleted_job():
