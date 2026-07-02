@@ -114,7 +114,7 @@ def has_post_today(phone_hash: str) -> bool:
     if daily:
         if daily.post_id:
             linked = Post.query.filter_by(id=daily.post_id).first()
-            if linked and linked.status != "deleted":
+            if linked is not None:
                 return True
         else:
             start = start_of_today_msk()
@@ -132,13 +132,14 @@ def has_post_today(phone_hash: str) -> bool:
         Post.query.filter(
             Post.phone_hash == phone_hash,
             Post.created_at >= start,
-            Post.status.in_(["published", "hidden", "pending"]),
+            Post.status.in_(["published", "hidden", "pending", "deleted"]),
         ).first()
         is not None
     )
 
 
 def release_daily_publish_slot(post: Post) -> None:
+    """Release a daily publish slot — not used for normal soft delete flows."""
     today = today_msk_date()
     PhoneDailyPublish.query.filter_by(
         phone_hash=post.phone_hash,
@@ -394,7 +395,6 @@ def delete_post(post: Post):
     now = utcnow()
     post.deleted_at = now
     post.updated_at = now
-    release_daily_publish_slot(post)
     db.session.commit()
 
 

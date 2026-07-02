@@ -46,7 +46,7 @@ def test_contact_get_returns_405(client, app):
     assert "POST" in res.get_json()["error"]
 
 
-def test_daily_limit_released_after_delete(client, app):
+def test_daily_limit_not_released_after_delete(client, app):
     post = _create_post(app, phone="+79006667788")
 
     with app.app_context():
@@ -56,7 +56,7 @@ def test_daily_limit_released_after_delete(client, app):
 
         delete_post(Post.query.get(post["id"]))
         phone_hash = hash_phone(validate_phone("+79006667788"))
-        assert has_post_today(phone_hash) is False
+        assert has_post_today(phone_hash) is True
 
     res = client.post(
         "/posts/new",
@@ -73,7 +73,7 @@ def test_daily_limit_released_after_delete(client, app):
     )
 
     assert res.status_code in (200, 302)
-    assert "уже опубликовано" not in res.get_data(as_text=True)
+    assert "уже опубликовано" in res.get_data(as_text=True)
 
 
 def test_expired_post_not_public(client, app):
