@@ -309,7 +309,7 @@ def edit(post_id):
                 else "Объявление обновлено",
                 "success",
             )
-            return redirect(url_for("posts.edit", post_id=post.id, token=token))
+            return redirect(url_for("posts.my_posts"))
         except ValidationError as e:
             errors.append(str(e))
 

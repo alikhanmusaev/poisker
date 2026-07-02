@@ -50,7 +50,9 @@ def test_edit_with_valid_token(client, app):
         follow_redirects=True,
     )
     assert res.status_code == 200
-    assert "Обновлённый заголовок" in res.get_data(as_text=True) or "обновлено" in res.get_data(as_text=True).lower()
+    text = res.get_data(as_text=True)
+    assert "Мои объявления" in text
+    assert "my-posts-list" in text
 
 
 def test_edit_with_wrong_token_denied(client, app):
