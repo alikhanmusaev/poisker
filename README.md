@@ -96,7 +96,29 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 - Flask, SQLAlchemy, PostgreSQL
 - Typesense, Redis, MinIO
 - HTMX, Service Worker
-- APScheduler (ранжирование, истечение объявлений)
+- APScheduler (ранжирование, истечение объявлений, очистка удалённых)
+
+## Deleted posts cleanup
+
+Пользовательское действие **«Снять объявление»** — это soft delete:
+
+- объявление сразу исчезает из публичной выдачи и поиска;
+- запись в PostgreSQL, картинки в MinIO и зашифрованный телефон временно сохраняются;
+- через `DELETED_POST_RETENTION_DAYS` дней (по умолчанию 30) фоновый cleanup удаляет картинки из MinIO и очищает `phone_encrypted`;
+- строка в базе остаётся для истории модерации (`phone_hash`, `phone_masked`, заголовок и т.д.).
+
+Ручной запуск:
+
+```bash
+flask --app wsgi cleanup-deleted-posts --days 30 --batch-size 100
+```
+
+Автоматический запуск — ежедневно в 03:30 (Europe/Moscow) при `SCHEDULER_ENABLED=true`.
+
+Переменные окружения:
+
+- `DELETED_POST_RETENTION_DAYS=30`
+- `DELETED_POST_CLEANUP_BATCH_SIZE=100`
 - Nginx + Gunicorn (см. `nginx.conf`, `Dockerfile`)
 
 ## Переменные окружения

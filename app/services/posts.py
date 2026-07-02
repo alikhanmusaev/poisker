@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta, timezone
 
 from flask import current_app, session
@@ -44,6 +45,60 @@ def mark_post_expired_if_needed(post: Post) -> bool:
     return False
 
 
+def is_post_gone(post: Post) -> bool:
+    """True if the post should return HTTP 410 on public URLs."""
+    if post.status in ("deleted", "expired"):
+        return True
+    if post.status == "published" and is_post_expired(post):
+        mark_post_expired_if_needed(post)
+        return True
+    return False
+
+
+def get_post_by_slug(slug: str) -> Post | None:
+    return Post.query.filter_by(slug=slug).first()
+
+
+def resolve_public_slug_view(
+    slug: str,
+    *,
+    city_slug: str | None = None,
+    category_slug: str | None = None,
+    token: str | None = None,
+) -> tuple[str, Post | None]:
+    """Resolve public slug access: show, gone, owner_preview, redirect, or not_found."""
+    post = get_post_by_slug(slug)
+    if not post:
+        return "not_found", None
+    if is_post_gone(post):
+        return "gone", post
+    if is_post_publicly_visible(post):
+        if city_slug is not None and category_slug is not None:
+            if city_slug != post.city or category_slug != post.category:
+                return "redirect", post
+        return "show", post
+    if token and post.edit_token == token and post.status in ("pending", "hidden"):
+        return "owner_preview", post
+    return "not_found", None
+
+
+def resolve_public_id_view(post_id: str, token: str | None = None) -> tuple[str, Post | None]:
+    """Resolve legacy /posts/<id> access: show, gone, owner_preview, redirect, or not_found."""
+    post = Post.query.filter_by(id=post_id).first()
+    if not post:
+        return "not_found", None
+    if is_post_gone(post):
+        return "gone", post
+    viewable = get_viewable_post(post_id, token=token)
+    if not viewable:
+        return "not_found", None
+    if is_post_publicly_visible(viewable) and viewable.slug:
+        return "redirect", viewable
+    if viewable.status in ("pending", "hidden"):
+        return "owner_preview", viewable
+    return "show", viewable
+
+
 def get_published_post_by_slug(slug: str) -> Post | None:
     post = Post.query.filter_by(slug=slug, status="published").first()
     if not post:
@@ -68,8 +123,6 @@ def get_viewable_post(post_id: str, token: str | None = None) -> Post | None:
     if not post or post.status == "deleted":
         return None
     if post.status == "expired" or is_post_expired(post):
-        if token and post.edit_token == token:
-            return post
         return None
     if is_post_publicly_visible(post):
         return post
@@ -181,7 +234,7 @@ def _validate_post_text(
     current_title: str | None = None,
     current_body: str | None = None,
 ) -> tuple[str, str]:
-    title = (title or "").strip()
+    title = re.sub(r"\s+", " ", (title or "").strip())
     body = (body or "").strip()
     prev_title = (current_title or "").strip()
     prev_body = (current_body or "").strip()
@@ -390,6 +443,11 @@ def reject_pending_revision(post: Post) -> bool:
 
 
 def delete_post(post: Post):
+    """Soft-delete a post.
+
+    The post is removed from public listing/search immediately,
+    but DB row, images and encrypted phone are kept until cleanup.
+    """
     remove_post_from_index(post.id)
     post.status = "deleted"
     now = utcnow()

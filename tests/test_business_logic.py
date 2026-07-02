@@ -89,7 +89,7 @@ def test_expired_post_not_public(client, app):
         db.session.commit()
 
     res = client.get(f"/obyavlenie/{post['city']}/{post['category']}/{post['slug']}")
-    assert res.status_code == 404
+    assert res.status_code == 410
 
 
 def test_meta_for_hidden_post_with_token(client, app):

@@ -8,6 +8,10 @@ from app.services.seo import post_json_ld, post_og_image, post_public_url, site_
 from app.utils.post_display import ordered_images
 
 
+def render_gone_page():
+    return render_template("errors/410.html"), 410
+
+
 def build_show_context(post, *, owner_preview: bool = False, owner_token: str | None = None):
     referrer = request.referrer or ""
     parsed_referrer = urlparse(referrer)

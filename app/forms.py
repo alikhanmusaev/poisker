@@ -16,7 +16,7 @@ from app.constants import (
 
 
 class PostForm(FlaskForm):
-    title = StringField(
+    title = TextAreaField(
         "Заголовок",
         validators=[DataRequired(), Length(min=POST_TITLE_MIN_LEN, max=POST_TITLE_MAX_LEN)],
     )
@@ -40,7 +40,7 @@ class PostForm(FlaskForm):
 
 
 class EditPostForm(FlaskForm):
-    title = StringField(
+    title = TextAreaField(
         "Заголовок",
         validators=[DataRequired(), Length(min=POST_TITLE_MIN_LEN, max=POST_TITLE_DB_MAX_LEN)],
     )

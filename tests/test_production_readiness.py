@@ -122,8 +122,8 @@ def test_deleted_post_not_public(client, app):
         category = post.category
         slug = post.slug
         delete_post(post)
-    assert client.get(f"/posts/{post_id}").status_code == 404
-    assert client.get(f"/obyavlenie/{city}/{category}/{slug}").status_code == 404
+    assert client.get(f"/posts/{post_id}").status_code == 410
+    assert client.get(f"/obyavlenie/{city}/{category}/{slug}").status_code == 410
 
 
 def test_meta_deleted_post_returns_deleted_flag(client, app):

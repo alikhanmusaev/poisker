@@ -15,6 +15,7 @@
         <th>Город</th>
         <th>Категория</th>
         <th>Удалено</th>
+        <th>Очистка</th>
         <th>Создано</th>
         <th></th>
       </tr>
@@ -27,6 +28,13 @@
         <td>{{ cities.get(post.city, post.city) }}</td>
         <td>{{ category_labels.get(post.category, post.category) }}</td>
         <td>{{ post.deleted_at.strftime('%d.%m.%Y %H:%M') if post.deleted_at else '—' }}</td>
+        <td>
+          {% if not post.images and not post.phone_encrypted %}
+          <span class="admin-badge admin-badge--cleaned">Очищено</span>
+          {% else %}
+          <span class="admin-badge admin-badge--pending-cleanup">Ожидает очистки</span>
+          {% endif %}
+        </td>
         <td class="admin-table__muted">{{ post.created_at.strftime('%d.%m.%Y') }}</td>
         <td>
           <a class="admin-btn admin-btn--ghost admin-btn--sm" href="{{ url_for('admin.post_preview', post_id=post.id) }}">Просмотр</a>

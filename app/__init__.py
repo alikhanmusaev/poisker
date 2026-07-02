@@ -189,6 +189,10 @@ def create_app(config_name=None):
             return {"error": "Слишком много запросов. Попробуйте позже."}, 429
         return render_template("errors/429.html"), 429
 
+    from app.cli import register_cli
+
+    register_cli(app)
+
     with app.app_context():
         if app.config.get("SCHEDULER_ENABLED"):
             from app.jobs.scheduler import init_scheduler

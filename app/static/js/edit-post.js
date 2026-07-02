@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function readLimits() {
     return {
       titleMin: parseInt(editForm?.dataset.titleMin || '5', 10),
-      titleMax: parseInt(editForm?.dataset.titleMax || '70', 10),
+      titleMax: parseInt(editForm?.dataset.titleMax || '40', 10),
       bodyMin: parseInt(editForm?.dataset.bodyMin || '20', 10),
       bodyMax: parseInt(editForm?.dataset.bodyMax || '3000', 10),
     };
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const { titleMin, titleMax, bodyMin, bodyMax } = readLimits();
     const title = editForm.querySelector('[name="title"]');
     const body = editForm.querySelector('[name="body"]');
-    const titleVal = title?.value.trim() || '';
+    const titleVal = (title?.value || '').trim().replace(/\s+/g, ' ');
     const bodyVal = body?.value.trim() || '';
     if (titleVal.length < titleMin) {
       window.alert(`Заголовок — минимум ${titleMin} символов`);
@@ -189,9 +189,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     event.preventDefault();
     const ok = await confirmDialog({
-      title: 'Удалить объявление?',
-      message: 'Восстановить его будет нельзя.',
-      confirmLabel: 'Удалить',
+      title: 'Снять объявление с публикации?',
+      message: 'Пользователи больше не будут его видеть.',
+      confirmLabel: 'Снять объявление',
       danger: true,
     });
     if (ok) {

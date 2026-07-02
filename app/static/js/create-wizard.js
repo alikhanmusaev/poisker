@@ -53,7 +53,7 @@
     const form = document.getElementById('create-post-form');
     return {
       titleMin: parseInt(form?.dataset.titleMin || '5', 10),
-      titleMax: parseInt(form?.dataset.titleMax || '70', 10),
+      titleMax: parseInt(form?.dataset.titleMax || '40', 10),
       bodyMin: parseInt(form?.dataset.bodyMin || '20', 10),
       bodyMax: parseInt(form?.dataset.bodyMax || '3000', 10),
     };
@@ -66,7 +66,7 @@
       const { titleMin, titleMax, bodyMin, bodyMax } = limits();
       const title = document.getElementById('title');
       const body = document.getElementById('body');
-      const titleVal = fieldValue('title');
+      const titleVal = fieldValue('title').replace(/\s+/g, ' ');
       const bodyVal = fieldValue('body');
       if (titleVal.length < titleMin) {
         showFieldError(title, `Заголовок — минимум ${titleMin} символов`);

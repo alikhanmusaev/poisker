@@ -4,7 +4,7 @@ from app.constants import CATEGORIES, CITIES, DEFAULT_SEARCH_SORT, DEFAULT_SORT,
 from app.extensions import limiter
 from app.models import Post, utcnow
 from app.routes.post_detail import render_show_page
-from app.services.posts import get_published_post_by_slug, get_viewable_post_by_slug
+from app.services.posts import get_published_post_by_slug, resolve_public_slug_view
 from app.services.search import search_posts, suggest
 from app.services.seo import (
     absolute_url,
@@ -111,37 +111,45 @@ def _render_listing(**kwargs):
 @bp.route("/obyavlenie/<city_slug>/<category_slug>/<slug>")
 @limiter.limit("120 per minute")
 def post_public(city_slug, category_slug, slug):
+    from flask import render_template
+
+    from app.routes.post_detail import build_show_context, render_gone_page, render_show_page
+
     token = request.args.get("token", "")
-    post = get_viewable_post_by_slug(
+    action, post = resolve_public_slug_view(
         slug,
         city_slug=city_slug,
         category_slug=category_slug,
         token=token or None,
     )
-    if not post:
-        from flask import render_template
-
+    if action == "not_found":
         return render_template("errors/404.html"), 404
-    if post.status == "pending" or (token and post.status == "hidden"):
-        from app.routes.post_detail import build_show_context
-
+    if action == "gone":
+        return render_gone_page()
+    if action == "redirect":
+        return redirect(post_public_url(post), code=301)
+    if action == "owner_preview":
         ctx = build_show_context(post, owner_preview=True, owner_token=token or None)
         ctx["robots"] = "noindex, nofollow"
         return render_template("posts/show.html", **ctx)
-    if city_slug != post.city or category_slug != post.category:
-        return redirect(post_public_url(post), code=301)
     return render_show_page(post)
 
 
 @bp.route("/obyavlenie/<slug>")
 @limiter.limit("120 per minute")
 def post_public_legacy(slug):
-    post = get_published_post_by_slug(slug)
-    if not post:
-        from flask import render_template
+    from flask import render_template
 
+    from app.routes.post_detail import render_gone_page
+
+    action, post = resolve_public_slug_view(slug)
+    if action == "not_found":
         return render_template("errors/404.html"), 404
-    return redirect(post_public_url(post), code=301)
+    if action == "gone":
+        return render_gone_page()
+    if action in ("show", "redirect"):
+        return redirect(post_public_url(post), code=301)
+    return render_template("errors/404.html"), 404
 
 
 @bp.route("/health")

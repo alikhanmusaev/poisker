@@ -30,6 +30,8 @@ class Config:
     HMAC_SECRET = os.getenv("HMAC_SECRET", "dev-hmac-secret")
     PHONE_ENCRYPTION_KEY = os.getenv("PHONE_ENCRYPTION_KEY", "dev-phone-encryption-key")
     POST_EXPIRY_DAYS = int(os.getenv("POST_EXPIRY_DAYS", "30"))
+    DELETED_POST_RETENTION_DAYS = int(os.getenv("DELETED_POST_RETENTION_DAYS", "30"))
+    DELETED_POST_CLEANUP_BATCH_SIZE = int(os.getenv("DELETED_POST_CLEANUP_BATCH_SIZE", "100"))
     PROMOTION_BOOST_24H_AMOUNT = int(os.getenv("PROMOTION_BOOST_24H_AMOUNT", "100"))
     TIMEZONE = "Europe/Moscow"
     MAX_UPLOAD_SIZE = 5 * 1024 * 1024

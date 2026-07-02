@@ -1,5 +1,6 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from app.services.cleanup import cleanup_deleted_posts
 from app.services.ranking import expire_old_posts, recalculate_all_rank_scores
 from app.services.search import reindex_published_posts, upsert_published_rank_scores
 
@@ -32,5 +33,23 @@ def init_scheduler(app):
                 reindex_published_posts()
             except Exception:
                 app.logger.exception("Scheduler: failed to reindex published posts")
+
+    timezone = app.config.get("TIMEZONE", "Europe/Moscow")
+
+    @scheduler.scheduled_job(
+        "cron",
+        hour=3,
+        minute=30,
+        id="cleanup_deleted_posts",
+        replace_existing=True,
+        timezone=timezone,
+    )
+    def cleanup_deleted_job():
+        with app.app_context():
+            try:
+                stats = cleanup_deleted_posts()
+                app.logger.info("cleanup_deleted_posts: %s", stats)
+            except Exception:
+                app.logger.exception("Scheduler: failed cleanup_deleted_posts")
 
     scheduler.start()

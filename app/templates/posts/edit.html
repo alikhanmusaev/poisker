@@ -35,8 +35,8 @@
     <input type="hidden" name="cover_index" id="cover-index-field" value="{{ cover_index }}">
     <div class="field">
       <label class="field-label">{{ form.title.label.text }}</label>
-      {{ form.title(class="input", minlength=post_title_min_len, maxlength=[post_title_max_len, post.title|length]|max) }}
-      <p class="field-help">От {{ post_title_min_len }} до {{ post_title_max_len }} символов</p>
+      {{ form.title(class="input textarea", rows=2, minlength=post_title_min_len, maxlength=[post_title_max_len, post.title|length]|max) }}
+      <p class="field-help">До {{ post_title_max_len }} символов. На карточке длинный заголовок переносится на вторую строку.</p>
     </div>
     <div class="field">
       <label class="field-label">{{ form.seller_name.label.text }}</label>
@@ -130,14 +130,14 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="button" class="btn btn-danger btn-block" id="delete-post-trigger">
         <i data-lucide="trash-2" class="icon" aria-hidden="true"></i>
-        Удалить
+        Снять объявление
       </button>
       <div class="delete-confirm-panel" id="delete-confirm-panel" hidden>
-        <p class="delete-confirm-text">Удалить объявление без восстановления?</p>
+        <p class="delete-confirm-text">Снять объявление с публикации? Пользователи больше не будут его видеть.</p>
         <div class="delete-confirm-actions">
           <button type="button" class="btn btn-secondary" id="delete-post-cancel">Отмена</button>
           <button type="submit" class="btn btn-danger" id="delete-post-submit">
-            Да, удалить
+            Да, снять
           </button>
         </div>
       </div>

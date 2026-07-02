@@ -25,6 +25,7 @@ from app.services.posts import (
     delete_post,
     get_post_by_token,
     get_viewable_post,
+    resolve_public_id_view,
     increment_contact_clicks,
     is_post_publicly_visible,
     reveal_post_phone,
@@ -189,21 +190,21 @@ def meta(post_id):
 @bp.route("/<post_id>")
 @limiter.limit("120 per minute")
 def show(post_id):
+    from flask import abort, redirect, render_template
+
+    from app.routes.post_detail import build_show_context, render_gone_page
+    from app.services.seo import post_public_url
+
     token = request.args.get("token", "")
-    post = get_viewable_post(post_id, token=token or None)
-    if not post:
-        from flask import abort
-
+    action, post = resolve_public_id_view(post_id, token=token or None)
+    if action == "not_found":
         abort(404)
-
-    owner_preview = post.status in ("pending", "hidden") or bool(
-        token and post.edit_token == token and not is_post_publicly_visible(post)
-    )
-
-    if is_post_publicly_visible(post) and post.slug:
+    if action == "gone":
+        return render_gone_page()
+    if action == "redirect":
         return redirect(post_public_url(post), code=301)
 
-    from app.routes.post_detail import build_show_context
+    owner_preview = action == "owner_preview"
 
     ctx = build_show_context(post, owner_preview=owner_preview, owner_token=token or None)
     if owner_preview:
@@ -340,5 +341,5 @@ def remove(post_id):
     if not post:
         return render_template("errors/404.html"), 404
     delete_post(post)
-    flash("Объявление удалено", "success")
+    flash("Объявление снято с публикации", "success")
     return redirect(url_for("main.index"))
