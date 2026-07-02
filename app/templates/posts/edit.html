@@ -36,7 +36,7 @@
     <div class="field">
       <label class="field-label">{{ form.title.label.text }}</label>
       {{ form.title(class="input", minlength=post_title_min_len, maxlength=[post_title_max_len, post.title|length]|max) }}
-      <p class="field-help">До {{ post_title_max_len }} символов. На карточке длинный заголовок переносится на вторую строку.</p>
+      <p class="field-help">От {{ post_title_min_len }} до {{ post_title_max_len }} символов</p>
     </div>
     <div class="field">
       <label class="field-label">{{ form.seller_name.label.text }}</label>

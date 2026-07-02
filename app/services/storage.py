@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 JPEG_QUALITY = 82
 MAX_DIMENSION = 1200
-_WATERMARK_LOGO_PATH = Path(__file__).resolve().parent.parent / "static" / "brand" / "logo.png"
+_WATERMARK_LOGO_PATH = Path(__file__).resolve().parent.parent / "static" / "brand" / "icon.png"
 
 
 def extract_s3_key(url: str) -> str | None:
@@ -96,10 +96,27 @@ def _watermark_font(size: int):
 @lru_cache(maxsize=1)
 def _watermark_logo_image() -> Image.Image | None:
     try:
-        return Image.open(_WATERMARK_LOGO_PATH).convert("RGBA")
+        logo = Image.open(_WATERMARK_LOGO_PATH).convert("RGBA")
+        return _prepare_watermark_logo(logo)
     except OSError:
         logger.warning("Watermark logo not found at %s", _WATERMARK_LOGO_PATH)
         return None
+
+
+def _prepare_watermark_logo(logo: Image.Image) -> Image.Image:
+    """Keep only the white mark; drop solid red/black background."""
+    pixels = logo.load()
+    width, height = logo.size
+    for y in range(height):
+        for x in range(width):
+            r, g, b, a = pixels[x, y]
+            if r > 120 and r > g + 25 and r > b + 25:
+                pixels[x, y] = (r, g, b, 0)
+            elif r < 45 and g < 45 and b < 45:
+                pixels[x, y] = (r, g, b, 0)
+            elif r > 200 and g > 200 and b > 200:
+                pixels[x, y] = (255, 255, 255, 255)
+    return logo
 
 
 def _scaled_logo(height: int) -> Image.Image | None:
@@ -162,7 +179,7 @@ def _apply_watermark(img: Image.Image) -> Image.Image:
     return Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
 
 
-def _validate_and_resize_image(file: FileStorage) -> bytes:
+def _validate_and_resize_image(file: FileStorage, *, category: str | None = None) -> bytes:
     max_pixels = current_app.config.get("MAX_IMAGE_PIXELS", 20_000_000)
     Image.MAX_IMAGE_PIXELS = max_pixels
     try:
@@ -184,6 +201,12 @@ def _validate_and_resize_image(file: FileStorage) -> bytes:
 
     img = img.convert("RGB")
     img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
+
+    if current_app.config.get("PLATE_BLUR_ENABLED", True):
+        from app.services.image_privacy import blur_license_plates
+
+        img = blur_license_plates(img, category=category)
+
     img = _apply_watermark(img)
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=JPEG_QUALITY, optimize=True, progressive=True)
@@ -191,13 +214,13 @@ def _validate_and_resize_image(file: FileStorage) -> bytes:
     return buf.read()
 
 
-def upload_image(file: FileStorage) -> str:
+def upload_image(file: FileStorage, *, category: str | None = None) -> str:
     ext = (file.filename or "").rsplit(".", 1)[-1].lower()
     if ext not in current_app.config["ALLOWED_EXTENSIONS"]:
         raise ValueError("Допустимые форматы: jpg, png, webp")
 
     _check_file_size(file)
-    data = _validate_and_resize_image(file)
+    data = _validate_and_resize_image(file, category=category)
     key = f"posts/{uuid.uuid4().hex}.jpg"
     bucket = current_app.config["S3_BUCKET"]
     client = _client()

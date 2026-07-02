@@ -69,6 +69,7 @@ class Config:
         if fp.strip()
     ]
     SCHEDULER_ENABLED = os.getenv("SCHEDULER_ENABLED", "false").lower() in ("1", "true", "yes")
+    PLATE_BLUR_ENABLED = os.getenv("PLATE_BLUR_ENABLED", "true").lower() in ("1", "true", "yes")
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
         "pool_recycle": 300,
