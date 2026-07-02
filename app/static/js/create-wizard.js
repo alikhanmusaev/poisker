@@ -53,7 +53,7 @@
     const form = document.getElementById('create-post-form');
     return {
       titleMin: parseInt(form?.dataset.titleMin || '5', 10),
-      titleMax: parseInt(form?.dataset.titleMax || '100', 10),
+      titleMax: parseInt(form?.dataset.titleMax || '70', 10),
       bodyMin: parseInt(form?.dataset.bodyMin || '20', 10),
       bodyMax: parseInt(form?.dataset.bodyMax || '3000', 10),
     };
