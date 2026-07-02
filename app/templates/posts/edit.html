@@ -35,7 +35,7 @@
     <input type="hidden" name="cover_index" id="cover-index-field" value="{{ cover_index }}">
     <div class="field">
       <label class="field-label">{{ form.title.label.text }}</label>
-      {{ form.title(class="input textarea", rows=2, minlength=post_title_min_len, maxlength=[post_title_max_len, post.title|length]|max) }}
+      {{ form.title(class="input", minlength=post_title_min_len, maxlength=[post_title_max_len, post.title|length]|max) }}
       <p class="field-help">До {{ post_title_max_len }} символов. На карточке длинный заголовок переносится на вторую строку.</p>
     </div>
     <div class="field">

@@ -44,7 +44,7 @@
       <h2 class="post-wizard-step-title" id="wizard-step-1-title">Что предлагаете?</h2>
       <div class="field">
         <label class="field-label" for="title">{{ form.title.label.text }}</label>
-        {{ form.title(class="input textarea", id="title", rows=2, placeholder="Например: Продам холодильник", required=true, minlength=post_title_min_len, maxlength=post_title_max_len) }}
+        {{ form.title(class="input", id="title", placeholder="Например: Продам холодильник", required=true, minlength=post_title_min_len, maxlength=post_title_max_len) }}
         <p class="field-help">До {{ post_title_max_len }} символов. На карточке длинный заголовок переносится на вторую строку.</p>
       </div>
       <div class="field">
