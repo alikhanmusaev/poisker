@@ -81,3 +81,23 @@ def app():
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+
+def set_captcha_session(client, answer: str, *, question: str = "test"):
+    """Store a builtin captcha challenge in the test client session."""
+    import time
+
+    with client.session_transaction() as sess:
+        sess["captcha_challenge"] = {
+            "answer": answer,
+            "question": question,
+            "prompt": "Сколько будет",
+            "kind": "math_digits",
+            "expires": time.time() + 600,
+        }
+
+
+def fill_contact_reveals(client, post_ids):
+    """Mark contact reveals in session to trigger CONTACT_SOFT_LIMIT captcha."""
+    with client.session_transaction() as sess:
+        sess["contact_revealed_posts"] = list(post_ids)

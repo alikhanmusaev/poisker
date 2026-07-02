@@ -83,9 +83,9 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
       typesense:
-        condition: service_started
+        condition: service_healthy
       minio:
         condition: service_healthy
     healthcheck:
@@ -123,8 +123,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       typesense:
-        condition: service_started
+        condition: service_healthy
       minio:
         condition: service_healthy
       web:
