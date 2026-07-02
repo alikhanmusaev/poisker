@@ -52,14 +52,18 @@
         <label class="field-label">{{ form.category.label.text }}</label>
         {{ form.category(class="input select-input") }}
       </div>
-      <div class="field">
-        <label class="field-label">{{ form.city.label.text }}</label>
-        {{ form.city(class="input select-input") }}
+      <div class="field city-autocomplete">
+        <label class="field-label" for="city-input">{{ form.city.label.text }}</label>
+        <input type="text" class="input" id="city-input" placeholder="Начните вводить название" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="city-suggestions-edit" required>
+        <input type="hidden" name="city" id="city" value="{{ post.city }}">
+        <ul class="suggest-list city-suggest-list" id="city-suggestions-edit" role="listbox" hidden></ul>
       </div>
     </div>
-    <div class="field">
-      <label class="field-label">{{ form.price.label.text }}</label>
-      {{ form.price(class="input", min="0", inputmode="numeric") }}
+    <div class="field price-input-wrap">
+      <label class="field-label" for="price-display">{{ form.price.label.text }}</label>
+      <input type="text" class="input price-display-input" id="price-display" inputmode="numeric" autocomplete="off" placeholder="Необязательно">
+      <input type="hidden" name="price" id="price" value="{{ post.price if post.price is not none else '' }}">
+      <p class="price-hint{% if post.price is none %} is-empty{% endif %}" id="price-hint" aria-live="polite"></p>
     </div>
     {% if edit_images %}
       <div class="field">
@@ -142,5 +146,7 @@
 </div>
 {% endblock %}
 {% block scripts %}
+<script type="application/json" id="edit-form-labels">{{ {"cities": cities}|tojson }}</script>
+<script src="{{ static_url('js/form-helpers.js') }}"></script>
 <script src="{{ static_url('js/edit-post.js') }}"></script>
 {% endblock %}

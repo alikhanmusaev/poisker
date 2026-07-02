@@ -2517,6 +2517,33 @@ body.lightbox-open {
 
 .suggest-item:hover { background: var(--slate-50); }
 
+.city-autocomplete {
+  position: relative;
+}
+
+.city-suggest-list {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+}
+
+.price-input-wrap .price-display-input {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.price-hint {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--slate-600);
+}
+
+.price-hint.is-empty {
+  color: var(--slate-400);
+}
+
 .edit-actions { margin-top: 24px; display: grid; gap: 12px; }
 
 .delete-confirm-panel {

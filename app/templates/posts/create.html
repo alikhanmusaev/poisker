@@ -59,19 +59,22 @@
 
     <section class="post-wizard-step" data-step="2" hidden aria-labelledby="wizard-step-2-title">
       <h2 class="post-wizard-step-title" id="wizard-step-2-title">Категория и цена</h2>
-      <div class="field-row">
-        <div class="field">
-          <label class="field-label" for="category">{{ form.category.label.text }}</label>
-          {{ form.category(class="input select-input", id="category", required=true) }}
-        </div>
-        <div class="field">
-          <label class="field-label" for="city">{{ form.city.label.text }}</label>
-          {{ form.city(class="input select-input", id="city", required=true) }}
-        </div>
-      </div>
       <div class="field">
-        <label class="field-label" for="price">{{ form.price.label.text }}</label>
-        {{ form.price(class="input", id="price", placeholder="Необязательно", min="0", inputmode="numeric") }}
+        <label class="field-label" for="category">{{ form.category.label.text }}</label>
+        {{ form.category(class="input select-input", id="category", required=true) }}
+      </div>
+      <div class="field city-autocomplete">
+        <label class="field-label" for="city-input">{{ form.city.label.text }}</label>
+        <input type="text" class="input" id="city-input" placeholder="Начните вводить название" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="city-suggestions" required>
+        <input type="hidden" name="city" id="city" value="{{ form.city.data or '' }}">
+        <ul class="suggest-list city-suggest-list" id="city-suggestions" role="listbox" hidden></ul>
+        <p class="field-help">Выберите город из подсказок</p>
+      </div>
+      <div class="field price-input-wrap">
+        <label class="field-label" for="price-display">{{ form.price.label.text }}</label>
+        <input type="text" class="input price-display-input" id="price-display" placeholder="Необязательно" inputmode="numeric" autocomplete="off">
+        <input type="hidden" name="price" id="price" value="{{ form.price.data if form.price.data is not none else '' }}">
+        <p class="price-hint is-empty" id="price-hint" aria-live="polite">Например: 1 500 или 25 000</p>
       </div>
       <div class="post-wizard-nav post-wizard-nav-split">
         <button type="button" class="btn btn-secondary wizard-back" data-back="1">Назад</button>
@@ -149,6 +152,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ static_url('js/form-helpers.js') }}"></script>
 <script src="{{ static_url('js/phone-mask.js') }}"></script>
 <script src="{{ static_url('js/publish-success.js') }}"></script>
 <script src="{{ static_url('js/create-wizard.js') }}"></script>

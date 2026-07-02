@@ -1,5 +1,28 @@
 document.addEventListener('DOMContentLoaded', () => {
   const editForm = document.getElementById('edit-post-form');
+  const labelsNode = document.getElementById('edit-form-labels');
+  let cities = {};
+  if (labelsNode) {
+    try {
+      cities = JSON.parse(labelsNode.textContent).cities || {};
+    } catch (e) {}
+  }
+  if (window.initCityAutocomplete) {
+    window.initCityAutocomplete(
+      document.getElementById('city-input'),
+      document.getElementById('city'),
+      document.getElementById('city-suggestions-edit'),
+      cities
+    );
+  }
+  if (window.initPriceInput) {
+    window.initPriceInput(
+      document.getElementById('price-display'),
+      document.getElementById('price'),
+      document.getElementById('price-hint')
+    );
+  }
+
   if (editForm && typeof saveEditUrl === 'function') {
     saveEditUrl(window.location.href, {
       postId: editForm.dataset.postId || '',
@@ -86,6 +109,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function validateEditForm() {
     if (!editForm) return true;
+    const cityInput = document.getElementById('city-input');
+    if (!editForm.querySelector('#city')?.value) {
+      window.alert('Выберите город из подсказок');
+      cityInput?.focus();
+      return false;
+    }
     const { titleMin, titleMax, bodyMin, bodyMax } = readLimits();
     const title = editForm.querySelector('[name="title"]');
     const body = editForm.querySelector('[name="body"]');

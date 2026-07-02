@@ -88,15 +88,14 @@
     }
 
     if (step === 2) {
-      const category = document.getElementById('category');
-      const city = document.getElementById('city');
-      const price = document.getElementById('price');
+      const cityInput = document.getElementById('city-input');
+      const price = document.getElementById('price-display');
       if (!fieldValue('category')) {
-        showFieldError(category, 'Выберите категорию');
+        showFieldError(document.getElementById('category'), 'Выберите категорию');
         return false;
       }
       if (!fieldValue('city')) {
-        showFieldError(city, 'Выберите город');
+        showFieldError(cityInput, 'Выберите город из подсказок');
         return false;
       }
       const priceRaw = fieldValue('price');
@@ -203,7 +202,29 @@
 
   function applyDraft(draft) {
     if (!draft) return;
+    const labels = readLabels();
     DRAFT_FIELDS.forEach((id) => {
+      if (id === 'city') {
+        const hidden = document.getElementById('city');
+        const input = document.getElementById('city-input');
+        if (hidden && draft[id] != null) hidden.value = draft[id];
+        if (input && draft[id]) input.value = labels.cities[draft[id]] || draft[id];
+        return;
+      }
+      if (id === 'price') {
+        const hidden = document.getElementById('price');
+        const display = document.getElementById('price-display');
+        const hint = document.getElementById('price-hint');
+        if (hidden && draft[id] != null) hidden.value = draft[id];
+        if (display && draft[id] && window.formatPriceDisplay) {
+          display.value = window.formatPriceDisplay(String(draft[id]));
+        }
+        if (hint && draft[id] && window.priceVerbalHint) {
+          hint.textContent = window.priceVerbalHint(parseInt(draft[id], 10));
+          hint.classList.remove('is-empty');
+        }
+        return;
+      }
       const el = document.getElementById(id);
       if (el && draft[id] != null) el.value = draft[id];
     });
@@ -242,6 +263,8 @@
       document.getElementById(id)?.addEventListener('input', scheduleSave);
       document.getElementById(id)?.addEventListener('change', scheduleSave);
     });
+    document.getElementById('city-input')?.addEventListener('input', scheduleSave);
+    document.getElementById('price-display')?.addEventListener('input', scheduleSave);
     form.addEventListener('change', scheduleSave);
   }
 
@@ -524,6 +547,23 @@
 
     goToStep(currentStep, { skipValidate: true, focus: false });
     initDraftStorage(goToStep);
+
+    if (window.initCityAutocomplete) {
+      window.initCityAutocomplete(
+        document.getElementById('city-input'),
+        document.getElementById('city'),
+        document.getElementById('city-suggestions'),
+        labels.cities
+      );
+    }
+    if (window.initPriceInput) {
+      window.initPriceInput(
+        document.getElementById('price-display'),
+        document.getElementById('price'),
+        document.getElementById('price-hint')
+      );
+    }
+
     const previewRootEl = document.querySelector('.image-picker-preview');
     if (previewRootEl && typeof MutationObserver !== 'undefined') {
       new MutationObserver(() => {
