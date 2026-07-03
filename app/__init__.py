@@ -75,6 +75,7 @@ def create_app(config_name=None):
 
     from app.routes import admin, main, media, posts, promotions, reports, search
 
+    main.register_listing_converters(app)
     app.register_blueprint(main.bp)
     app.register_blueprint(media.bp)
     app.register_blueprint(posts.bp)
@@ -133,7 +134,7 @@ def create_app(config_name=None):
                 return f"{days} {plural_ru(days, 'день', 'дня', 'дней')} назад"
             return value.strftime("%d.%m.%Y")
 
-        from app.services.seo import post_public_url, site_description, site_name, site_tagline
+        from app.services.seo import category_path, city_category_path, post_public_url, site_description, site_name, site_tagline
         from app.utils.post_display import cover_image, ordered_images
 
         from app.services.captcha import (
@@ -176,6 +177,8 @@ def create_app(config_name=None):
             "post_title_max_len": POST_TITLE_MAX_LEN,
             "post_body_min_len": POST_BODY_MIN_LEN,
             "post_body_max_len": POST_BODY_MAX_LEN,
+            "category_path": category_path,
+            "city_category_path": city_category_path,
         }
 
     @app.errorhandler(404)

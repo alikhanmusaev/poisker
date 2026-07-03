@@ -162,9 +162,13 @@
 
   function categoryFromPath() {
     const parts = window.location.pathname.split('/').filter(Boolean);
-    if (parts[0] === 'kategoriya' && parts[1]) return parts[1];
-    if (parts[0] === 'gorod' && parts[2]) return parts[2];
-    return '';
+    if (!parts.length) return '';
+    if (parts[0] === 'kategoriya') return parts[1] || '';
+    if (parts[0] === 'gorod') return parts[2] || '';
+    if (parts.length >= 2) return parts[1];
+    const slug = parts[0];
+    const catChip = document.querySelector(`.category-chip[data-category="${slug}"]`);
+    return catChip ? slug : '';
   }
 
   function syncControlsFromUrl() {

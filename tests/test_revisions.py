@@ -91,7 +91,7 @@ def test_ordered_images_puts_cover_first(app):
 
 
 def test_category_page_is_seo_friendly(client):
-    res = client.get("/kategoriya/avto")
+    res = client.get("/avto/")
     assert res.status_code == 200
     assert "Авто" in res.get_data(as_text=True)
 
@@ -99,7 +99,7 @@ def test_category_page_is_seo_friendly(client):
 def test_index_category_query_redirects_to_category_page(client):
     res = client.get("/?category=avto", follow_redirects=False)
     assert res.status_code == 301
-    assert "/kategoriya/avto" in res.headers["Location"]
+    assert res.headers["Location"].endswith("/avto/")
 
 
 def test_user_promote_route_disabled(client, app):

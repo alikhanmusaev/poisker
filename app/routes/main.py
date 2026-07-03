@@ -1,6 +1,7 @@
-from flask import Blueprint, current_app, jsonify, make_response, redirect, render_template, request, send_from_directory, url_for
+from urllib.parse import urlencode
 
-from app.constants import CATEGORIES, CITIES, DEFAULT_SEARCH_SORT, DEFAULT_SORT, SORT_OPTIONS
+from flask import Blueprint, current_app, jsonify, make_response, redirect, render_template, request, url_for
+from app.constants import CATEGORIES, CITIES, DEFAULT_SEARCH_SORT, DEFAULT_SORT, RESERVED_SLUGS, SORT_OPTIONS
 from app.extensions import limiter
 from app.models import Post, utcnow
 from app.routes.post_detail import render_show_page
@@ -8,6 +9,7 @@ from app.services.posts import get_published_post_by_slug, resolve_public_slug_v
 from app.services.search import search_posts, suggest
 from app.services.seo import (
     absolute_url,
+    category_path,
     city_category_path,
     listing_canonical_url,
     listing_seo_description,
@@ -19,6 +21,50 @@ from app.services.smart_query import parse_search_query
 bp = Blueprint("main", __name__)
 
 PER_PAGE = 20
+
+
+def register_listing_converters(app) -> None:
+    from werkzeug.exceptions import NotFound
+    from werkzeug.routing import BaseConverter
+
+    class ListingSlugConverter(BaseConverter):
+        regex = r"[a-z0-9\.\-]+"
+
+        def to_python(self, value):
+            if value in RESERVED_SLUGS:
+                raise NotFound()
+            if value in CATEGORIES or value in CITIES:
+                return value
+            raise NotFound()
+
+        def to_url(self, value):
+            return value
+
+    class ListingCityConverter(BaseConverter):
+        regex = r"[a-z0-9\-]+"
+
+        def to_python(self, value):
+            if value in RESERVED_SLUGS or value not in CITIES:
+                raise NotFound()
+            return value
+
+        def to_url(self, value):
+            return value
+
+    class ListingCategoryConverter(BaseConverter):
+        regex = r"[a-z0-9\-]+"
+
+        def to_python(self, value):
+            if value in RESERVED_SLUGS or value not in CATEGORIES:
+                raise NotFound()
+            return value
+
+        def to_url(self, value):
+            return value
+
+    app.url_map.converters["listing_slug"] = ListingSlugConverter
+    app.url_map.converters["listing_city"] = ListingCityConverter
+    app.url_map.converters["listing_category"] = ListingCategoryConverter
 
 
 def _flag_enabled(name: str) -> bool:
@@ -94,11 +140,28 @@ def _listing_context(*, fixed_city: str | None = None, fixed_category: str | Non
             with_price=with_price,
             sort=sort,
             page=page,
+            fixed_city=fixed_city,
+            fixed_category=fixed_category,
         ),
         "listing_path": request.path,
         "fixed_city": fixed_city,
         "fixed_category": fixed_category,
     }
+
+
+def _redirect_preserve_query(target_path: str, *, drop_params: set[str] | None = None):
+    drop_params = drop_params or set()
+    if not request.args:
+        return redirect(target_path, code=301)
+    params: list[tuple[str, str]] = []
+    for key, values in request.args.lists():
+        if key in drop_params:
+            continue
+        for value in values:
+            params.append((key, value))
+    if not params:
+        return redirect(target_path, code=301)
+    return redirect(f"{target_path}?{urlencode(params)}", code=301)
 
 
 def _render_listing(**kwargs):
@@ -182,15 +245,9 @@ def sitemap_xml():
     for city_slug in CITIES:
         urls.append({"loc": absolute_url(city_category_path(city_slug))})
     for category_slug in CATEGORIES:
-        urls.append({"loc": absolute_url(url_for("main.category_page", category_slug=category_slug))})
+        urls.append({"loc": absolute_url(category_path(category_slug))})
         for city_slug in CITIES:
-            urls.append(
-                {
-                    "loc": absolute_url(
-                        url_for("main.city_category_page", city_slug=city_slug, category_slug=category_slug)
-                    )
-                }
-            )
+            urls.append({"loc": absolute_url(city_category_path(city_slug, category_slug))})
 
     posts = (
         Post.query.filter_by(status="published")
@@ -227,7 +284,7 @@ def index():
         and not request.args.get("price_max")
         and max(request.args.get("page", 1, type=int), 1) == 1
     ):
-        return redirect(url_for("main.category_page", category_slug=category), code=301)
+        return redirect(category_path(category), code=301)
     return _render_listing()
 
 
@@ -247,26 +304,29 @@ def suggest_view():
 
 @bp.route("/kategoriya/<category_slug>")
 @limiter.limit(lambda: current_app.config["RATELIMIT_INDEX"])
-def category_page(category_slug):
+def category_page_legacy(category_slug):
     if category_slug not in CATEGORIES:
         return render_template("errors/404.html"), 404
-    return _render_listing(fixed_category=category_slug)
+    return _redirect_preserve_query(category_path(category_slug), drop_params={"category"})
 
 
 @bp.route("/gorod/<city_slug>")
 @limiter.limit(lambda: current_app.config["RATELIMIT_INDEX"])
-def city_page(city_slug):
+def city_page_legacy(city_slug):
     if city_slug not in CITIES:
         return render_template("errors/404.html"), 404
-    return _render_listing(fixed_city=city_slug)
+    return _redirect_preserve_query(city_category_path(city_slug), drop_params={"city"})
 
 
 @bp.route("/gorod/<city_slug>/<category_slug>")
 @limiter.limit(lambda: current_app.config["RATELIMIT_INDEX"])
-def city_category_page(city_slug, category_slug):
+def city_category_page_legacy(city_slug, category_slug):
     if city_slug not in CITIES or category_slug not in CATEGORIES:
         return render_template("errors/404.html"), 404
-    return _render_listing(fixed_city=city_slug, fixed_category=category_slug)
+    return _redirect_preserve_query(
+        city_category_path(city_slug, category_slug),
+        drop_params={"city", "category"},
+    )
 
 
 @bp.route("/offline")
@@ -325,3 +385,17 @@ def assetlinks():
             }
         ]
     )
+
+
+@bp.route("/<listing_city:city_slug>/<listing_category:category_slug>/")
+@limiter.limit(lambda: current_app.config["RATELIMIT_INDEX"])
+def city_category_page(city_slug, category_slug):
+    return _render_listing(fixed_city=city_slug, fixed_category=category_slug)
+
+
+@bp.route("/<listing_slug:slug>/")
+@limiter.limit(lambda: current_app.config["RATELIMIT_INDEX"])
+def category_page(slug):
+    if slug in CATEGORIES:
+        return _render_listing(fixed_category=slug)
+    return _render_listing(fixed_city=slug)

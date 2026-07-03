@@ -56,10 +56,10 @@
         <a href="{{ url_for('main.index') }}">Главная</a>
       </li>
       <li class="breadcrumbs-item">
-        <a href="{{ url_for('main.city_page', city_slug=post.city) }}">{{ cities.get(post.city, post.city) }}</a>
+        <a href="{{ city_category_path(post.city) }}">{{ cities.get(post.city, post.city) }}</a>
       </li>
       <li class="breadcrumbs-item">
-        <a href="{{ url_for('main.city_category_page', city_slug=post.city, category_slug=post.category) }}">{{ category_labels.get(post.category, post.category) }}</a>
+        <a href="{{ city_category_path(post.city, post.category) }}">{{ category_labels.get(post.category, post.category) }}</a>
       </li>
       <li class="breadcrumbs-item breadcrumbs-item-current" aria-current="page">{{ post.title }}</li>
     </ol>

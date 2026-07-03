@@ -122,9 +122,13 @@ def login():
     return render_template("admin/login.html", form=form)
 
 
-@bp.route("/logout", methods=["POST"])
+@bp.route("/logout", methods=["POST", "GET"])
 @login_required
 def logout():
+    if request.method != "POST":
+        from flask import abort
+
+        abort(405)
     logout_user()
     return redirect(url_for("main.index"))
 

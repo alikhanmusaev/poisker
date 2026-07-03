@@ -48,6 +48,31 @@ CATEGORIES = {
 
 # Flat labels for forms/selects
 CATEGORY_LABELS = {slug: label for slug, (label, _) in CATEGORIES.items()}
+
+# Paths that must not be handled by /<slug>/ listing routes
+RESERVED_SLUGS = frozenset({
+    "admin",
+    "posts",
+    "privacy",
+    "terms",
+    "guidelines",
+    "reports",
+    "promotions",
+    "sitemap.xml",
+    "robots.txt",
+    "manifest.webmanifest",
+    "sw.js",
+    "static",
+    "media",
+    "offline",
+    "health",
+    ".well-known",
+    "obyavlenie",
+    "kategoriya",
+    "gorod",
+    "search",
+    "suggest",
+})
 CATEGORY_ICONS = {slug: icon for slug, (_, icon) in CATEGORIES.items()}
 
 SORT_OPTIONS = {

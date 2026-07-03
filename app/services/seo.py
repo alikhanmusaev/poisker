@@ -116,6 +116,8 @@ def listing_canonical_url(**ctx) -> str:
     city = ctx.get("city") or ""
     category = ctx.get("category") or ""
     page = ctx.get("page", 1) or 1
+    fixed_city = ctx.get("fixed_city")
+    fixed_category = ctx.get("fixed_category")
     has_extra = any(
         [
             ctx.get("query"),
@@ -134,13 +136,22 @@ def listing_canonical_url(**ctx) -> str:
         if category and category in CATEGORIES:
             return absolute_url(category_path(category))
 
+    if city and category and city in CITIES and category in CATEGORIES:
+        base_path = city_category_path(city, category)
+    elif city and city in CITIES:
+        base_path = city_category_path(city)
+    elif category and category in CATEGORIES:
+        base_path = category_path(category)
+    else:
+        base_path = "/"
+
     params = {}
     if ctx.get("query"):
         params["q"] = ctx["query"]
-    if city:
-        params["city"] = city
-    if category:
+    if category and not fixed_category:
         params["category"] = category
+    if city and not fixed_city:
+        params["city"] = city
     if ctx.get("price_min"):
         params["price_min"] = ctx["price_min"]
     if ctx.get("price_max"):
@@ -153,7 +164,7 @@ def listing_canonical_url(**ctx) -> str:
         params["sort"] = ctx["sort"]
     if page > 1:
         params["page"] = page
-    base = absolute_url("/")
+    base = absolute_url(base_path)
     if not params:
         return base
     return f"{base}?{urlencode(params)}"
@@ -161,12 +172,12 @@ def listing_canonical_url(**ctx) -> str:
 
 def city_category_path(city_slug: str, category_slug: str | None = None) -> str:
     if category_slug:
-        return url_for("main.city_category_page", city_slug=city_slug, category_slug=category_slug)
-    return url_for("main.city_page", city_slug=city_slug)
+        return f"/{city_slug}/{category_slug}/"
+    return f"/{city_slug}/"
 
 
 def category_path(category_slug: str) -> str:
-    return url_for("main.category_page", category_slug=category_slug)
+    return f"/{category_slug}/"
 
 
 def listing_page_url(

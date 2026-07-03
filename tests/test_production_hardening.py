@@ -86,18 +86,17 @@ def test_delete_with_wrong_token_denied(client, app):
 
 
 def test_city_seo_page_returns_200_not_redirect(client):
-    res = client.get("/gorod/grozny", follow_redirects=False)
+    res = client.get("/grozny/", follow_redirects=False)
     assert res.status_code == 200
     assert "Объявления в Грозном" in res.get_data(as_text=True)
 
 
 def test_city_category_seo_page_returns_200_not_redirect(client):
-    res = client.get("/gorod/grozny/avto", follow_redirects=False)
+    res = client.get("/grozny/avto/", follow_redirects=False)
     assert res.status_code == 200
     text = res.get_data(as_text=True)
-    assert res.status_code == 200
     assert "Авто в Грозном" in text
-    assert 'href="/gorod/grozny/avto"' in text or 'canonical' in text
+    assert 'href="/grozny/avto/"' in text or 'canonical' in text
 
 
 def test_valid_jpeg_upload_validation(app):
