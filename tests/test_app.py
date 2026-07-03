@@ -1013,5 +1013,10 @@ def test_seed_demo_posts(app):
         count = seed_demo_posts()
         assert count == 16
         assert is_seeded()
+        from app.models import Post
+
+        seeded = Post.query.filter_by(ip_hash="seed-demo").all()
+        assert len(seeded) == 16
+        assert all(post.slug for post in seeded)
         assert seed_demo_posts() == 0
         clear_seed_posts()

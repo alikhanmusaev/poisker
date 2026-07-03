@@ -15,3 +15,19 @@ def register_cli(app: Flask) -> None:
         click.echo(f"Processed: {stats['processed']}")
         click.echo(f"Images deleted: {stats['images_deleted']}")
         click.echo(f"Phones cleared: {stats['phone_encrypted_cleared']}")
+
+    @app.cli.command("seed-demo-posts")
+    @click.option("--force", is_flag=True, help="Replace existing demo posts")
+    def seed_demo_posts_cmd(force):
+        """Create demo listings for development and empty catalogs."""
+        from app.services.search import reindex_published_posts
+        from app.services.seed import seed_demo_posts
+
+        count = seed_demo_posts(force=force)
+        if count:
+            click.echo(f"Demo posts created: {count}")
+        else:
+            click.echo("Demo posts already exist (use --force to recreate)")
+        reindexed = reindex_published_posts()
+        if reindexed:
+            click.echo(f"Published posts indexed: {reindexed}")

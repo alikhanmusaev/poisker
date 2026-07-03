@@ -10,6 +10,7 @@ from app.services.phone import generate_edit_token, hash_phone, mask_phone, vali
 from app.services.phone_crypto import encrypt_phone
 from app.services.ranking import calculate_rank_score
 from app.services.search import index_post, remove_post_from_index
+from app.services.slug import make_unique_slug
 
 SEED_MARKER = "seed-demo"
 
@@ -228,6 +229,8 @@ def _create_seed_post(data: dict) -> Post:
     )
     post.rank_score = calculate_rank_score(post)
     db.session.add(post)
+    db.session.flush()
+    post.slug = make_unique_slug(post.title, post.id)
     db.session.commit()
     index_post(post)
     return post
