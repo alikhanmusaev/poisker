@@ -69,6 +69,7 @@ class Config:
         if fp.strip()
     ]
     SCHEDULER_ENABLED = os.getenv("SCHEDULER_ENABLED", "false").lower() in ("1", "true", "yes")
+    SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "info@poisker.ru")
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
         "pool_recycle": 300,

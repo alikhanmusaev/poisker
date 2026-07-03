@@ -38,18 +38,19 @@
       <i data-lucide="chevron-left" class="icon" aria-hidden="true"></i>
     </button>
     <div class="category-carousel-shell" id="category-carousel-shell">
-      <div class="category-carousel" id="category-carousel" role="tablist" aria-label="Категории" tabindex="0">
-        <button type="button" class="category-chip {% if not category %}is-active{% endif %}"
-                data-category="" role="tab" aria-selected="{{ 'true' if not category else 'false' }}">
+      <div class="category-carousel" id="category-carousel" role="navigation" aria-label="Категории">
+        <a href="{{ url_for('main.index') }}" class="category-chip {% if not category %}is-active{% endif %}"
+           data-category="" {% if not category %}aria-current="page"{% endif %}>
           <span class="category-chip-icon"><i data-lucide="layout-grid" class="icon" aria-hidden="true"></i></span>
           <span class="category-chip-label">Все</span>
-        </button>
+        </a>
         {% for slug, (label, icon) in categories.items() %}
-          <button type="button" class="category-chip {% if category == slug %}is-active{% endif %}"
-                  data-category="{{ slug }}" role="tab" aria-selected="{{ 'true' if category == slug else 'false' }}">
+          <a href="{{ url_for('main.category_page', category_slug=slug) }}"
+             class="category-chip {% if category == slug %}is-active{% endif %}"
+             data-category="{{ slug }}" {% if category == slug %}aria-current="page"{% endif %}>
             <span class="category-chip-icon"><i data-lucide="{{ icon }}" class="icon" aria-hidden="true"></i></span>
             <span class="category-chip-label">{{ label }}</span>
-          </button>
+          </a>
         {% endfor %}
       </div>
     </div>

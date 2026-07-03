@@ -169,6 +169,46 @@ def category_path(category_slug: str) -> str:
     return url_for("main.category_page", category_slug=category_slug)
 
 
+def listing_page_url(
+    listing_path: str,
+    *,
+    page: int = 1,
+    query: str = "",
+    city: str = "",
+    category: str = "",
+    fixed_city: str | None = None,
+    fixed_category: str | None = None,
+    price_min: int | None = None,
+    price_max: int | None = None,
+    with_photo: bool = False,
+    with_price: bool = False,
+    sort: str = "",
+) -> str:
+    """Build a listing URL that preserves path-based city/category and query filters."""
+    params: dict[str, str | int] = {}
+    if query:
+        params["q"] = query
+    if category and not fixed_category:
+        params["category"] = category
+    if city and not fixed_city:
+        params["city"] = city
+    if price_min is not None and price_min != "":
+        params["price_min"] = price_min
+    if price_max is not None and price_max != "":
+        params["price_max"] = price_max
+    if with_photo:
+        params["with_photo"] = 1
+    if with_price:
+        params["with_price"] = 1
+    if sort:
+        params["sort"] = sort
+    if page > 1:
+        params["page"] = page
+    if not params:
+        return listing_path
+    return f"{listing_path}?{urlencode(params)}"
+
+
 def post_json_ld(post, *, canonical_url: str, image_url: str | None = None) -> dict:
     city_name = CITIES.get(post.city, post.city)
     category_name = CATEGORY_LABELS.get(post.category, post.category)

@@ -89,6 +89,10 @@ def create_app(config_name=None):
     def plural_ru_filter(count, one, few, many):
         return plural_ru(count, one, few, many)
 
+    from app.services.seo import listing_page_url as listing_page_url_fn
+
+    app.jinja_env.globals["listing_page_url"] = listing_page_url_fn
+
     @app.context_processor
     def inject_globals():
         from datetime import timezone
@@ -158,7 +162,7 @@ def create_app(config_name=None):
             "captcha_site_key": captcha_site_key(),
             "captcha_question": ensure_captcha_challenge() if captcha_enabled() else "",
             "captcha_prompt": captcha_prompt() if captcha_enabled() else "",
-            "support_email": app.config.get("SUPPORT_EMAIL", ""),
+            "support_email": app.config.get("SUPPORT_EMAIL", "info@poisker.ru"),
             "app_domain": app.config.get("APP_DOMAIN", ""),
             "site_name": site_name(),
             "site_tagline": site_tagline(),

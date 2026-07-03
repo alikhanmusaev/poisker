@@ -618,6 +618,7 @@ body:not(.page-home) .site-main {
   font-weight: 500;
   line-height: 1.25;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
@@ -1231,6 +1232,55 @@ textarea:focus {
 }
 
 .back-link:hover { color: var(--primary-600); }
+
+.breadcrumbs {
+  margin: -6px 0 8px;
+}
+
+.breadcrumbs-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--slate-500);
+}
+
+.breadcrumbs-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.breadcrumbs-item:not(:last-child)::after {
+  content: "/";
+  color: var(--slate-300);
+  pointer-events: none;
+}
+
+.breadcrumbs-item a {
+  color: var(--primary-800);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.breadcrumbs-item a:hover {
+  color: var(--primary-600);
+  text-decoration: underline;
+}
+
+.breadcrumbs-item-current {
+  color: var(--slate-600);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .page-card {
   max-width: 720px;

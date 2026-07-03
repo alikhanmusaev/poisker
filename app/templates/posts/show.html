@@ -50,6 +50,20 @@
          data-post-id="{{ post.id }}"
          data-contact-url="{{ url_for('posts.contact', post_id=post.id, token=owner_token) if owner_token else url_for('posts.contact', post_id=post.id) }}"
          data-meta-url="{{ url_for('posts.meta', post_id=post.id) }}">
+  <nav class="breadcrumbs" aria-label="Навигация по сайту">
+    <ol class="breadcrumbs-list">
+      <li class="breadcrumbs-item">
+        <a href="{{ url_for('main.index') }}">Главная</a>
+      </li>
+      <li class="breadcrumbs-item">
+        <a href="{{ url_for('main.city_page', city_slug=post.city) }}">{{ cities.get(post.city, post.city) }}</a>
+      </li>
+      <li class="breadcrumbs-item">
+        <a href="{{ url_for('main.city_category_page', city_slug=post.city, category_slug=post.category) }}">{{ category_labels.get(post.category, post.category) }}</a>
+      </li>
+      <li class="breadcrumbs-item breadcrumbs-item-current" aria-current="page">{{ post.title }}</li>
+    </ol>
+  </nav>
   <a href="{{ back_url }}" class="back-link">
     <i data-lucide="arrow-left" class="icon icon-sm" aria-hidden="true"></i>
     Назад к объявлениям

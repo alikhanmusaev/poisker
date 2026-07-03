@@ -96,6 +96,8 @@ def _listing_context(*, fixed_city: str | None = None, fixed_category: str | Non
             page=page,
         ),
         "listing_path": request.path,
+        "fixed_city": fixed_city,
+        "fixed_category": fixed_category,
     }
 
 

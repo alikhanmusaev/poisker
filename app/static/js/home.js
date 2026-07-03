@@ -174,7 +174,11 @@
     document.querySelectorAll('.category-chip').forEach((chip) => {
       const active = (chip.dataset.category || '') === cat;
       chip.classList.toggle('is-active', active);
-      chip.setAttribute('aria-selected', active ? 'true' : 'false');
+      if (active) {
+        chip.setAttribute('aria-current', 'page');
+      } else {
+        chip.removeAttribute('aria-current');
+      }
     });
 
     const sort = params.get('sort') || (params.get('q') ? 'relevance' : 'rank');
@@ -189,19 +193,6 @@
     );
     carouselApi?.updateCarouselState();
   }
-
-  document.querySelectorAll('.category-chip').forEach((chip) => {
-    chip.addEventListener('click', () => {
-      categoryField.value = chip.dataset.category || '';
-      document.querySelectorAll('.category-chip').forEach((item) => {
-        const active = item === chip;
-        item.classList.toggle('is-active', active);
-        item.setAttribute('aria-selected', active ? 'true' : 'false');
-      });
-      carouselApi?.scrollChipIntoView(chip, 'smooth');
-      submitFeed();
-    });
-  });
 
   document.body.addEventListener('change', (event) => {
     if (event.target?.id === 'sort-select') {
