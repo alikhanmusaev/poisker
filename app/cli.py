@@ -31,3 +31,19 @@ def register_cli(app: Flask) -> None:
         reindexed = reindex_published_posts()
         if reindexed:
             click.echo(f"Published posts indexed: {reindexed}")
+
+    @app.cli.command("purge-all-posts")
+    @click.option("--yes", is_flag=True, help="Confirm destructive purge")
+    @click.option("--keep-daily-limits", is_flag=True, help="Keep phone_daily_publishes rows")
+    def purge_all_posts_cmd(yes, keep_daily_limits):
+        """Hard-delete all posts, uploaded images, and search index documents."""
+        if not yes:
+            raise click.ClickException("Refusing to purge without --yes")
+
+        from app.services.purge import purge_all_posts
+
+        stats = purge_all_posts(clear_daily_limits=not keep_daily_limits)
+        click.echo(f"Posts deleted: {stats['posts_deleted']}")
+        click.echo(f"Images deleted: {stats['images_deleted']}")
+        click.echo(f"Orphan S3 objects deleted: {stats['orphan_objects_deleted']}")
+        click.echo(f"Daily publish limits cleared: {stats['daily_limits_cleared']}")

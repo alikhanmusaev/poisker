@@ -267,3 +267,21 @@ def delete_stored_image(url: str) -> None:
 def delete_stored_images(urls: list[str]) -> None:
     for url in urls:
         delete_stored_image(url)
+
+
+def purge_upload_prefix(prefix: str = "posts/") -> int:
+    """Delete all objects under an upload prefix (e.g. orphaned files after DB purge)."""
+    client = _client()
+    bucket = current_app.config["S3_BUCKET"]
+    deleted = 0
+    paginator = client.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        contents = page.get("Contents") or []
+        for i in range(0, len(contents), 1000):
+            chunk = contents[i : i + 1000]
+            client.delete_objects(
+                Bucket=bucket,
+                Delete={"Objects": [{"Key": obj["Key"]} for obj in chunk], "Quiet": True},
+            )
+            deleted += len(chunk)
+    return deleted
