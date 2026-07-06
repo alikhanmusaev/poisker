@@ -1,6 +1,41 @@
 """Regression tests for production hardening."""
 
+import re
 import time
+
+
+def _admin_login_csrf(client) -> str:
+    res = client.get("/admin/login", base_url="https://poisker.ru")
+    match = re.search(r'name="csrf_token"[^>]*value="([^"]+)"', res.get_data(as_text=True))
+    assert match, "csrf_token missing on admin login page"
+    return match.group(1)
+
+
+def test_csrf_allows_www_referrer_on_admin_login(app):
+    app.config.update(WTF_CSRF_ENABLED=True, WTF_CSRF_SSL_STRICT=True, APP_DOMAIN="poisker.ru")
+    with app.test_client() as client:
+        token = _admin_login_csrf(client)
+        res = client.post(
+            "/admin/login",
+            data={"csrf_token": token, "username": "wrong", "password": "wrong"},
+            base_url="https://poisker.ru",
+            headers={"Referer": "https://www.poisker.ru/admin/login"},
+        )
+    assert res.status_code == 200
+    assert "referrer does not match" not in res.get_data(as_text=True).lower()
+
+
+def test_csrf_allows_missing_referrer_on_admin_login(app):
+    app.config.update(WTF_CSRF_ENABLED=True, WTF_CSRF_SSL_STRICT=True, APP_DOMAIN="poisker.ru")
+    with app.test_client() as client:
+        token = _admin_login_csrf(client)
+        res = client.post(
+            "/admin/login",
+            data={"csrf_token": token, "username": "wrong", "password": "wrong"},
+            base_url="https://poisker.ru",
+        )
+    assert res.status_code == 200
+    assert "referrer header is missing" not in res.get_data(as_text=True).lower()
 
 
 def test_suggest_partial_has_no_inline_click_handler(client):
