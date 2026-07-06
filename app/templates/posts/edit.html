@@ -125,6 +125,12 @@
   </form>
 
   <div class="edit-actions">
+    {% if post.status == 'published' %}
+    <a href="{{ url_for('promotions.promote', post_id=post.id, token=token) }}" class="btn btn-secondary btn-block">
+      <i data-lucide="trending-up" class="icon" aria-hidden="true"></i>
+      Поднять объявление
+    </a>
+    {% endif %}
     <form method="post" action="{{ url_for('posts.remove', post_id=post.id) }}" id="delete-post-form">
       <input type="hidden" name="token" value="{{ token }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

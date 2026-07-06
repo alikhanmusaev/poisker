@@ -102,12 +102,28 @@ def test_index_category_query_redirects_to_category_page(client):
     assert res.headers["Location"].endswith("/avto/")
 
 
-def test_user_promote_route_disabled(client, app):
+def test_user_promote_route(client, app):
+    from app.models import Promotion
+
     with app.app_context():
         post = create_test_post(app, publish=True, phone="+79001002005")
         post_id = post.id
         token = post.edit_token
-    assert client.get(f"/posts/{post_id}/promote?token={token}").status_code == 404
+
+    res = client.get(f"/posts/{post_id}/promote?token={token}")
+    assert res.status_code == 200
+    assert "Продвижение объявления" in res.get_data(as_text=True)
+
+    res = client.post(
+        f"/posts/{post_id}/promote?token={token}",
+        data={"token": token, "type": "boost_24h"},
+        follow_redirects=False,
+    )
+    assert res.status_code == 302
+    with app.app_context():
+        promo = Promotion.query.filter_by(post_id=post_id, status="pending").first()
+        assert promo is not None
+        assert promo.type == "boost_24h"
 
 
 def test_admin_approve_revision(client, app):
