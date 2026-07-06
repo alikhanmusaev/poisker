@@ -1659,6 +1659,12 @@ body.lightbox-open {
   min-width: 56px;
 }
 
+.post-lightbox-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .post-lightbox-counter {
   margin-left: auto;
   margin-right: 8px;
@@ -1734,6 +1740,10 @@ body.lightbox-open {
   .post-lightbox-nav {
     width: 38px;
     height: 38px;
+  }
+
+  .post-lightbox-zoom-controls {
+    display: none;
   }
 }
 
