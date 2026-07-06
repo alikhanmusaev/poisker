@@ -46,7 +46,7 @@ def completeness_score(post: Post) -> float:
         score += 0.2
     if len(post.body or "") >= 100:
         score += 0.1
-    if 10 <= len(post.title or "") <= 80:
+    if 10 <= len(post.title or "") <= 50:
         score += 0.1
     return min(score, 1.0)
 

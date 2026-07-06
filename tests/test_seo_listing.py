@@ -53,10 +53,10 @@ def test_listing_page_url_home_with_filters():
     assert url.startswith("/?")
 
 
-def test_post_title_max_len_is_80():
+def test_post_title_max_len_is_50():
     from app.constants import POST_TITLE_MAX_LEN
 
-    assert POST_TITLE_MAX_LEN == 80
+    assert POST_TITLE_MAX_LEN == 50
 
 
 def test_support_email_default(app):
