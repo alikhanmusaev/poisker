@@ -39,10 +39,13 @@ def _allowed_csrf_referrer_hosts() -> set[str]:
 
 
 def _csrf_referrer_allowed() -> bool:
-    if not request.referrer:
-        # CSRF token already validated; some mobile browsers omit Referer on same-origin POST.
+    ref = (request.referrer or "").strip()
+    if not ref or ref.lower() in {"null", "about:blank"}:
+        # CSRF token already validated; mobile/in-app browsers may send literal "null".
         return True
-    ref_host = urlparse(request.referrer).netloc.split(":")[0].lower()
+    ref_host = urlparse(ref).netloc.split(":")[0].lower()
+    if not ref_host:
+        return True
     return ref_host in _allowed_csrf_referrer_hosts()
 
 
