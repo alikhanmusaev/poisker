@@ -14,3 +14,4 @@ build/
 .chechnya_board.db
 .DS_Store
 Thumbs.db
+.aider*

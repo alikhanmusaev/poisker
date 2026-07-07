@@ -25,7 +25,7 @@
   function confirmDialog(options = {}) {
     const dialog = getDialog();
     if (!dialog) {
-      return Promise.resolve(window.confirm(options.message || options.title || 'Продолжить?'));
+      return Promise.resolve(window.confirm(String(options.message || options.title || 'Продолжить?')));
     }
 
     const titleEl = dialog.querySelector('[data-confirm-title]');
@@ -33,8 +33,8 @@
     const confirmBtn = dialog.querySelector('[data-confirm-ok]');
     const cancelBtn = dialog.querySelector('[data-confirm-cancel]');
 
-    if (titleEl) titleEl.textContent = options.title || 'Подтвердите действие';
-    if (messageEl) messageEl.textContent = options.message || '';
+    if (titleEl) titleEl.textContent = String(options.title || 'Подтвердите действие');
+    if (messageEl) messageEl.textContent = String(options.message || '');
     if (messageEl) messageEl.hidden = !options.message;
     if (confirmBtn) confirmBtn.textContent = options.confirmLabel || 'Да';
     if (cancelBtn) cancelBtn.textContent = options.cancelLabel || 'Отмена';

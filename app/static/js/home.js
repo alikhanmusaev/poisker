@@ -167,7 +167,9 @@
     if (parts[0] === 'gorod') return parts[2] || '';
     if (parts.length >= 2) return parts[1];
     const slug = parts[0];
-    const catChip = document.querySelector(`.category-chip[data-category="${slug}"]`);
+    const P = window.Poisker;
+    const escaped = P?.cssEscape ? P.cssEscape(slug) : slug.replace(/["\\]/g, '\\$&');
+    const catChip = document.querySelector(`.category-chip[data-category="${escaped}"]`);
     return catChip ? slug : '';
   }
 

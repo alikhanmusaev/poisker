@@ -17,7 +17,7 @@ Required secrets:
 - `TYPESENSE_API_KEY`
 - `S3_ACCESS_KEY`
 - `S3_SECRET_KEY`
-- `CAPTCHA_PROVIDER` — `builtin` (по умолчанию), `yandex`, `turnstile`, `none`
+- `CAPTCHA_PROVIDER` — `builtin` (по умолчанию), `yandex`, `none`
 - `REQUIRE_CAPTCHA` — включить капчу
 
 Generate Flask/HMAC secrets with:
@@ -78,7 +78,7 @@ Check in browser:
 
 Functional smoke:
 
-- publish an ad with Turnstile enabled
+- publish an ad with captcha enabled
 - save/copy edit link
 - open own ad and verify edit button appears only for the owner token
 - search by title/category/city

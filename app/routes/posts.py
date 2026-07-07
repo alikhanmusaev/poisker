@@ -1,7 +1,7 @@
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 
 from app.constants import CATEGORIES, CATEGORY_LABELS, CITIES
-from app.extensions import contact_post_rate_key, contact_rate_key, limiter
+from app.extensions import contact_post_rate_key, contact_rate_key, get_client_ip, limiter
 from app.forms import EditPostForm, PostForm
 from app.models import Post
 from app.services.captcha import (
@@ -62,7 +62,7 @@ def create():
 
     if form.validate_on_submit():
         token = extract_captcha_response()
-        if not verify_captcha(token, request.remote_addr):
+        if not verify_captcha(token, get_client_ip()):
             errors.append(captcha_error_message())
         else:
             try:
@@ -85,7 +85,7 @@ def create():
                     "images": images,
                     "cover_index": cover_index,
                 }
-                ip_hash = hash_value(request.remote_addr or "unknown")
+                ip_hash = hash_value(get_client_ip())
                 post = create_post(data, ip_hash=ip_hash)
                 edit_url = url_for("posts.edit", post_id=post.id, token=post.edit_token, _external=True)
                 if is_ajax:
@@ -234,7 +234,7 @@ def contact(post_id):
 
     if contact_needs_captcha(post_id):
         answer = extract_captcha_response()
-        ok, error, _question = verify_captcha_or_error(answer, request.remote_addr)
+        ok, error, _question = verify_captcha_or_error(answer, get_client_ip())
         if not ok:
             payload = {
                 "error": error or captcha_error_message(),

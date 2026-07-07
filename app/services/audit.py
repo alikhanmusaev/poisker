@@ -1,7 +1,6 @@
-from flask import current_app
 from flask_login import current_user
 
-from app.extensions import db
+from app.extensions import db, get_client_ip
 from app.models import AdminAuditLog
 from app.services.phone import hash_value
 
@@ -23,9 +22,7 @@ def log_admin_action(action: str, *, target_type: str, target_id: str, ip_hash: 
 def log_admin_action_from_request(action: str, *, target_type: str, target_id: str):
     remote = "unknown"
     try:
-        from flask import request
-
-        remote = request.remote_addr or "unknown"
+        remote = get_client_ip()
     except RuntimeError:
         pass
     log_admin_action(action, target_type=target_type, target_id=target_id, ip_hash=hash_value(remote))

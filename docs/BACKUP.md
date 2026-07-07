@@ -1,6 +1,22 @@
 # Резервное копирование Poisker
 
-Инструкция для бэкапа PostgreSQL, MinIO/S3 и связанных Docker volumes перед продакшеном.
+## Автоматизация (production)
+
+На сервере в `/opt/poisker`:
+
+```bash
+chmod +x scripts/*.sh
+./scripts/backup.sh              # разовый бэкап
+./scripts/verify-backup.sh       # проверка последнего дампа
+./scripts/monitor.sh             # проверка /health, Docker, диска
+./scripts/install-ops-cron.sh    # cron: бэкап 03:00, мониторинг каждые 5 мин
+```
+
+Логи: `backups/logs/`. Опциональные алерты в Telegram — `MONITOR_TELEGRAM_*` в `.env` (см. `.env.production.example`).
+
+---
+
+Инструкция для ручного бэкапа PostgreSQL, MinIO/S3 и связанных Docker volumes.
 
 ## Что бэкапить
 

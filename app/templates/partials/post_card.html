@@ -6,7 +6,7 @@
         {% if card_images|length > 1 %}
           <div class="post-card-slider-track" data-card-slider-track>
             {% for img in card_images %}
-              <img src="{{ image_url(img) }}" alt="" class="post-card-img post-card-slide" loading="lazy" width="320" height="240"{% if not loop.first %} aria-hidden="true"{% endif %}>
+              <img src="{{ image_url(img) }}" alt="{{ post_image_alt(post.title, loop.index, card_images|length) }}" class="post-card-img post-card-slide" loading="lazy" width="320" height="240"{% if not loop.first %} aria-hidden="true"{% endif %}>
             {% endfor %}
           </div>
           <div class="post-card-slider-dots" data-card-slider-dots aria-hidden="true">
@@ -19,7 +19,7 @@
             {{ card_images|length }}
           </span>
         {% else %}
-          <img src="{{ image_url(card_images[0]) }}" alt="" class="post-card-img" loading="lazy" width="320" height="240">
+          <img src="{{ image_url(card_images[0]) }}" alt="{{ post_image_alt(post.title) }}" class="post-card-img" loading="lazy" width="320" height="240">
         {% endif %}
       {% else %}
         <div class="post-card-img post-card-img-placeholder" aria-hidden="true">

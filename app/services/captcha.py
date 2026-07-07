@@ -18,7 +18,7 @@ def captcha_provider() -> str:
 def captcha_required() -> bool:
     if current_app.config.get("REQUIRE_CAPTCHA") is not None:
         return bool(current_app.config.get("REQUIRE_CAPTCHA"))
-    return bool(current_app.config.get("REQUIRE_TURNSTILE"))
+    return bool(current_app.config.get("REQUIRE_CAPTCHA"))
 
 
 def captcha_enabled() -> bool:
@@ -195,10 +195,6 @@ def mark_contact_revealed(post_id: str) -> None:
         revealed.append(post_id)
     session[CONTACT_REVEALS_KEY] = revealed[-200:]
     session.modified = True
-
-
-def verify_turnstile(token: str, remote_ip: str | None = None) -> bool:
-    return verify_captcha(token, remote_ip)
 
 
 def extract_captcha_response() -> str:

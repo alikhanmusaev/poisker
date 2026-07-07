@@ -82,7 +82,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 | `TYPESENSE_API_KEY` | API-ключ Typesense |
 | `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Учётные данные MinIO |
 | `S3_PUBLIC_URL` | Публичный URL медиа (HTTPS) |
-| `CAPTCHA_PROVIDER` | `builtin` (по умолчанию), `yandex`, `turnstile`, `none` |
+| `CAPTCHA_PROVIDER` | `builtin` (по умолчанию), `yandex`, `none` |
 | `REQUIRE_CAPTCHA` | Требовать капчу при публикации и жалобах |
 
 Полный список — в `.env.production.example`.

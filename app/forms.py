@@ -27,8 +27,8 @@ class PostForm(FlaskForm):
     )
     category = SelectField(
         "Категория",
-        choices=[(k, v) for k, v in CATEGORY_LABELS.items()],
-        validators=[DataRequired()],
+        choices=[("", "Выберите категорию"), *[(k, v) for k, v in CATEGORY_LABELS.items()]],
+        validators=[DataRequired(message="Выберите категорию")],
     )
     city = SelectField(
         "Город",
@@ -65,8 +65,8 @@ class EditPostForm(FlaskForm):
 class ReportForm(FlaskForm):
     reason = SelectField(
         "Причина",
-        choices=[(k, v) for k, v in REPORT_REASONS.items()],
-        validators=[DataRequired()],
+        choices=[("", "Выберите причину"), *[(k, v) for k, v in REPORT_REASONS.items()]],
+        validators=[DataRequired(message="Выберите причину")],
     )
     comment = TextAreaField("Комментарий", validators=[Optional(), Length(max=500)])
 

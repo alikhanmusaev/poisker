@@ -17,7 +17,7 @@ docker compose build web && docker compose up -d web
 docker compose build web; docker compose up -d web
 ```
 
-Если `docker compose` ругается на переменные из `.env`, задай недостающие (например `POSTGRES_PASSWORD`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`) в `.env` или в сессии перед командой.
+Если `docker compose` ругается на переменные из `.env`, задай недостающие (например `POSTGRES_PASSWORD`) в `.env` или в сессии перед командой.
 
 Не пропускай этот шаг: без пересборки в контейнере остаётся старый образ и пользователь не видит изменений.
 

@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
+  'use strict';
+
+  const P = window.Poisker || {};
   const root = document.querySelector('[data-post-detail]');
   if (!root) return;
 
@@ -14,10 +17,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const contactError = document.getElementById('contact-error');
   const contactCaptcha = document.getElementById('contact-captcha');
 
-  function csrfToken() {
-    return document.querySelector('meta[name="csrf-token"]')?.content || '';
-  }
-
   function captchaAnswerValue() {
     const input = contactCaptcha?.querySelector('.captcha-answer-input');
     return input?.value.trim() || '';
@@ -28,31 +27,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     contactCaptcha.hidden = false;
     const questionEl = contactCaptcha.querySelector('.captcha-question');
     const promptEl = contactCaptcha.querySelector('.captcha-prompt');
-    if (questionEl && question) questionEl.textContent = question;
-    if (promptEl && prompt) promptEl.textContent = prompt;
+    if (questionEl && question) questionEl.textContent = String(question);
+    if (promptEl && prompt) promptEl.textContent = String(prompt);
     contactCaptcha.querySelector('.captcha-answer-input')?.focus();
     if (window.refreshIcons) refreshIcons();
   }
 
   async function requestContact() {
+    if (!contactUrl || !P.isSameOriginUrl?.(contactUrl)) {
+      return { res: { ok: false, status: 0 }, data: {} };
+    }
     const headers = {
       Accept: 'application/json',
-      'X-CSRFToken': csrfToken(),
+      'X-CSRFToken': P.csrfToken?.() || '',
     };
     const answer = captchaAnswerValue();
     const body = new URLSearchParams();
     if (answer) body.set('captcha_answer', answer);
-    const res = await fetch(contactUrl, { method: 'POST', headers, body });
-    let data = {};
-    try {
-      data = await res.json();
-    } catch (e) {}
+    const res = await fetch(contactUrl, {
+      method: 'POST',
+      headers,
+      body,
+      credentials: 'same-origin',
+    });
+    const data = (await P.parseJsonResponse?.(res)) || {};
     return { res, data };
   }
 
   function showContactError(message) {
     if (!contactError || !message) return;
-    contactError.textContent = message;
+    contactError.textContent = String(message);
     contactError.hidden = false;
   }
 
@@ -64,10 +68,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function showPhoneResult(phone, button) {
     clearContactError();
-    if (phoneText) phoneText.textContent = phone;
+    const safePhone = String(phone || '').slice(0, 24);
+    if (phoneText) phoneText.textContent = safePhone;
     if (phoneLink) {
-      const digits = phone.replace(/\D/g, '');
-      phoneLink.href = digits ? `tel:+${digits}` : '#';
+      const digits = (P.digitsOnly || ((v) => v.replace(/\D/g, '')))(safePhone);
+      phoneLink.href = digits.length >= 10 ? `tel:+${digits}` : '#';
     }
     phoneDisplay?.classList.remove('hidden');
     if (button) button.hidden = true;
@@ -75,22 +80,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.refreshIcons) refreshIcons();
   }
 
-  if (editLink && typeof findSavedPost === 'function') {
+  if (editLink && typeof findSavedPost === 'function' && P.isPostId?.(postId) && metaUrl && P.isSameOriginUrl?.(metaUrl)) {
     const saved = findSavedPost(postId);
-    if (saved?.url && metaUrl) {
+    if (saved?.url && P.isAllowedEditUrl?.(saved.url)) {
       try {
         const token = new URL(saved.url, window.location.origin).searchParams.get('token');
         if (token) {
           const res = await fetch(`${metaUrl}?token=${encodeURIComponent(token)}`, {
             headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
           });
-          const data = await res.json();
+          const data = (await P.parseJsonResponse?.(res)) || {};
           if (data.ok && data.can_edit) {
             editLink.href = saved.url;
             editLink.hidden = false;
           }
         }
-      } catch (e) {}
+      } catch (_e) {
+        /* ignore */
+      }
     }
   }
 
@@ -124,7 +132,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.name === 'AbortError') return;
       }
     }
-    await copyText(window.location.href);
+    if (typeof copyText === 'function') {
+      await copyText(window.location.href);
+    }
   });
 
   if (window.refreshIcons) refreshIcons();

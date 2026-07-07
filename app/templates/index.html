@@ -2,13 +2,24 @@
 {% block title %}{{ seo_title }}{% endblock %}
 {% block meta_description %}{{ seo_description }}{% endblock %}
 {% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+{% block robots %}
+  {% if robots_noindex %}
+  <meta name="robots" content="noindex, follow">
+  {% else %}
+  <meta name="robots" content="index, follow">
+  {% endif %}
+{% endblock %}
 {% block head %}
   <meta property="og:title" content="{{ seo_title }}">
   <meta property="og:description" content="{{ seo_description }}">
   <meta property="og:url" content="{{ canonical_url }}">
   <meta property="og:type" content="website">
-  {% if page > 1 %}
-  <meta name="robots" content="noindex, follow">
+  {% if listing_og_image %}
+  <meta property="og:image" content="{{ listing_og_image }}">
+  <meta name="twitter:card" content="summary">
+  {% endif %}
+  {% if json_ld %}
+  <script type="application/ld+json">{{ json_ld | tojson }}</script>
   {% endif %}
 {% endblock %}
 {% block body_class %}page-home{% endblock %}

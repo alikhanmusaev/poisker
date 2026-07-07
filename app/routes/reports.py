@@ -1,6 +1,6 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from app.extensions import limiter
+from app.extensions import get_client_ip, limiter
 from app.forms import ReportForm
 from app.models import Post, Report
 from app.services.captcha import captcha_error_message, extract_captcha_response, verify_captcha
@@ -18,10 +18,10 @@ def report_post(post_id):
     form = ReportForm()
     if form.validate_on_submit():
         token = extract_captcha_response()
-        if not verify_captcha(token, request.remote_addr):
+        if not verify_captcha(token, get_client_ip()):
             flash(captcha_error_message(), "error")
         else:
-            ip_hash = hash_value(request.remote_addr or "unknown")
+            ip_hash = hash_value(get_client_ip())
             existing = Report.query.filter_by(post_id=post_id, ip_hash=ip_hash).first()
             if existing:
                 flash("Вы уже отправляли жалобу на это объявление", "error")

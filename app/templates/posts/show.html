@@ -75,7 +75,7 @@
           {% for img in gallery_images %}
             <div class="post-gallery-slide" data-gallery-slide aria-hidden="{{ 'false' if loop.first else 'true' }}">
               <button type="button" class="post-gallery-open" data-gallery-open aria-label="Увеличить фото {{ loop.index }} из {{ gallery_images|length }}">
-                <img src="{{ image_url(img) }}" alt="" loading="{{ 'eager' if loop.first else 'lazy' }}" width="800" height="600">
+                <img src="{{ image_url(img) }}" alt="{{ post_image_alt(post.title, loop.index, gallery_images|length) }}" loading="{{ 'eager' if loop.first else 'lazy' }}" width="800" height="600">
                 <span class="post-gallery-zoom-hint" aria-hidden="true">
                   <i data-lucide="zoom-in" class="icon icon-sm"></i>
                 </span>

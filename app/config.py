@@ -21,8 +21,6 @@ class Config:
     S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "minioadmin")
     S3_BUCKET = os.getenv("S3_BUCKET", "board-images")
     S3_PUBLIC_URL = os.getenv("S3_PUBLIC_URL", "http://localhost:9000/board-images")
-    TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "")
-    TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "")
     CAPTCHA_PROVIDER = os.getenv("CAPTCHA_PROVIDER", "builtin").lower()
     CAPTCHA_TTL_SECONDS = int(os.getenv("CAPTCHA_TTL_SECONDS", "600"))
     SMARTCAPTCHA_SITE_KEY = os.getenv("SMARTCAPTCHA_SITE_KEY", "")
@@ -45,12 +43,11 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
     TRUST_PROXY = os.getenv("TRUST_PROXY", "false").lower() in ("1", "true", "yes")
-    REQUIRE_CAPTCHA = os.getenv("REQUIRE_CAPTCHA", os.getenv("REQUIRE_TURNSTILE", "false")).lower() in (
+    REQUIRE_CAPTCHA = os.getenv("REQUIRE_CAPTCHA", "false").lower() in (
         "1",
         "true",
         "yes",
     )
-    REQUIRE_TURNSTILE = REQUIRE_CAPTCHA
     SECURITY_HEADERS_ENABLED = os.getenv("SECURITY_HEADERS_ENABLED", "true").lower() in ("1", "true", "yes")
     HSTS_ENABLED = os.getenv("HSTS_ENABLED", "false").lower() in ("1", "true", "yes")
     PERMANENT_SESSION_LIFETIME = timedelta(hours=12)
@@ -86,12 +83,11 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "true").lower() in ("1", "true", "yes")
-    REQUIRE_CAPTCHA = os.getenv("REQUIRE_CAPTCHA", os.getenv("REQUIRE_TURNSTILE", "true")).lower() in (
+    REQUIRE_CAPTCHA = os.getenv("REQUIRE_CAPTCHA", "true").lower() in (
         "1",
         "true",
         "yes",
     )
-    REQUIRE_TURNSTILE = REQUIRE_CAPTCHA
     HSTS_ENABLED = os.getenv("HSTS_ENABLED", "true").lower() in ("1", "true", "yes")
 
     @staticmethod

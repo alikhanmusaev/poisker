@@ -134,7 +134,7 @@ def create_app(config_name=None):
                 return f"{days} {plural_ru(days, 'день', 'дня', 'дней')} назад"
             return value.strftime("%d.%m.%Y")
 
-        from app.services.seo import category_path, city_category_path, post_public_url, site_description, site_name, site_tagline
+        from app.services.seo import category_path, city_category_path, post_image_alt, post_public_url, site_description, site_name, site_tagline
         from app.utils.post_display import cover_image, ordered_images
 
         from app.services.captcha import (
@@ -172,6 +172,7 @@ def create_app(config_name=None):
             "image_url": resolve_image_url,
             "ordered_images": ordered_images,
             "cover_image": cover_image,
+            "post_image_alt": post_image_alt,
             "relative_time": relative_time,
             "post_title_min_len": POST_TITLE_MIN_LEN,
             "post_title_max_len": POST_TITLE_MAX_LEN,

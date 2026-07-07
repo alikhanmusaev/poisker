@@ -10,15 +10,21 @@
   const TOTAL_STEPS = 5;
   const DRAFT_KEY = 'poisker_create_draft_v1';
   const DRAFT_FIELDS = ['title', 'body', 'category', 'city', 'price', 'seller_name', 'phone'];
+  const DRAFT_CONTENT_FIELDS = ['title', 'body', 'city', 'price', 'seller_name', 'phone'];
+  const DRAFT_MAX_BYTES = 32_000;
+
+  function poisker() {
+    return window.Poisker || {};
+  }
 
   function readLabels() {
-    const node = document.getElementById('create-wizard-labels');
-    if (!node) return { cities: {}, categories: {} };
-    try {
-      return JSON.parse(node.textContent);
-    } catch (e) {
-      return { cities: {}, categories: {} };
-    }
+    return poisker().readJsonScript?.('create-wizard-labels', { cities: {}, categories: {} })
+      ?? (() => {
+        const node = document.getElementById('create-wizard-labels');
+        if (!node) return { cities: {}, categories: {} };
+        return poisker().parseJsonSafe?.(node.textContent, { cities: {}, categories: {} })
+          ?? { cities: {}, categories: {} };
+      })();
   }
 
   function formatPrice(value) {
@@ -53,7 +59,7 @@
     const form = document.getElementById('create-post-form');
     return {
       titleMin: parseInt(form?.dataset.titleMin || '5', 10),
-      titleMax: parseInt(form?.dataset.titleMax || '40', 10),
+      titleMax: parseInt(form?.dataset.titleMax || '50', 10),
       bodyMin: parseInt(form?.dataset.bodyMin || '20', 10),
       bodyMax: parseInt(form?.dataset.bodyMax || '3000', 10),
     };
@@ -174,21 +180,70 @@
     setCoverIndex(readCoverIndex());
   }
 
+  function sanitizeDraft(raw, labels) {
+    if (!raw || typeof raw !== 'object') return null;
+    const P = poisker();
+    const data = { step: 1 };
+    const step = parseInt(raw.step, 10);
+    if (step >= 1 && step <= TOTAL_STEPS) data.step = step;
+
+    DRAFT_FIELDS.forEach((id) => {
+      if (raw[id] == null) return;
+      const val = String(raw[id]);
+      if (id === 'city') {
+        if (P.isSafeSlug?.(val) && labels.cities[val]) data[id] = val;
+        return;
+      }
+      if (id === 'category') {
+        if (P.isSafeSlug?.(val) && labels.categories[val]) data[id] = val;
+        return;
+      }
+      if (id === 'price') {
+        if (/^\d{1,9}$/.test(val)) data[id] = val;
+        return;
+      }
+      if (id === 'phone') {
+        data[id] = val.slice(0, 20);
+        return;
+      }
+      if (id === 'seller_name') {
+        data[id] = val.slice(0, 80);
+        return;
+      }
+      if (id === 'title') {
+        data[id] = val.slice(0, 50);
+        return;
+      }
+      if (id === 'body') {
+        data[id] = val.slice(0, 3000);
+      }
+    });
+    return data;
+  }
+
   function readDraft() {
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      return null;
+    const P = poisker();
+    const raw = P.parseJsonSafe?.(P.storageGet?.(DRAFT_KEY));
+    if (!raw) return null;
+    return sanitizeDraft(raw, readLabels());
+  }
+
+  function draftFieldHasContent(id, value) {
+    const text = String(value ?? '').trim();
+    if (!text) return false;
+    const digits = poisker().digitsOnly?.(text) ?? text.replace(/\D/g, '');
+    if (id === 'phone') return digits.length >= 10;
+    if (id === 'seller_name') return text.length >= 2;
+    if (id === 'price') {
+      const amount = parseInt(text, 10);
+      return !Number.isNaN(amount) && amount > 0;
     }
+    return true;
   }
 
   function draftHasContent(data) {
     if (!data) return false;
-    return DRAFT_FIELDS.some((id) => {
-      const value = data[id];
-      return value != null && String(value).trim() !== '';
-    });
+    return DRAFT_CONTENT_FIELDS.some((id) => draftFieldHasContent(id, data[id]));
   }
 
   function writeDraft() {
@@ -205,11 +260,13 @@
       clearDraft();
       return;
     }
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+    const payload = JSON.stringify(data);
+    if (payload.length > DRAFT_MAX_BYTES) return;
+    poisker().storageSet?.(DRAFT_KEY, payload);
   }
 
   function clearDraft() {
-    localStorage.removeItem(DRAFT_KEY);
+    poisker().storageRemove?.(DRAFT_KEY);
   }
 
   function applyDraft(draft) {
@@ -242,12 +299,26 @@
     });
   }
 
+  let draftTimer = null;
+
+  function flushDraft() {
+    clearTimeout(draftTimer);
+    draftTimer = null;
+    writeDraft();
+  }
+
+  function scheduleDraftSave(event) {
+    if (!poisker().isTrustedUserEvent?.(event)) return;
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(writeDraft, 400);
+  }
+
   function initDraftStorage(goToStep) {
     const banner = document.getElementById('wizard-draft-banner');
     const restoreBtn = document.getElementById('wizard-draft-restore');
     const discardBtn = document.getElementById('wizard-draft-discard');
     const form = document.getElementById('create-post-form');
-    if (!form) return;
+    if (!form) return () => {};
 
     const existing = readDraft();
     if (existing && !draftHasContent(existing)) {
@@ -268,18 +339,16 @@
       if (banner) banner.hidden = true;
     });
 
-    let timer = null;
-    const scheduleSave = () => {
-      clearTimeout(timer);
-      timer = setTimeout(writeDraft, 400);
-    };
     DRAFT_FIELDS.forEach((id) => {
-      document.getElementById(id)?.addEventListener('input', scheduleSave);
-      document.getElementById(id)?.addEventListener('change', scheduleSave);
+      document.getElementById(id)?.addEventListener('input', scheduleDraftSave);
+      document.getElementById(id)?.addEventListener('change', scheduleDraftSave);
     });
-    document.getElementById('city-input')?.addEventListener('input', scheduleSave);
-    document.getElementById('price-display')?.addEventListener('input', scheduleSave);
-    form.addEventListener('change', scheduleSave);
+    document.getElementById('city-input')?.addEventListener('input', scheduleDraftSave);
+    document.getElementById('price-display')?.addEventListener('input', scheduleDraftSave);
+    form.addEventListener('change', scheduleDraftSave);
+    window.addEventListener('pagehide', flushDraft);
+
+    return flushDraft;
   }
 
   function buildPreviewHtml(labels) {
@@ -298,44 +367,41 @@
 
     const gallery = ordered.length
       ? `<div class="post-submit-preview-gallery">${ordered
-          .map((src) => `<img src="${src}" alt="">`)
+          .map((src) => {
+            const P = poisker();
+            if (!P.isSafeImageSrc?.(src)) return '';
+            return `<img src="${P.escapeAttr(src)}" alt="">`;
+          })
           .join('')}</div>`
       : `<div class="post-submit-preview-placeholder"><i data-lucide="image" class="icon icon-xl" aria-hidden="true"></i><span>Без фото</span></div>`;
 
     const priceHtml = price
-      ? `<p class="post-submit-preview-price">${price}</p>`
+      ? `<p class="post-submit-preview-price">${poisker().escapeHtml(price)}</p>`
       : '<p class="post-submit-preview-price post-submit-preview-price-muted">Цена не указана</p>';
 
+    const esc = poisker().escapeHtml;
     return `
       <article class="post-submit-preview-card">
         ${gallery}
         ${priceHtml}
-        <h3 class="post-submit-preview-title">${escapeHtml(title)}</h3>
+        <h3 class="post-submit-preview-title">${esc(title)}</h3>
         <p class="post-submit-preview-meta">
           <i data-lucide="user" class="icon icon-xs" aria-hidden="true"></i>
-          <span>${escapeHtml(sellerName)}</span>
+          <span>${esc(sellerName)}</span>
           <span class="meta-dot">·</span>
           <i data-lucide="map-pin" class="icon icon-xs" aria-hidden="true"></i>
-          <span>${escapeHtml(city)}</span>
+          <span>${esc(city)}</span>
           <span class="meta-dot">·</span>
           <i data-lucide="tag" class="icon icon-xs" aria-hidden="true"></i>
-          <span>${escapeHtml(category)}</span>
+          <span>${esc(category)}</span>
         </p>
-        <p class="post-submit-preview-body">${escapeHtml(body)}</p>
+        <p class="post-submit-preview-body">${esc(body)}</p>
         <p class="post-submit-preview-phone">
           <i data-lucide="phone" class="icon icon-sm" aria-hidden="true"></i>
-          <span>Телефон: ${escapeHtml(phone)}</span>
+          <span>Телефон: ${esc(phone)}</span>
         </p>
       </article>
     `;
-  }
-
-  function escapeHtml(value) {
-    return String(value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
   }
 
   function updateCaptchaWidget(meta) {
@@ -354,7 +420,7 @@
     box.innerHTML = errors
       .map(
         (error) =>
-          `<p class="error"><i data-lucide="alert-circle" class="icon icon-sm" aria-hidden="true"></i>${escapeHtml(error)}</p>`
+          `<p class="error"><i data-lucide="alert-circle" class="icon icon-sm" aria-hidden="true"></i>${poisker().escapeHtml(error)}</p>`
       )
       .join('');
     box.hidden = false;
@@ -370,10 +436,11 @@
     form.hidden = true;
     successSection.hidden = false;
 
-    panel.dataset.editUrl = data.edit_url;
-    panel.dataset.postId = data.post_id;
-    panel.dataset.postTitle = data.title;
-    panel.dataset.viewUrl = data.view_url || '';
+    const P = poisker();
+    panel.dataset.editUrl = P.isAllowedEditUrl?.(data.edit_url) ? data.edit_url : '';
+    panel.dataset.postId = P.isPostId?.(String(data.post_id || '')) ? data.post_id : '';
+    panel.dataset.postTitle = String(data.title || '').slice(0, 50);
+    panel.dataset.viewUrl = P.safeHref?.(data.view_url || '') || '';
     panel.dataset.moderationPending = data.moderation_pending ? '1' : '0';
     delete panel.dataset.publishInit;
 
@@ -404,8 +471,8 @@
         ? 'Сейчас объявление видите только вы. После одобрения оно появится в каталоге.'
         : 'Объявление уже в каталоге. Сохраните ссылку — без неё редактировать не получится.';
     }
-    if (openBtn && data.view_url) {
-      openBtn.href = data.view_url;
+    if (openBtn && panel.dataset.viewUrl) {
+      openBtn.href = panel.dataset.viewUrl;
       openBtn.hidden = false;
     }
     if (openLabel) {
@@ -414,8 +481,8 @@
     if (openIcon) {
       openIcon.setAttribute('data-lucide', moderationPending ? 'eye' : 'external-link');
     }
-    if (editBtn && data.edit_url) {
-      editBtn.href = data.edit_url;
+    if (editBtn && panel.dataset.editUrl) {
+      editBtn.href = panel.dataset.editUrl;
     }
 
     const iconWrap = panel.querySelector('.publish-success-icon');
@@ -444,6 +511,7 @@
     const previewRoot = document.getElementById('post-submit-preview');
     const submitBtn = document.getElementById('wizard-submit-btn');
     let currentStep = parseInt(form.dataset.initialStep || '1', 10);
+    const flushDraft = initDraftStorage(goToStep);
 
     function goToStep(step, options = {}) {
       const target = Math.min(Math.max(step, 1), TOTAL_STEPS);
@@ -491,6 +559,8 @@
       if (options.scroll !== false) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
+
+      if (!options.skipDraft) flushDraft();
     }
 
     form.querySelectorAll('.wizard-next').forEach((btn) => {
@@ -540,10 +610,19 @@
             'X-Requested-With': 'XMLHttpRequest',
             Accept: 'application/json',
           },
+          credentials: 'same-origin',
         });
 
-        const data = await response.json();
+        const data = await poisker().parseJsonResponse?.(response);
+        if (!data) {
+          showSubmitErrors(['Некорректный ответ сервера. Попробуйте ещё раз.']);
+          return;
+        }
         if (data.ok) {
+          if (!poisker().isAllowedEditUrl?.(data.edit_url)) {
+            showSubmitErrors(['Некорректный ответ сервера. Попробуйте ещё раз.']);
+            return;
+          }
           clearDraft();
           showSuccessStep(data);
           return;
@@ -566,8 +645,7 @@
       }
     });
 
-    goToStep(currentStep, { skipValidate: true, focus: false });
-    initDraftStorage(goToStep);
+    goToStep(currentStep, { skipValidate: true, focus: false, skipDraft: true });
 
     if (window.initCityAutocomplete) {
       window.initCityAutocomplete(

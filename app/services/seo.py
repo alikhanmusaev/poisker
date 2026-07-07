@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 
 from flask import current_app, request, url_for
 
-from app.constants import CATEGORIES, CATEGORY_LABELS, CITIES, CITY_LOCATIVE
+from app.constants import CATEGORIES, CATEGORY_LABELS, CITIES, CITY_LOCATIVE, DEFAULT_SEARCH_SORT, DEFAULT_SORT
 from app.routes.media import resolve_image_url
 from app.utils.post_display import cover_image, ordered_images
 from app.services.storage import extract_s3_key
@@ -23,6 +23,36 @@ def site_description() -> str:
         "SITE_DESCRIPTION",
         "Поискер — бесплатные объявления по Чеченской Республике. Без регистрации и смс.",
     )
+
+
+def post_image_alt(title: str, index: int = 1, total: int = 1) -> str:
+    """Accessible alt text for listing and detail images."""
+    clean = " ".join(str(title or "Объявление").split())
+    if total > 1:
+        return f"{clean} — фото {index} из {total}"
+    return f"{clean} — фото"
+
+
+def listing_og_image() -> str:
+    return absolute_url("/static/icons/icon-512.png")
+
+
+def site_json_ld() -> dict:
+    return {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": site_name(),
+        "url": absolute_url("/"),
+        "description": site_description(),
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": absolute_url("/?q={search_term_string}"),
+            },
+            "query-input": "required name=search_term_string",
+        },
+    }
 
 
 def site_base_url() -> str:
@@ -178,6 +208,32 @@ def city_category_path(city_slug: str, category_slug: str | None = None) -> str:
 
 def category_path(category_slug: str) -> str:
     return f"/{category_slug}/"
+
+
+def listing_should_noindex(
+    *,
+    page: int,
+    search_text: str = "",
+    query: str = "",
+    price_min: int | None = None,
+    price_max: int | None = None,
+    with_photo: bool = False,
+    with_price: bool = False,
+    sort: str = "",
+) -> bool:
+    """Filtered/paginated listing variants should not compete in search index."""
+    if page > 1:
+        return True
+    if (search_text or query.strip()):
+        return True
+    if price_min is not None or price_max is not None:
+        return True
+    if with_photo or with_price:
+        return True
+    default_sort = DEFAULT_SEARCH_SORT if (search_text or query.strip()) else DEFAULT_SORT
+    if sort and sort != default_sort:
+        return True
+    return False
 
 
 def listing_page_url(

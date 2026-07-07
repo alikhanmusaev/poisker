@@ -46,7 +46,7 @@
   function initPriceInput(displayInput, hiddenInput, hintEl) {
     if (!displayInput || !hiddenInput) return;
 
-    function sync() {
+    function sync(emitChange) {
       const digits = priceDigits(displayInput.value).slice(0, 9);
       hiddenInput.value = digits;
       const caretFromEnd = displayInput.value.length - (displayInput.selectionStart ?? displayInput.value.length);
@@ -60,16 +60,18 @@
         hintEl.textContent = priceVerbalHint(amount);
         hintEl.classList.toggle('is-empty', !digits);
       }
-      hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+      if (emitChange) {
+        hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }
     }
 
-    displayInput.addEventListener('input', sync);
-    displayInput.addEventListener('blur', sync);
+    displayInput.addEventListener('input', () => sync(true));
+    displayInput.addEventListener('blur', () => sync(true));
 
     if (hiddenInput.value) {
       displayInput.value = formatPriceDisplay(hiddenInput.value);
     }
-    sync();
+    sync(false);
   }
 
   function matchCities(query, citiesMap, limit = 8) {
@@ -122,6 +124,8 @@
     }
 
     function selectCity(slug, label) {
+      const P = window.Poisker;
+      if (!P?.isSafeSlug?.(slug) || !citiesMap[slug]) return;
       hiddenInput.value = slug;
       input.value = label;
       hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
@@ -168,7 +172,9 @@
       } else if (event.key === 'Enter' && activeIndex >= 0) {
         event.preventDefault();
         const btn = options[activeIndex];
-        selectCity(btn.dataset.citySlug, btn.dataset.cityLabel);
+        if (btn?.dataset.citySlug && btn.dataset.cityLabel) {
+          selectCity(btn.dataset.citySlug, btn.dataset.cityLabel);
+        }
       } else if (event.key === 'Escape') {
         closeList();
       }

@@ -14,7 +14,10 @@ from app.services.seo import (
     listing_canonical_url,
     listing_seo_description,
     listing_seo_title,
+    listing_should_noindex,
+    listing_og_image,
     post_public_url,
+    site_json_ld,
 )
 from app.services.smart_query import parse_search_query
 
@@ -109,6 +112,17 @@ def _listing_context(*, fixed_city: str | None = None, fixed_category: str | Non
     )
     has_next = page * PER_PAGE < total
 
+    robots_noindex = listing_should_noindex(
+        page=page,
+        search_text=parsed["text"],
+        query=query,
+        price_min=price_min,
+        price_max=price_max,
+        with_photo=with_photo,
+        with_price=with_price,
+        sort=sort,
+    )
+
     return {
         "query": query,
         "search_text": parsed["text"],
@@ -146,6 +160,9 @@ def _listing_context(*, fixed_city: str | None = None, fixed_category: str | Non
         "listing_path": request.path,
         "fixed_city": fixed_city,
         "fixed_category": fixed_category,
+        "robots_noindex": robots_noindex,
+        "listing_og_image": listing_og_image() if not robots_noindex else None,
+        "json_ld": site_json_ld() if request.path == "/" and not robots_noindex else None,
     }
 
 

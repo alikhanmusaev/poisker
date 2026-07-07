@@ -1,6 +1,6 @@
 """Listing URL helpers and SEO listing UX."""
 
-from app.services.seo import listing_page_url
+from app.services.seo import listing_page_url, listing_should_noindex
 
 
 def test_listing_page_url_preserves_category_path():
@@ -51,6 +51,59 @@ def test_listing_page_url_home_with_filters():
     assert "sort=relevance" in url
     assert "page=2" in url
     assert url.startswith("/?")
+
+
+def test_listing_should_noindex_clean_category_page():
+    assert not listing_should_noindex(page=1, sort="rank")
+
+
+def test_listing_should_noindex_search_and_filters():
+    assert listing_should_noindex(page=1, query="iphone")
+    assert listing_should_noindex(page=1, price_min=1000)
+    assert listing_should_noindex(page=1, with_photo=True)
+    assert listing_should_noindex(page=1, sort="price_asc")
+    assert listing_should_noindex(page=2)
+
+
+def test_listing_search_page_has_noindex(client):
+    res = client.get("/?q=iphone")
+    assert res.status_code == 200
+    assert 'content="noindex, follow"' in res.get_data(as_text=True)
+
+
+def test_listing_category_page_is_indexable(client):
+    res = client.get("/avto/")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert 'content="index, follow"' in html
+    assert 'content="noindex, follow"' not in html
+
+
+def test_listing_sorted_category_page_has_noindex(client):
+    res = client.get("/avto/?sort=price_asc")
+    assert res.status_code == 200
+    assert 'content="noindex, follow"' in res.get_data(as_text=True)
+
+
+def test_homepage_has_website_json_ld(client):
+    res = client.get("/")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert '"@type": "WebSite"' in html or '"@type":"WebSite"' in html
+    assert "SearchAction" in html
+
+
+def test_indexable_listing_has_og_image(client):
+    res = client.get("/avto/")
+    assert res.status_code == 200
+    assert 'property="og:image"' in res.get_data(as_text=True)
+
+
+def test_post_image_alt_helper():
+    from app.services.seo import post_image_alt
+
+    assert post_image_alt("Холодильник", 2, 3) == "Холодильник — фото 2 из 3"
+    assert post_image_alt("  Диван  ") == "Диван — фото"
 
 
 def test_post_title_max_len_is_50():

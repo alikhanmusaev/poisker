@@ -106,8 +106,11 @@ function tokenFromEditUrl(editUrl) {
 }
 
 async function canEditPostCard(postId, editUrl) {
+  const P = window.Poisker || {};
+  if (!P.isPostId?.(postId) || !P.isAllowedEditUrl?.(editUrl)) return false;
+
   const token = tokenFromEditUrl(editUrl);
-  if (!postId || !token) return false;
+  if (!token) return false;
 
   const cacheKey = `${postId}:${token}`;
   if (!postCardEditChecks.has(cacheKey)) {
@@ -144,7 +147,7 @@ function initPostCardEditLinks(scope) {
       link.hidden = false;
       link.setAttribute('aria-label', 'Редактировать объявление');
       refreshIcons();
-    });
+    }).catch(() => hidePostCardEditLink(link));
   });
 
   refreshIcons();

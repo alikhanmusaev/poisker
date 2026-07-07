@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function readLimits() {
     return {
       titleMin: parseInt(editForm?.dataset.titleMin || '5', 10),
-      titleMax: parseInt(editForm?.dataset.titleMax || '40', 10),
+      titleMax: parseInt(editForm?.dataset.titleMax || '50', 10),
       bodyMin: parseInt(editForm?.dataset.bodyMin || '20', 10),
       bodyMax: parseInt(editForm?.dataset.bodyMax || '3000', 10),
     };

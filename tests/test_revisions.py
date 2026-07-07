@@ -126,6 +126,31 @@ def test_user_promote_route(client, app):
         assert promo.type == "boost_24h"
 
 
+def test_reject_pending_revision_keeps_live_content(app):
+    from app.services.posts import reject_pending_revision, update_post
+
+    with app.app_context():
+        post = create_test_post(app, publish=True, phone="+79001002007")
+        original_title = post.title
+        update_post(
+            post,
+            {
+                "title": "Отклонённая правка заголовка",
+                "body": post.body,
+                "seller_name": post.seller_name,
+                "category": post.category,
+                "city": post.city,
+                "price": post.price,
+                "images": list(post.images or []),
+                "cover_index": 0,
+            },
+        )
+        assert post.pending_revision is not None
+        reject_pending_revision(post)
+        assert post.pending_revision is None
+        assert post.title == original_title
+
+
 def test_admin_approve_revision(client, app):
     from app.extensions import db
     from app.models import AdminUser, Post
