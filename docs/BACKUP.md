@@ -6,10 +6,10 @@
 
 ```bash
 chmod +x scripts/*.sh
-./scripts/backup.sh              # разовый бэкап
-./scripts/verify-backup.sh       # проверка последнего дампа
-./scripts/monitor.sh             # проверка /health, Docker, диска
-./scripts/install-ops-cron.sh    # cron: бэкап 03:00, мониторинг каждые 5 мин
+bash scripts/backup.sh              # разовый бэкап
+bash scripts/verify-backup.sh       # проверка последнего дампа
+bash scripts/monitor.sh             # проверка /ready, Docker, диска
+bash scripts/install-ops-cron.sh    # cron: бэкап 03:00, мониторинг каждые 5 мин
 ```
 
 Логи: `backups/logs/`. Опциональные алерты в Telegram — `MONITOR_TELEGRAM_*` в `.env` (см. `.env.production.example`).

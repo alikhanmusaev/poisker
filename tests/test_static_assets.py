@@ -26,3 +26,17 @@ def test_compute_static_version_respects_env(monkeypatch, tmp_path):
     monkeypatch.setenv("STATIC_VERSION", "deploy-42")
 
     assert compute_static_version(str(static_root)) == "deploy-42"
+
+
+def test_compute_static_version_changes_when_demo_image_changes(tmp_path):
+    static_root = tmp_path / "static"
+    demo_dir = static_root / "demo"
+    demo_dir.mkdir(parents=True)
+    image = demo_dir / "avto.jpg"
+    image.write_bytes(b"first-image")
+
+    first = compute_static_version(str(static_root))
+    image.write_bytes(b"second-image-with-new-content")
+    second = compute_static_version(str(static_root))
+
+    assert first != second

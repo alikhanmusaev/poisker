@@ -10,6 +10,8 @@ instance/
 *.egg-info/
 dist/
 build/
+*-deploy.tar.gz
+docker-compose.audit.yml
 *.db
 .chechnya_board.db
 .DS_Store

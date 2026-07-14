@@ -1,4 +1,4 @@
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 
 from app.constants import PROMOTION_TYPES
 from app.extensions import db
@@ -7,6 +7,12 @@ from app.services.posts import get_post_by_token
 from app.services.promotions import promotion_amount
 
 bp = Blueprint("promotions", __name__)
+
+
+@bp.before_request
+def require_promotions_enabled():
+    if not current_app.config.get("PROMOTIONS_ENABLED", False):
+        abort(404)
 
 
 @bp.route("/posts/<post_id>/promote", methods=["GET", "POST"])

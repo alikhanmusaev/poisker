@@ -48,20 +48,36 @@ ACTION_LABELS = {
 }
 
 ADMIN_NAV = (
-    ("admin.dashboard", "Обзор", "layout-dashboard"),
-    ("admin.posts_list", "Объявления", "list"),
-    ("admin.moderation_list", "Модерация", "shield-check"),
-    ("admin.reports_list", "Жалобы", "flag"),
-    ("admin.deleted_list", "Удалённые", "trash-2"),
-    ("admin.blocked_phones_list", "Заблокированные номера", "phone-off"),
-    ("admin.promotions_list", "Поднятия", "trending-up"),
-    ("admin.audit_list", "Логи", "scroll-text"),
-    ("admin.settings", "Настройки", "settings"),
+    (
+        "Работа",
+        (
+            ("admin.dashboard", "Обзор", "layout-dashboard"),
+            ("admin.moderation_list", "Модерация", "shield-check"),
+            ("admin.reports_list", "Жалобы", "flag"),
+            ("admin.posts_list", "Все объявления", "list"),
+        ),
+    ),
+    (
+        "Управление",
+        (
+            ("admin.deleted_list", "Удалённые", "trash-2"),
+            ("admin.blocked_phones_list", "Блокировки", "phone-off"),
+            ("admin.promotions_list", "Поднятия", "trending-up"),
+        ),
+    ),
+    (
+        "Система",
+        (
+            ("admin.audit_list", "Журнал действий", "scroll-text"),
+            ("admin.settings", "Настройки", "settings"),
+        ),
+    ),
 )
 
 
 @bp.context_processor
 def admin_template_helpers():
+    from flask import current_app
     from app.routes.media import resolve_image_url
     from app.utils.post_display import cover_image, ordered_images
 
@@ -72,8 +88,21 @@ def admin_template_helpers():
         params["page"] = page
         return url_for(request.endpoint, **params)
 
+    nav_counts = {}
+    if current_user.is_authenticated:
+        from sqlalchemy import or_
+
+        nav_counts = {
+            "admin.moderation_list": Post.query.filter(
+                or_(Post.status == "pending", Post.pending_revision.isnot(None))
+            ).count(),
+            "admin.reports_list": Report.query.filter_by(status="new").count(),
+        }
+
     return {
         "admin_page_url": admin_page_url,
+        "admin_nav_counts": nav_counts,
+        "promotions_enabled": current_app.config.get("PROMOTIONS_ENABLED", False),
         "cover_image": cover_image,
         "ordered_images": ordered_images,
         "image_url": resolve_image_url,
@@ -136,15 +165,19 @@ def logout():
 @bp.route("/")
 @login_required
 def dashboard():
+    from sqlalchemy import or_
+
     today_start = start_of_today_msk()
     status_counts = count_posts_by_status()
+    moderation_pending = Post.query.filter(
+        or_(Post.status == "pending", Post.pending_revision.isnot(None))
+    ).count()
     return render_template(
         "admin/dashboard.html",
         status_counts=status_counts,
+        moderation_pending=moderation_pending,
         posts_today=Post.query.filter(Post.created_at >= today_start).count(),
-        reports_total=count_reports(),
         reports_new=count_reports(new_only=True),
-        promos_pending=Promotion.query.filter_by(status="pending").count(),
         admin_nav=ADMIN_NAV,
     )
 
@@ -225,8 +258,10 @@ def settings():
         settings={
             "REQUIRE_CAPTCHA": cfg.get("REQUIRE_CAPTCHA"),
             "CONTACT_SOFT_LIMIT": cfg.get("CONTACT_SOFT_LIMIT"),
+            "POST_DAILY_LIMIT": cfg.get("POST_DAILY_LIMIT"),
             "RATELIMIT_ENABLED": cfg.get("RATELIMIT_ENABLED"),
             "SCHEDULER_ENABLED": cfg.get("SCHEDULER_ENABLED"),
+            "PROMOTIONS_ENABLED": cfg.get("PROMOTIONS_ENABLED"),
             "APP_DOMAIN": cfg.get("APP_DOMAIN"),
         },
         admin_nav=ADMIN_NAV,

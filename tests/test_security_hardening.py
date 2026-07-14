@@ -241,3 +241,38 @@ def test_health_endpoint(client):
 
     assert res.status_code == 200
     assert res.get_json() == {"status": "ok"}
+
+
+def test_ready_endpoint_checks_dependencies(client):
+    from unittest.mock import MagicMock, patch
+
+    redis_client = MagicMock()
+    typesense_response = MagicMock()
+    typesense_response.json.return_value = {"ok": True}
+    storage_client = MagicMock()
+    with (
+        patch("redis.from_url", return_value=redis_client),
+        patch("httpx.get", return_value=typesense_response),
+        patch("app.services.storage._client", return_value=storage_client),
+    ):
+        res = client.get("/ready")
+
+    assert res.status_code == 200
+    assert res.get_json() == {
+        "status": "ok",
+        "checks": {
+            "database": "ok",
+            "redis": "ok",
+            "typesense": "ok",
+            "storage": "ok",
+        },
+    }
+    redis_client.ping.assert_called_once()
+    storage_client.head_bucket.assert_called_once_with(Bucket="board-images")
+
+
+def test_token_responses_are_not_cached_or_referred(client):
+    res = client.get("/?token=owner-secret")
+
+    assert res.headers["Referrer-Policy"] == "no-referrer"
+    assert res.headers["Cache-Control"] == "no-store"

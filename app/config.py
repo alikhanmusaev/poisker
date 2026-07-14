@@ -12,6 +12,7 @@ class Config:
     RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
     RATELIMIT_ENABLED = os.getenv("RATELIMIT_ENABLED", "true").lower() not in ("0", "false", "no")
     RATELIMIT_DEFAULT = os.getenv("RATELIMIT_DEFAULT", "600 per minute")
+    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     RATELIMIT_INDEX = os.getenv("RATELIMIT_INDEX", "300 per minute")
     RATELIMIT_SUGGEST = os.getenv("RATELIMIT_SUGGEST", "180 per minute")
     TYPESENSE_URL = os.getenv("TYPESENSE_URL", "http://localhost:8108")
@@ -28,8 +29,10 @@ class Config:
     HMAC_SECRET = os.getenv("HMAC_SECRET", "dev-hmac-secret")
     PHONE_ENCRYPTION_KEY = os.getenv("PHONE_ENCRYPTION_KEY", "dev-phone-encryption-key")
     POST_EXPIRY_DAYS = int(os.getenv("POST_EXPIRY_DAYS", "30"))
+    POST_DAILY_LIMIT = max(int(os.getenv("POST_DAILY_LIMIT", "5")), 1)
     DELETED_POST_RETENTION_DAYS = int(os.getenv("DELETED_POST_RETENTION_DAYS", "30"))
     DELETED_POST_CLEANUP_BATCH_SIZE = int(os.getenv("DELETED_POST_CLEANUP_BATCH_SIZE", "100"))
+    PROMOTIONS_ENABLED = os.getenv("PROMOTIONS_ENABLED", "false").lower() in ("1", "true", "yes")
     PROMOTION_BOOST_24H_AMOUNT = int(os.getenv("PROMOTION_BOOST_24H_AMOUNT", "100"))
     TIMEZONE = "Europe/Moscow"
     MAX_UPLOAD_SIZE = 5 * 1024 * 1024

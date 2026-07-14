@@ -18,14 +18,24 @@
   <div class="admin-overlay" id="admin-overlay" hidden></div>
   <aside class="admin-sidebar" id="admin-sidebar">
     <div class="admin-sidebar__brand">
-      <a href="{{ url_for('admin.dashboard') }}" class="admin-sidebar__logo">Poisker</a>
-      <span class="admin-sidebar__subtitle">Админ-панель</span>
+      <a href="{{ url_for('admin.dashboard') }}" class="admin-sidebar__logo">Poisker <span>admin</span></a>
+      <span class="admin-sidebar__subtitle">Управление площадкой</span>
     </div>
     <nav class="admin-sidebar__nav" aria-label="Админ-навигация">
-      {% for endpoint, label, icon in admin_nav %}
+      {% for section, items in admin_nav %}
+      <div class="admin-sidebar__section">
+        <span class="admin-sidebar__section-title">{{ section }}</span>
+        {% for endpoint, label, icon in items %}
+        {% if endpoint != 'admin.promotions_list' or promotions_enabled %}
       <a href="{{ url_for(endpoint) }}" class="admin-sidebar__link{% if request.endpoint == endpoint %} is-active{% endif %}">
         <span>{{ label }}</span>
+        {% if admin_nav_counts.get(endpoint) %}
+        <span class="admin-sidebar__count" aria-label="{{ admin_nav_counts[endpoint] }} новых">{{ admin_nav_counts[endpoint] }}</span>
+        {% endif %}
       </a>
+        {% endif %}
+        {% endfor %}
+      </div>
       {% endfor %}
     </nav>
     <div class="admin-sidebar__footer">
@@ -42,7 +52,11 @@
   <div class="admin-content">
     {% if current_user.is_authenticated %}
     <header class="admin-topbar">
-      <h1 class="admin-topbar__title">{% block page_title %}{% endblock %}</h1>
+      <div>
+        <span class="admin-topbar__eyebrow">Админ-панель</span>
+        <h1 class="admin-topbar__title">{% block page_title %}{% endblock %}</h1>
+      </div>
+      <a href="{{ url_for('main.index') }}" class="admin-btn admin-btn--ghost admin-topbar__site" target="_blank" rel="noopener">Открыть сайт ↗</a>
     </header>
     {% endif %}
 

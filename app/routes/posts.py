@@ -99,8 +99,8 @@ def create():
                         "moderation_pending": post.status == "pending",
                     }
                 return redirect(url_for("posts.success", post_id=post.id, token=post.edit_token))
-            except PostLimitError:
-                errors.append("С этого номера сегодня уже опубликовано объявление. Попробуйте завтра или отредактируйте существующее.")
+            except PostLimitError as e:
+                errors.append(str(e))
             except BlockedPhoneError as e:
                 errors.append(str(e))
             except ValidationError as e:

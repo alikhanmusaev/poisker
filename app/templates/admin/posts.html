@@ -3,6 +3,12 @@
 {% block title %}Объявления{% endblock %}
 {% block page_title %}Объявления{% endblock %}
 {% block content %}
+<div class="admin-list-summary">
+  <span>Найдено: <strong>{{ pagination.total }}</strong></span>
+  {% if filters.q or filters.phone or filters.status != 'all' or filters.city or filters.category or filters.has_photo or filters.has_reports or filters.date_from or filters.date_to %}
+  <a href="{{ url_for('admin.posts_list') }}">Сбросить все фильтры</a>
+  {% endif %}
+</div>
 <form class="admin-filters" method="get" action="{{ url_for('admin.posts_list') }}">
   <label>Поиск
     <input class="admin-input" type="search" name="q" value="{{ filters.q }}" placeholder="Заголовок, описание, маска телефона">
@@ -52,13 +58,11 @@
 {{ empty_state('Нет объявлений', 'Измените фильтры или дождитесь новых публикаций.') }}
 {% else %}
 <div class="admin-table-wrap">
-  <table class="admin-table">
+  <table class="admin-table admin-posts-table">
     <thead>
       <tr>
         <th></th>
-        <th>Заголовок</th>
-        <th>Город</th>
-        <th>Категория</th>
+        <th>Объявление</th>
         <th>Цена</th>
         <th>Статус</th>
         <th>Жалобы</th>
@@ -73,14 +77,13 @@
         <td>
           <a class="admin-table__title admin-table__clip" href="{{ url_for('admin.post_preview', post_id=post.id) }}" title="{{ post.title }}">{{ post.title }}</a>
           {% if post.pending_revision %}<span class="admin-badge admin-badge--pending">правки</span>{% endif %}
+          <div class="admin-table__meta">{{ category_labels.get(post.category, post.category) }} · {{ cities.get(post.city, post.city) }}</div>
         </td>
-        <td>{{ cities.get(post.city, post.city) }}</td>
-        <td>{{ category_labels.get(post.category, post.category) }}</td>
-        <td>{% if post.price %}{{ post.price|int|string|replace(',', ' ') }} ₽{% else %}—{% endif %}</td>
-        <td>{{ status_badge(post.status, status_labels) }}</td>
-        <td>{{ post.reports_count }}</td>
-        <td class="admin-table__muted">{{ post.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
-        <td>{{ post_actions(post) }}</td>
+        <td data-label="Цена">{% if post.price %}{{ post.price|int|string|replace(',', ' ') }} ₽{% else %}—{% endif %}</td>
+        <td data-label="Статус">{{ status_badge(post.status, status_labels) }}</td>
+        <td data-label="Жалобы">{% if post.reports_count %}<a class="admin-report-count" href="{{ url_for('admin.reports_list') }}">{{ post.reports_count }}</a>{% else %}<span class="admin-table__muted">0</span>{% endif %}</td>
+        <td data-label="Дата" class="admin-table__muted">{{ post.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+        <td data-label="Действия">{{ post_actions(post, compact=true) }}</td>
       </tr>
       {% endfor %}
     </tbody>

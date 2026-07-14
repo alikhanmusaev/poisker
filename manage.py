@@ -45,7 +45,8 @@ def _ensure_admin_user():
     production = os.getenv("FLASK_ENV", "development") == "production"
     username = os.getenv("ADMIN_USERNAME", "admin")
     password = os.getenv("ADMIN_PASSWORD", "")
-    if production and password in ("", "admin123", "password", "change-me"):
+    weak_passwords = {"", "admin123", "password", "change-me", "qwerty123", "123456789012"}
+    if production and (len(password) < 12 or password.lower() in weak_passwords):
         raise RuntimeError("Production requires a strong ADMIN_PASSWORD")
     if not password:
         password = "admin123"

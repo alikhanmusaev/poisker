@@ -32,8 +32,13 @@
 </div>
 {% endmacro %}
 
-{% macro post_actions(post, back='admin.posts_list') %}
-<div class="admin-actions">
+{% macro post_actions(post, back='admin.posts_list', compact=false) %}
+{% if compact %}
+<details class="admin-action-menu">
+  <summary class="admin-btn admin-btn--ghost admin-btn--sm">Действия</summary>
+  <div class="admin-action-menu__panel">
+{% endif %}
+<div class="admin-actions{% if compact %} admin-actions--stacked{% endif %}">
   <a class="admin-btn admin-btn--ghost admin-btn--sm" href="{{ url_for('admin.post_preview', post_id=post.id) }}" target="_blank" rel="noopener">Просмотр</a>
   {% if post.status == 'pending' %}
   <form method="post" action="{{ url_for('admin.publish_post', post_id=post.id) }}" class="admin-inline-form">
@@ -76,4 +81,8 @@
   </form>
   {% endif %}
 </div>
+{% if compact %}
+  </div>
+</details>
+{% endif %}
 {% endmacro %}

@@ -71,6 +71,9 @@ def create_app(config_name=None):
                 "Strict-Transport-Security",
                 "max-age=31536000; includeSubDomains",
             )
+        if request.args.get("token") or request.form.get("token"):
+            response.headers["Referrer-Policy"] = "no-referrer"
+            response.headers["Cache-Control"] = "no-store"
         return response
 
     from app.routes import admin, main, media, posts, promotions, reports, search

@@ -8,7 +8,7 @@ from app.extensions import db
 from app.models import BlockedPhone, PhoneDailyPublish, Post, utcnow
 from app.services.phone import generate_edit_token, hash_phone, mask_phone, validate_phone
 from app.services.phone_crypto import decrypt_phone, encrypt_phone
-from app.services.ranking import calculate_rank_score, start_of_today_msk, today_msk_date
+from app.services.ranking import calculate_rank_score, today_msk_date
 from app.services.search import index_post, remove_post_from_index
 from app.services.slug import make_unique_slug
 from app.services.storage import delete_stored_image, delete_stored_images
@@ -162,33 +162,22 @@ class ValidationError(Exception):
 
 
 def has_post_today(phone_hash: str) -> bool:
-    today = today_msk_date()
-    daily = PhoneDailyPublish.query.filter_by(phone_hash=phone_hash, publish_date=today).first()
-    if daily:
-        if daily.post_id:
-            linked = Post.query.filter_by(id=daily.post_id).first()
-            if linked is not None:
-                return True
-        else:
-            start = start_of_today_msk()
-            active_today = Post.query.filter(
-                Post.phone_hash == phone_hash,
-                Post.created_at >= start,
-                Post.status.in_(["published", "hidden", "pending"]),
-            ).first()
-            if active_today:
-                return True
-        db.session.delete(daily)
-        db.session.flush()
-    start = start_of_today_msk()
-    return (
-        Post.query.filter(
-            Post.phone_hash == phone_hash,
-            Post.created_at >= start,
-            Post.status.in_(["published", "hidden", "pending", "deleted"]),
-        ).first()
-        is not None
-    )
+    """Compatibility helper: whether the phone published in the last 24 hours."""
+    return recent_post_count(phone_hash) > 0
+
+
+def recent_post_count(phone_hash: str) -> int:
+    cutoff = utcnow() - timedelta(hours=24)
+    return Post.query.filter(
+        Post.phone_hash == phone_hash,
+        Post.created_at >= cutoff,
+        Post.status.in_(["published", "hidden", "pending", "deleted"]),
+    ).count()
+
+
+def has_reached_post_limit(phone_hash: str) -> bool:
+    limit = current_app.config.get("POST_DAILY_LIMIT", 5)
+    return recent_post_count(phone_hash) >= limit
 
 
 def release_daily_publish_slot(post: Post) -> None:
@@ -269,8 +258,11 @@ def create_post(data: dict, ip_hash: str | None = None, *, publish: bool = False
     if is_phone_blocked(phone_hash):
         raise BlockedPhoneError("Этот номер заблокирован")
 
-    if has_post_today(phone_hash):
-        raise PostLimitError("С этого номера сегодня уже опубликовано объявление")
+    if has_reached_post_limit(phone_hash):
+        limit = current_app.config.get("POST_DAILY_LIMIT", 5)
+        raise PostLimitError(
+            f"Достигнут лимит: не более {limit} объявлений с одного номера за 24 часа"
+        )
 
     price = data.get("price")
     if price is not None and price != "":

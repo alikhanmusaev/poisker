@@ -105,6 +105,8 @@ def test_index_category_query_redirects_to_category_page(client):
 def test_user_promote_route(client, app):
     from app.models import Promotion
 
+    app.config["PROMOTIONS_ENABLED"] = True
+
     with app.app_context():
         post = create_test_post(app, publish=True, phone="+79001002005")
         post_id = post.id
@@ -124,6 +126,29 @@ def test_user_promote_route(client, app):
         promo = Promotion.query.filter_by(post_id=post_id, status="pending").first()
         assert promo is not None
         assert promo.type == "boost_24h"
+
+
+def test_user_promotions_are_disabled_by_default(client, app):
+    from app.models import Promotion
+
+    with app.app_context():
+        post = create_test_post(app, publish=True, phone="+79001002006")
+        post_id = post.id
+        token = post.edit_token
+
+    edit_res = client.get(f"/posts/{post_id}/edit?token={token}")
+    assert edit_res.status_code == 200
+    assert "/promote" not in edit_res.get_data(as_text=True)
+
+    get_res = client.get(f"/posts/{post_id}/promote?token={token}")
+    post_res = client.post(
+        f"/posts/{post_id}/promote?token={token}",
+        data={"token": token, "type": "boost_24h"},
+    )
+    assert get_res.status_code == 404
+    assert post_res.status_code == 404
+    with app.app_context():
+        assert Promotion.query.filter_by(post_id=post_id).count() == 0
 
 
 def test_reject_pending_revision_keeps_live_content(app):

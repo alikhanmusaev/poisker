@@ -58,11 +58,18 @@ def test_daily_limit_not_released_after_delete(client, app):
         phone_hash = hash_phone(validate_phone("+79006667788"))
         assert has_post_today(phone_hash) is True
 
+    for number in range(2, 6):
+        _create_post(
+            app,
+            phone="+79006667788",
+            title=f"Объявление номер {number} за сутки",
+        )
+
     res = client.post(
         "/posts/new",
         data={
             "seller_name": "Продавец",
-            "title": "Второе объявление за день",
+            "title": "Шестое объявление за сутки",
             "body": "Повторная публикация с тем же номером телефона в тот же день.",
             "category": "prodazha",
             "city": "grozny",
@@ -73,7 +80,7 @@ def test_daily_limit_not_released_after_delete(client, app):
     )
 
     assert res.status_code in (200, 302)
-    assert "уже опубликовано" in res.get_data(as_text=True)
+    assert "Достигнут лимит" in res.get_data(as_text=True)
 
 
 def test_expired_post_not_public(client, app):

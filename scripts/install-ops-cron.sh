@@ -4,8 +4,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MARKER="# poisker-ops"
-BACKUP_CRON="0 3 * * * cd $ROOT && $ROOT/scripts/backup.sh >> $ROOT/backups/logs/backup-cron.log 2>&1"
-MONITOR_CRON="*/5 * * * * cd $ROOT && $ROOT/scripts/monitor.sh >> $ROOT/backups/logs/monitor-cron.log 2>&1"
+BACKUP_CRON="0 3 * * * cd $ROOT && bash $ROOT/scripts/backup.sh >> $ROOT/backups/logs/backup-cron.log 2>&1"
+MONITOR_CRON="*/5 * * * * cd $ROOT && bash $ROOT/scripts/monitor.sh >> $ROOT/backups/logs/monitor-cron.log 2>&1"
 
 chmod +x "$ROOT/scripts/backup.sh" "$ROOT/scripts/monitor.sh" "$ROOT/scripts/verify-backup.sh" "$ROOT/scripts/lib/env.sh"
 

@@ -23,6 +23,10 @@ if [ "${RUN_DB_UPGRADE:-false}" = "true" ]; then
   flask db upgrade
   echo "Running post-migration bootstrap..."
   python manage.py bootstrap
+  if [ "${FLASK_ENV:-development}" = "development" ] && [ "${SEED_DEMO_DATA:-1}" != "0" ]; then
+    echo "Seeding development demo data..."
+    python manage.py seed
+  fi
 elif [ "${RUN_DB_INIT:-false}" = "true" ]; then
   echo "Initializing database..."
   python manage.py init --no-seed

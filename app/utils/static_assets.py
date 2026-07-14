@@ -23,7 +23,9 @@ def _watched_static_files(static_root: Path) -> list[Path]:
         "icons/icon-maskable-192.png",
         "icons/icon-maskable-512.png",
     )
-    return [static_root / name for name in names if (static_root / name).is_file()]
+    watched = [static_root / name for name in names if (static_root / name).is_file()]
+    watched.extend(sorted((static_root / "demo").glob("*.jpg")))
+    return watched
 
 
 def compute_static_version(static_folder: str | None) -> str:

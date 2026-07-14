@@ -125,7 +125,7 @@
   </form>
 
   <div class="edit-actions">
-    {% if post.status == 'published' %}
+    {% if post.status == 'published' and config.PROMOTIONS_ENABLED %}
     <a href="{{ url_for('promotions.promote', post_id=post.id, token=token) }}" class="btn btn-secondary btn-block">
       <i data-lucide="trending-up" class="icon" aria-hidden="true"></i>
       Поднять объявление

@@ -126,7 +126,8 @@ def test_image_url_helper(app):
         assert resolve_image_url("http://localhost:9000/board-images/posts/abc.jpg").endswith(
             "/media/posts/abc.jpg"
         )
-        assert resolve_image_url("/static/demo/avto.jpg") == "/static/demo/avto.jpg"
+        static_url = resolve_image_url("/static/demo/avto.jpg")
+        assert static_url.startswith("/static/demo/avto.jpg?v=")
 
 
 def test_load_more_partial(client, app):
@@ -180,32 +181,24 @@ def test_create_post_requires_seller_name(app):
 
 def test_create_post_and_limit(app):
     with app.app_context():
-        post = create_post(
-            {
-                "seller_name": "Ахмад",
-                "title": "Продам диван",
-                "body": "Диван в хорошем состоянии, самовывоз из Грозного.",
-                "category": "prodazha",
-                "city": "grozny",
-                "phone": "+79001112233",
-                "price": 5000,
-                "images": [],
-            },
-            ip_hash="test", publish=True,
-        )
-        assert post.id
+        payload = {
+            "seller_name": "Ахмад",
+            "title": "Продам диван",
+            "body": "Диван в хорошем состоянии, самовывоз из Грозного.",
+            "category": "prodazha",
+            "city": "grozny",
+            "phone": "+79001112233",
+            "price": 5000,
+            "images": [],
+        }
+        for number in range(1, 6):
+            payload["title"] = f"Продам диван номер {number}"
+            post = create_post(payload, ip_hash="test", publish=True)
+            assert post.id
+
         with pytest.raises(PostLimitError):
-            create_post(
-                {
-                    "seller_name": "Ахмад",
-                "title": "Ещё одно",
-                    "body": "Второе объявление с того же номера за день.",
-                    "category": "prodazha",
-                    "city": "grozny",
-                    "phone": "+79001112233",
-                    "images": [],
-                }
-            )
+            payload["title"] = "Шестое объявление за сутки"
+            create_post(payload)
 
 
 def test_post_detail_has_back_link(client, app):

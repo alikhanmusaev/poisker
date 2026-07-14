@@ -19,7 +19,7 @@ mkdir -p "$LOG_DIR"
 MONITOR_TELEGRAM_BOT_TOKEN=""
 MONITOR_TELEGRAM_CHAT_ID=""
 APP_DOMAIN="poisker.ru"
-URL="${MONITOR_URL:-https://poisker.ru/health}"
+URL="${MONITOR_URL:-https://poisker.ru/ready}"
 
 if [[ -f "$ROOT/.env" ]]; then
   MONITOR_TELEGRAM_BOT_TOKEN="$(get_env MONITOR_TELEGRAM_BOT_TOKEN)"

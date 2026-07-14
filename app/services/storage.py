@@ -1,5 +1,4 @@
 import io
-import json
 import logging
 import uuid
 from functools import lru_cache
@@ -61,21 +60,15 @@ def ensure_bucket():
         except Exception:
             _log_exception("Failed to create S3 bucket")
 
-    policy = {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Principal": {"AWS": ["*"]},
-                "Action": ["s3:GetObject"],
-                "Resource": [f"arn:aws:s3:::{bucket}/*"],
-            }
-        ],
-    }
+    # Uploaded media is served through the application, which verifies that
+    # the referenced post is still public (or that its owner/admin may view it).
+    # Remove legacy public-read policies during every idempotent bootstrap.
     try:
-        client.put_bucket_policy(Bucket=bucket, Policy=json.dumps(policy))
-    except Exception:
-        _log_exception("Failed to set S3 bucket policy")
+        client.delete_bucket_policy(Bucket=bucket)
+    except ClientError as exc:
+        code = exc.response.get("Error", {}).get("Code", "")
+        if code not in ("NoSuchBucketPolicy", "NoSuchBucket"):
+            _log_exception("Failed to make S3 bucket private")
 
 
 def _check_file_size(file: FileStorage) -> None:

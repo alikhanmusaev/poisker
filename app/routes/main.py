@@ -247,6 +247,46 @@ def health():
         return jsonify(status="error"), 503
 
 
+@bp.route("/ready")
+def ready():
+    """Readiness probe for every service required by normal requests."""
+    import httpx
+    import redis
+    from sqlalchemy import text
+
+    from app.extensions import db
+    from app.services.storage import _client
+
+    checks = {}
+    try:
+        db.session.execute(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception:
+        checks["database"] = "error"
+    try:
+        redis.from_url(current_app.config["REDIS_URL"], socket_timeout=2).ping()
+        checks["redis"] = "ok"
+    except Exception:
+        checks["redis"] = "error"
+    try:
+        response = httpx.get(
+            f"{current_app.config['TYPESENSE_URL'].rstrip('/')}/health",
+            headers={"X-TYPESENSE-API-KEY": current_app.config["TYPESENSE_API_KEY"]},
+            timeout=2,
+        )
+        checks["typesense"] = "ok" if response.json().get("ok") else "error"
+    except Exception:
+        checks["typesense"] = "error"
+    try:
+        _client().head_bucket(Bucket=current_app.config["S3_BUCKET"])
+        checks["storage"] = "ok"
+    except Exception:
+        checks["storage"] = "error"
+
+    ok = all(value == "ok" for value in checks.values())
+    return jsonify(status="ok" if ok else "error", checks=checks), 200 if ok else 503
+
+
 @bp.route("/robots.txt")
 def robots_txt():
     return (
