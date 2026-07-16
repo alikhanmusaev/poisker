@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Профиль — {{ site_name }}{% endblock %}
+{% block body_class %}page-profile{% endblock %}
+{% block content %}
+<div class="profile-page">
+  <div class="profile-header-card">
+    <div class="profile-user-row">
+      <div class="profile-avatar" aria-hidden="true">{{ user.display_name.0|upper }}</div>
+      <div class="profile-user-meta">
+        <h1 class="profile-user-name">{{ user.display_name }}</h1>
+        <p class="profile-user-email">{{ user.email }}</p>
+        {% if user.phone %}
+          <p class="profile-user-phone">{{ user.phone }}</p>
+        {% endif %}
+        {% if user.rating_count %}
+          <p class="seller-rating">
+            <i data-lucide="star" class="icon icon-xs is-filled" aria-hidden="true"></i>
+            {{ user.rating_avg|floatformat:1 }} · {{ user.rating_count }} {% if user.rating_count == 1 %}отзыв{% elif user.rating_count < 5 %}отзыва{% else %}отзывов{% endif %}
+          </p>
+        {% endif %}
+        <a href="{% url 'reviews:seller_profile' user.id %}" class="profile-public-link">Публичный профиль</a>
+      </div>
+      <a href="{% url 'accounts:profile_edit' %}" class="profile-edit-btn" aria-label="Редактировать личные данные">
+        <i data-lucide="pencil" class="icon" aria-hidden="true"></i>
+      </a>
+    </div>
+    <div class="profile-account-actions">
+      <form method="post" action="{% url 'accounts:logout' %}" class="profile-logout-form">
+        {% csrf_token %}
+        <button type="submit" class="profile-account-link profile-account-link-muted">
+          <i data-lucide="log-out" class="icon icon-xs" aria-hidden="true"></i>
+          Выйти
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {% include "accounts/partials/my_posts_section.html" %}
+</div>
+{% endblock %}

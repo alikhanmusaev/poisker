@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load poisker_tags %}
+{% block title %}Закладки — {{ site_name }}{% endblock %}
+{% block body_class %}page-bookmarks{% endblock %}
+{% block content %}
+<div class="bookmarks-page">
+  <div class="bookmarks-page-header">
+    <h1 class="page-title">Закладки</h1>
+  </div>
+
+  <div class="bookmarks-tabs" role="tablist" aria-label="Тип закладок">
+    <a href="{% url 'bookmarks:index' %}" class="bookmarks-tab{% if tab == 'posts' %} is-active{% endif %}" role="tab" aria-selected="{% if tab == 'posts' %}true{% else %}false{% endif %}">
+      Объявления
+      {% if post_bookmarks %}<span class="bookmarks-tab-count">{{ post_bookmarks|length }}</span>{% endif %}
+    </a>
+    <a href="{% url 'bookmarks:index' %}?tab=categories" class="bookmarks-tab{% if tab == 'categories' %} is-active{% endif %}" role="tab" aria-selected="{% if tab == 'categories' %}true{% else %}false{% endif %}">
+      Категории
+      {% if category_rows %}<span class="bookmarks-tab-count">{{ category_rows|length }}</span>{% endif %}
+    </a>
+  </div>
+
+  {% if tab == 'posts' %}
+    {% if post_bookmarks %}
+      <div class="bookmark-post-list">
+        {% for bookmark in post_bookmarks %}
+          {% with post=bookmark.post %}
+            <div class="bookmark-post-row">
+              <a href="{% post_public_url post %}" class="bookmark-post-link">
+                <div class="bookmark-post-media">
+                  {% post_cover_image post as cover_image %}
+                  {% if cover_image %}
+                    <img src="{{ cover_image }}" alt="" class="bookmark-post-img" loading="lazy" width="64" height="64">
+                  {% else %}
+                    <div class="bookmark-post-img bookmark-post-img-placeholder" aria-hidden="true">
+                      <i data-lucide="image" class="icon" aria-hidden="true"></i>
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="bookmark-post-body">
+                  <p class="bookmark-post-title">{{ post.title }}</p>
+                  <p class="bookmark-post-meta">
+                    {{ cities|get_item:post.city }} · {{ category_labels|get_item:post.category }}
+                    {% if post.price is not None %} · {{ post.price|format_price }} ₽{% endif %}
+                  </p>
+                  {% if post.status != 'published' %}
+                    <p class="bookmark-post-note">Не опубликовано</p>
+                  {% endif %}
+                </div>
+              </a>
+              <form method="post" action="{% url 'bookmarks:toggle_post' post.id %}" class="bookmark-remove-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'bookmarks:index' %}">
+                <button type="submit" class="bookmark-remove-btn" aria-label="Убрать из закладок" title="Убрать из закладок">
+                  <i data-lucide="bookmark-x" class="icon icon-sm" aria-hidden="true"></i>
+                </button>
+              </form>
+            </div>
+          {% endwith %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state empty-state-compact">
+        <i data-lucide="bookmark" class="icon empty-state-icon" aria-hidden="true"></i>
+        <p>Пока нет закладок объявлений</p>
+        <p class="empty-state-hint">Откройте объявление и нажмите «В закладки».</p>
+        <a href="{% url 'core:index' %}" class="btn btn-primary btn-sm">К объявлениям</a>
+      </div>
+    {% endif %}
+  {% else %}
+    {% if category_rows %}
+      <div class="bookmark-category-list">
+        {% for row in category_rows %}
+          <div class="bookmark-category-row">
+            <a href="{{ row.url }}" class="bookmark-category-link">
+              <span class="bookmark-category-icon" aria-hidden="true">
+                <i data-lucide="{{ row.icon }}" class="icon" aria-hidden="true"></i>
+              </span>
+              <span class="bookmark-category-label">{{ row.label }}</span>
+            </a>
+            <form method="post" action="{% url 'bookmarks:toggle_category' row.slug %}" class="bookmark-remove-form">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{% url 'bookmarks:index' %}?tab=categories">
+              <button type="submit" class="bookmark-remove-btn" aria-label="Не следить" title="Не следить">
+                <i data-lucide="bookmark-x" class="icon icon-sm" aria-hidden="true"></i>
+              </button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state empty-state-compact">
+        <i data-lucide="folder-heart" class="icon empty-state-icon" aria-hidden="true"></i>
+        <p>Нет отслеживаемых категорий</p>
+        <p class="empty-state-hint">Выберите категории ниже или на странице категории.</p>
+      </div>
+    {% endif %}
+
+    <div class="bookmark-category-picker">
+      <h2 class="bookmark-section-title">Все категории</h2>
+      <div class="bookmark-category-grid">
+        {% for item in all_categories %}
+          <form method="post" action="{% url 'bookmarks:toggle_category' item.slug %}" class="bookmark-category-chip-form">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'bookmarks:index' %}?tab=categories">
+            <button type="submit" class="bookmark-category-chip{% if item.bookmarked %} is-active{% endif %}">
+              <i data-lucide="{{ item.icon }}" class="icon icon-sm" aria-hidden="true"></i>
+              <span>{{ item.label }}</span>
+              {% if item.bookmarked %}
+                <i data-lucide="check" class="icon icon-xs" aria-hidden="true"></i>
+              {% endif %}
+            </button>
+          </form>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

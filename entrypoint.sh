@@ -1,38 +1,39 @@
 #!/bin/sh
 set -e
 
+if [ "$(id -u)" = "0" ]; then
+  mkdir -p /app/staticfiles /app/media
+  chown -R appuser:appuser /app/staticfiles /app/media
+  exec gosu appuser "$0" "$@"
+fi
+
 echo "Waiting for PostgreSQL..."
-until python -c "
+until python - <<'PY'
 import os, time
 import psycopg
-url = os.environ.get('DATABASE_URL', '').replace('postgresql+psycopg://', 'postgresql://')
-for i in range(30):
+url = os.environ.get("DATABASE_URL", "").replace("postgresql+psycopg://", "postgresql://")
+if not url:
+    url = f"postgresql://{os.environ.get('POSTGRES_USER','board')}:{os.environ.get('POSTGRES_PASSWORD','board')}@postgres:5432/{os.environ.get('POSTGRES_DB','chechnya_board')}"
+for _ in range(60):
     try:
         psycopg.connect(url)
         break
     except Exception:
         time.sleep(1)
 else:
-    raise SystemExit('PostgreSQL not ready')
-" 2>/dev/null; do
-  sleep 1
-done
+    raise SystemExit("PostgreSQL not ready")
+PY
+do sleep 1; done
 
-if [ "${RUN_DB_UPGRADE:-false}" = "true" ]; then
-  echo "Running database migrations..."
-  flask db upgrade
-  echo "Running post-migration bootstrap..."
-  python manage.py bootstrap
-  if [ "${FLASK_ENV:-development}" = "development" ] && [ "${SEED_DEMO_DATA:-1}" != "0" ]; then
-    echo "Seeding development demo data..."
-    python manage.py seed
-  fi
-elif [ "${RUN_DB_INIT:-false}" = "true" ]; then
-  echo "Initializing database..."
-  python manage.py init --no-seed
-else
-  echo "Skipping database migration/init (set RUN_DB_UPGRADE=true for migrations)."
+echo "Running migrations..."
+python manage.py migrate --noinput
+python manage.py bootstrap
+if [ "${SEED_DEMO_DATA:-0}" = "1" ]; then
+  python manage.py seed_demo
 fi
 
+echo "Collecting static files..."
+python manage.py collectstatic --noinput
+
 echo "Starting gunicorn..."
-exec gunicorn -w "${WEB_CONCURRENCY:-2}" -b 0.0.0.0:8000 --timeout 120 --graceful-timeout 30 wsgi:app
+exec gunicorn config.wsgi:application -w "${WEB_CONCURRENCY:-2}" -b 0.0.0.0:8000 --timeout 120

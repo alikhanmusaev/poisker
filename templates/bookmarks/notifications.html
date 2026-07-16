@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load poisker_tags %}
+{% block title %}Уведомления — {{ site_name }}{% endblock %}
+{% block body_class %}page-notifications{% endblock %}
+{% block content %}
+<div class="notifications-page">
+  <div class="notifications-page-header">
+    <h1 class="page-title">Уведомления</h1>
+    {% if notifications %}
+      <div class="notifications-header-actions">
+        <form method="post" action="{% url 'bookmarks:mark_all_read' %}" class="notifications-mark-all-form">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-secondary btn-sm">Прочитать все</button>
+        </form>
+        <form method="post" action="{% url 'bookmarks:delete_all' %}" class="notifications-delete-all-form" onsubmit="return confirm('Удалить все уведомления?')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-secondary btn-sm notifications-delete-all-btn">Удалить все</button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if notifications %}
+    <div class="notification-list">
+      {% for item in notifications %}
+        <div class="notification-row{% if item.is_unread %} is-unread{% endif %}">
+          <form method="post" action="{% url 'bookmarks:mark_read' item.id %}" class="notification-item-form">
+            {% csrf_token %}
+            <button type="submit" class="notification-item">
+              <span class="notification-item-icon" aria-hidden="true">
+                {% if item.kind == 'price_changed' %}
+                  <i data-lucide="banknote" class="icon" aria-hidden="true"></i>
+                {% elif item.kind == 'post_unpublished' or item.kind == 'moderation_rejected' %}
+                  <i data-lucide="eye-off" class="icon" aria-hidden="true"></i>
+                {% elif item.kind == 'moderation_approved' %}
+                  <i data-lucide="check-circle" class="icon" aria-hidden="true"></i>
+                {% elif item.kind == 'post_expired' %}
+                  <i data-lucide="clock" class="icon" aria-hidden="true"></i>
+                {% elif item.kind == 'new_review' or item.kind == 'review_reply' %}
+                  <i data-lucide="star" class="icon" aria-hidden="true"></i>
+                {% else %}
+                  <i data-lucide="sparkles" class="icon" aria-hidden="true"></i>
+                {% endif %}
+              </span>
+              <span class="notification-item-body">
+                <span class="notification-item-title">{{ item.title }}</span>
+                {% if item.body %}
+                  <span class="notification-item-text">{{ item.body }}</span>
+                {% endif %}
+                <time class="notification-item-time" datetime="{{ item.created_at|date:'c' }}">{{ item.created_at|relative_time }}</time>
+              </span>
+              {% if item.is_unread %}
+                <span class="notification-item-dot" aria-label="Непрочитано"></span>
+              {% endif %}
+            </button>
+          </form>
+          <form method="post" action="{% url 'bookmarks:delete' item.id %}" class="notification-delete-form" onsubmit="return confirm('Удалить уведомление?')">
+            {% csrf_token %}
+            <button type="submit" class="notification-delete-btn" aria-label="Удалить" title="Удалить">
+              <i data-lucide="trash-2" class="icon icon-sm" aria-hidden="true"></i>
+            </button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state empty-state-compact">
+      <i data-lucide="bell" class="icon empty-state-icon" aria-hidden="true"></i>
+      <p>Пока нет уведомлений</p>
+      <p class="empty-state-hint">Следите за объявлениями и категориями в закладках — мы сообщим об изменениях.</p>
+      <a href="{% url 'bookmarks:index' %}" class="btn btn-primary btn-sm">К закладкам</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

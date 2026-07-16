@@ -1,156 +1,65 @@
 # Поискер — доска объявлений (poisker.ru)
 
-Региональная доска объявлений **Поискер** для **Чеченской Республики** — [poisker.ru](https://poisker.ru).
-
-## Возможности
-
-- Публикация без регистрации (до 5 объявлений с одного номера за 24 часа)
-- Пошаговая публикация с сохранением секретной ссылки
-- Редактирование по секретной ссылке (кнопка «Редактировать» на своих объявлениях)
-- Умный поиск (Typesense) с опечатками и синонимами
-- Сортировка: рекомендуемые, по релевантности, по дате, **по дешевле / по дороже**
-- Фильтры: с фото, с ценой
-- Слайдер и увеличение фото на странице объявления
-- Ранжированная лента
-- «Мои объявления» — сохранённые ссылки на устройстве
-- Жалобы и админ-модерация
-- Подготовленная механика платного поднятия объявлений (временно отключена флагом)
-- PWA (Jinja2 + HTMX + Service Worker)
-
-## Быстрый старт
-
-```bash
-cp .env.example .env
-docker compose up -d postgres redis typesense minio
-python -m venv .venv
-.venv\Scripts\activate   # Windows
-pip install -r requirements.txt
-python generate_icons.py
-python download_vendor_assets.py
-python manage.py
-flask --app wsgi run --debug
-```
-
-Откройте http://127.0.0.1:5000
-
-Админка: http://127.0.0.1:5000/admin (логин/пароль из `.env`)
-
-Демо-объявления (16 шт.) создаются при `python manage.py`. Повторно: `python manage.py seed --force`.
-
-## Docker (локально)
-
-```bash
-cp .env.example .env
-docker compose build web
-docker compose up -d
-```
-
-По умолчанию в Docker используется `FLASK_ENV=development` — dev-секреты допустимы для локальной разработки.
-
-Приложение: http://localhost/ (nginx) или http://127.0.0.1:8000/ (web напрямую)
-
-После изменений в коде:
-
-```bash
-docker compose build web && docker compose up -d web
-```
-
-## Docker (production)
-
-1. Скопируйте шаблон: `cp .env.production.example .env`
-2. Заполните **обязательные** переменные (см. ниже)
-3. Запуск:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml build web
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-```
-
-В production наружу смотрит только **nginx** (порт 80). Postgres, Redis, Typesense и MinIO доступны только внутри Docker-сети.
-
-Включены: `FLASK_ENV=production`, `SESSION_COOKIE_SECURE=true`, `REQUIRE_CAPTCHA=true`, `HSTS_ENABLED=true`, `TRUST_PROXY=true`.
-
-### Обязательные переменные для production
-
-| Переменная | Описание |
-|------------|----------|
-| `SECRET_KEY` | Секрет Flask-сессий |
-| `HMAC_SECRET` | HMAC для хешей телефона и IP |
-| `PHONE_ENCRYPTION_KEY` | Ключ шифрования телефонов (отдельно от HMAC) |
-| `POSTGRES_PASSWORD` | Пароль PostgreSQL |
-| `ADMIN_PASSWORD` | Пароль админки |
-| `TYPESENSE_API_KEY` | API-ключ Typesense |
-| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Учётные данные MinIO |
-| `S3_PUBLIC_URL` | Публичный URL медиа (HTTPS) |
-| `CAPTCHA_PROVIDER` | `builtin` (по умолчанию), `yandex`, `none` |
-| `REQUIRE_CAPTCHA` | Требовать капчу при публикации и жалобах |
-
-Полный список — в `.env.production.example`.
-
-## Резервное копирование
-
-См. [`docs/BACKUP.md`](docs/BACKUP.md) — PostgreSQL, MinIO, volumes и график бэкапов.
+Региональная доска объявлений для **Чеченской Республики**.
 
 ## Стек
 
-- Flask, SQLAlchemy, PostgreSQL
+- **Django 5** + PostgreSQL
+- **HTMX** + Django templates
 - Typesense, Redis, MinIO
-- HTMX, Service Worker
-- APScheduler (ранжирование, истечение объявлений, очистка удалённых)
 
-## Deleted posts cleanup
+## Аутентификация
 
-Пользовательское действие **«Снять объявление»** — это soft delete:
+Публикация объявлений только для зарегистрированных пользователей:
 
-- объявление сразу исчезает из публичной выдачи и поиска;
-- запись в PostgreSQL, картинки в MinIO и зашифрованный телефон временно сохраняются;
-- через `DELETED_POST_RETENTION_DAYS` дней (по умолчанию 30) фоновый cleanup удаляет картинки из MinIO и очищает `phone_encrypted`;
-- строка в базе остаётся для истории модерации (`phone_hash`, `phone_masked`, заголовок и т.д.).
+- Регистрация → `/accounts/register/`
+- Вход → `/accounts/login/`
+- Мои объявления → `/posts/my/`
+- Профиль → `/accounts/profile/`
 
-Ручной запуск:
+## Быстрый старт (Podman / Docker)
 
 ```bash
-flask --app wsgi cleanup-deleted-posts --days 30 --batch-size 100
+cp .env.example .env
+./scripts/podman-up.sh
+# или: docker compose build web && docker compose up -d
 ```
 
-Автоматический запуск — ежедневно в 03:30 (Europe/Moscow) при `SCHEDULER_ENABLED=true`.
+Сайт: http://127.0.0.1:8080/ (nginx) или http://127.0.0.1:8000/
 
-Переменные окружения:
+Админка Django: http://127.0.0.1:8000/admin/
+- Email: `admin@example.com`
+- Пароль: `admin123`
 
-- `DELETED_POST_RETENTION_DAYS=30`
-- `DELETED_POST_CLEANUP_BATCH_SIZE=100`
-- Nginx + Gunicorn (см. `nginx.conf`, `Dockerfile`)
+## Локальная разработка
 
-## Переменные окружения
-
-См. `.env.example`
-
-Перед продакшеном:
-- `SECRET_KEY`, `HMAC_SECRET`, `PHONE_ENCRYPTION_KEY` — сильные случайные значения (`PHONE_ENCRYPTION_KEY` ≠ `HMAC_SECRET`)
-- `REQUIRE_CAPTCHA=true` — встроенная математическая капча, внешние ключи не нужны
-- `APP_DOMAIN=poisker.ru`, `SITE_NAME=Поискер` — для SEO, PWA и Google Play asset links
-
-## Структура
-
-```
-app/
-  models/      — Post, Report, Promotion, AdminUser
-  services/    — phone, posts, search, ranking, storage
-  routes/      — main, posts, search, admin, reports, promotions
-  templates/   — Jinja2 + HTMX partials
-  static/      — CSS, JS, sw.js, manifest
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+export DJANGO_DEBUG=true USE_SQLITE=true
+python manage.py migrate
+python manage.py bootstrap
+python manage.py seed_demo
+python manage.py runserver
 ```
 
-## Политика конфиденциальности
+## Структура проекта
 
-`/privacy` — страница для соответствия 152-ФЗ и Google Play Data safety.  
-Также: `/terms`, `/guidelines`.
+```
+config/          — настройки Django
+accounts/        — пользователи (email + имя + пароль)
+listings/        — объявления, CRUD, поиск, S3
+core/            — главная, SEO-URL, health
+templates/       — шаблоны
+static/          — CSS, JS, изображения
+```
 
-## Публикация в Google Play
+## Полезные команды
 
-См. подробный чеклист: [`docs/GOOGLE_PLAY.md`](docs/GOOGLE_PLAY.md)
-
-- PWA + TWA (Bubblewrap), Digital Asset Links: `/.well-known/assetlinks.json`
-- Service Worker: `/sw.js`
-- Maskable icons в `app/static/icons/`
-- Переменные: `APP_DOMAIN`, `ANDROID_PACKAGE_NAME`, `ANDROID_SHA256_FINGERPRINTS`, `SUPPORT_EMAIL`
+```bash
+python manage.py bootstrap      # Typesense + MinIO + superuser
+python manage.py seed_demo      # демо-объявления
+python manage.py seed_demo --force
+python run_scheduler.py         # фоновые задачи (expiry, reindex)
+```

@@ -126,7 +126,7 @@ docker compose up -d
 Индекс можно пересобрать без бэкапа:
 
 ```bash
-docker compose exec web flask reindex
+docker compose exec web python manage.py bootstrap
 ```
 
 Если команда `reindex` недоступна, используйте `python manage.py reindex` или восстановите volume `typesense_data`.

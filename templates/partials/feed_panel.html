@@ -1,0 +1,43 @@
+{% load poisker_tags %}
+<div id="feed-panel">
+  <div class="feed-toolbar">
+    <p class="feed-count">
+      {% if query or category %}
+        Найдено: <strong>{{ total }}</strong> {{ total|plural_ru:"объявление,объявления,объявлений" }}
+      {% else %}
+        <strong>{{ total }}</strong> {{ total|plural_ru:"объявление,объявления,объявлений" }}
+      {% endif %}
+    </p>
+    <div class="feed-toolbar-actions">
+      {% if category %}
+        {% if user.is_authenticated %}
+          <form method="post" action="{% url 'bookmarks:toggle_category' category %}" class="category-watch-form">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn btn-secondary btn-sm category-watch-btn{% if category_bookmarked %} is-active{% endif %}">
+              <i data-lucide="{% if category_bookmarked %}bookmark-check{% else %}bookmark{% endif %}" class="icon icon-sm" aria-hidden="true"></i>
+              {% if category_bookmarked %}В закладках{% else %}Следить{% endif %}
+            </button>
+          </form>
+        {% else %}
+          <a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-secondary btn-sm category-watch-btn">
+            <i data-lucide="bookmark" class="icon icon-sm" aria-hidden="true"></i>
+            Следить
+          </a>
+        {% endif %}
+      {% endif %}
+      <div class="sort-control">
+        <select id="sort-select" class="sort-select" aria-label="Сортировка">
+          <option value="" {% if sort not in sort_options %}selected{% endif %}>По умолчанию</option>
+          {% for value, label in sort_options.items %}
+            <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="post-list">
+    {% include "partials/post_list.html" %}
+  </div>
+</div>

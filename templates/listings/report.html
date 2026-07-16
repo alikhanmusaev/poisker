@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load poisker_tags %}
+{% block title %}Пожаловаться — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="form-page">
+  <a href="{% post_public_url post %}" class="back-link">
+    <i data-lucide="arrow-left" class="icon icon-sm" aria-hidden="true"></i>
+    Назад к объявлению
+  </a>
+  <div class="page-card">
+    <h1 class="page-title">Пожаловаться</h1>
+    <p class="page-lead">{{ post.title }}</p>
+
+    <form method="post" class="listing-form" novalidate>
+      {% csrf_token %}
+      {% include "listings/partials/form_fields.html" %}
+      <button type="submit" class="btn btn-primary btn-block">
+        <i data-lucide="flag" class="icon" aria-hidden="true"></i>
+        Отправить жалобу
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

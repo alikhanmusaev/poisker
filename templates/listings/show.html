@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% load static poisker_tags %}
+{% block title %}{{ post.title }} — {{ site_name }}{% endblock %}
+{% block content %}
+<article class="page-card post-detail"
+         data-post-detail
+         data-post-id="{{ post.id }}"
+         {% if user.is_authenticated %}data-contact-url="{% url 'listings:contact' post.id %}"{% endif %}>
+  <nav class="breadcrumbs" aria-label="Навигация по сайту">
+    <ol class="breadcrumbs-list">
+      <li class="breadcrumbs-item">
+        <a href="{% url 'core:index' %}">Главная</a>
+      </li>
+      <li class="breadcrumbs-item">
+        <a href="{% city_category_path post.city %}">{{ cities|get_item:post.city }}</a>
+      </li>
+      <li class="breadcrumbs-item">
+        <a href="{% city_category_path post.city post.category %}">{{ category_labels|get_item:post.category }}</a>
+      </li>
+      <li class="breadcrumbs-item breadcrumbs-item-current" aria-current="page">{{ post.title }}</li>
+    </ol>
+  </nav>
+  <a href="{{ back_url }}" class="back-link">
+    <i data-lucide="arrow-left" class="icon icon-sm" aria-hidden="true"></i>
+    Назад к объявлениям
+  </a>
+  {% if gallery_images %}
+    <div class="post-gallery" data-post-gallery>
+      <div class="post-gallery-viewport" data-gallery-viewport tabindex="0" aria-roledescription="carousel" aria-label="Фотографии объявления">
+        <div class="post-gallery-track" data-gallery-track>
+          {% for img in gallery_images %}
+            <div class="post-gallery-slide" data-gallery-slide aria-hidden="{% if forloop.first %}false{% else %}true{% endif %}">
+              <button type="button" class="post-gallery-open" data-gallery-open aria-label="Увеличить фото {{ forloop.counter }} из {{ gallery_images|length }}">
+                <img src="{{ img }}" alt="{% post_image_alt post.title forloop.counter gallery_images|length %}" loading="{% if forloop.first %}eager{% else %}lazy{% endif %}" width="800" height="600">
+                <span class="post-gallery-zoom-hint" aria-hidden="true">
+                  <i data-lucide="zoom-in" class="icon icon-sm"></i>
+                </span>
+              </button>
+            </div>
+          {% endfor %}
+        </div>
+        {% if gallery_images|length > 1 %}
+          <button type="button" class="post-gallery-nav post-gallery-prev" data-gallery-prev aria-label="Предыдущее фото">
+            <i data-lucide="chevron-left" class="icon" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="post-gallery-nav post-gallery-next" data-gallery-next aria-label="Следующее фото">
+            <i data-lucide="chevron-right" class="icon" aria-hidden="true"></i>
+          </button>
+          <span class="post-gallery-counter" data-gallery-counter>1 / {{ gallery_images|length }}</span>
+        {% endif %}
+      </div>
+      {% if gallery_images|length > 1 %}
+        <div class="post-gallery-dots" data-gallery-dots role="tablist" aria-label="Выбор фото">
+          {% for img in gallery_images %}
+            <button type="button" role="tab" aria-label="Фото {{ forloop.counter }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" class="post-gallery-dot{% if forloop.first %} is-active{% endif %}"></button>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="post-lightbox" id="post-lightbox" hidden role="dialog" aria-modal="true" aria-label="Просмотр фото">
+      <div class="post-lightbox-backdrop" data-lightbox-backdrop></div>
+      <div class="post-lightbox-panel">
+        <div class="post-lightbox-toolbar">
+          <div class="post-lightbox-zoom-controls">
+            <button type="button" class="post-lightbox-tool" data-lightbox-zoom-out aria-label="Уменьшить">
+              <i data-lucide="zoom-out" class="icon" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="post-lightbox-tool post-lightbox-zoom-label" data-lightbox-zoom-reset data-lightbox-zoom-label aria-label="Сбросить масштаб">100%</button>
+            <button type="button" class="post-lightbox-tool" data-lightbox-zoom-in aria-label="Увеличить">
+              <i data-lucide="zoom-in" class="icon" aria-hidden="true"></i>
+            </button>
+          </div>
+          <span class="post-lightbox-counter" data-lightbox-counter></span>
+          <button type="button" class="post-lightbox-tool post-lightbox-close" data-lightbox-close aria-label="Закрыть">
+            <i data-lucide="x" class="icon" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="post-lightbox-stage" data-lightbox-stage>
+          <div class="post-lightbox-pan" data-lightbox-pan>
+            <img src="" alt="" data-lightbox-img draggable="false">
+          </div>
+          <button type="button" class="post-lightbox-nav post-lightbox-prev" data-lightbox-prev aria-label="Предыдущее фото">
+            <i data-lucide="chevron-left" class="icon" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="post-lightbox-nav post-lightbox-next" data-lightbox-next aria-label="Следующее фото">
+            <i data-lucide="chevron-right" class="icon" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+  {% if post.is_promoted %}
+    <span class="badge badge-promoted" style="position:static;display:inline-flex;margin-bottom:12px;">
+      <i data-lucide="zap" class="icon icon-xs" aria-hidden="true"></i>
+      Поднято
+    </span>
+  {% endif %}
+  {% if post.price is not None %}
+    <p class="post-price">{{ post.price|format_price }} ₽</p>
+  {% else %}
+    <p class="post-price post-price-muted">Цена не указана</p>
+  {% endif %}
+  <h1>{{ post.title }}</h1>
+  <p class="post-meta">
+    {% if post.seller_name %}
+      <i data-lucide="user" class="icon icon-xs" aria-hidden="true"></i>
+      <a href="{% url 'reviews:seller_profile' post.user_id %}" class="post-seller-link">{{ post.seller_name }}</a>
+      {% if post.user.rating_count %}
+        <span class="post-seller-rating" aria-label="Рейтинг {{ post.user.rating_avg|floatformat:1 }}">
+          <i data-lucide="star" class="icon icon-xs is-filled" aria-hidden="true"></i>
+          {{ post.user.rating_avg|floatformat:1 }}
+        </span>
+      {% endif %}
+      <span class="meta-dot">·</span>
+    {% endif %}
+    <i data-lucide="map-pin" class="icon icon-xs" aria-hidden="true"></i>
+    <span>{{ cities|get_item:post.city }}</span>
+    <span class="meta-dot">·</span>
+    <i data-lucide="tag" class="icon icon-xs" aria-hidden="true"></i>
+    <span>{{ category_labels|get_item:post.category }}</span>
+    <span class="meta-dot">·</span>
+    <i data-lucide="eye" class="icon icon-xs" aria-hidden="true"></i>
+    <span>{{ post.views|default:0 }}</span>
+    <span class="meta-dot">·</span>
+    <span>{{ post.created_at|relative_time }}</span>
+  </p>
+  <p class="safety-note">
+    <i data-lucide="shield-alert" class="icon icon-sm" aria-hidden="true"></i>
+    Не переводите предоплату, пока не осмотрите товар и не убедитесь в надёжности продавца.
+  </p>
+  <div class="post-body">{{ post.body }}</div>
+
+  <div class="contact-box">
+    {% url 'messaging:start' post.id as message_start_url %}
+    {% if user.is_staff %}
+      <a href="{% url 'moderation:post_detail' post.id %}" class="btn btn-primary btn-block">
+        <i data-lucide="shield-check" class="icon" aria-hidden="true"></i>
+        Открыть в модерации
+      </a>
+    {% elif user.is_authenticated %}
+      {% if user.id != post.user_id %}
+        <a href="{% url 'messaging:start' post.id %}" class="btn btn-primary btn-block">
+          <i data-lucide="message-circle" class="icon" aria-hidden="true"></i>
+          Написать продавцу
+        </a>
+      {% endif %}
+      <button type="button" class="btn btn-secondary btn-block" id="show-phone">
+        <i data-lucide="phone" class="icon" aria-hidden="true"></i>
+        Показать телефон
+      </button>
+      <p id="contact-error" class="flash flash-error" role="alert" hidden></p>
+      <p id="phone-display" class="phone-display hidden">
+        <a id="phone-link" class="phone-link" href="#">
+          <i data-lucide="phone" class="icon" aria-hidden="true"></i>
+          <span id="phone-text"></span>
+        </a>
+      </p>
+    {% else %}
+      <a href="{% url 'accounts:login' %}?next={{ message_start_url|urlencode }}" class="btn btn-primary btn-block">
+        <i data-lucide="message-circle" class="icon" aria-hidden="true"></i>
+        Войти, чтобы написать продавцу
+      </a>
+      <a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-secondary btn-block">
+        <i data-lucide="log-in" class="icon" aria-hidden="true"></i>
+        Войти, чтобы увидеть телефон
+      </a>
+      <p class="contact-guest-note">Сообщения и телефон доступны только зарегистрированным пользователям.</p>
+    {% endif %}
+    <button type="button" class="btn btn-secondary btn-block" id="share-post">
+      <i data-lucide="share-2" class="icon" aria-hidden="true"></i>
+      Поделиться
+    </button>
+    {% if user.is_authenticated and not user.is_staff %}
+      <form method="post" action="{% url 'bookmarks:toggle_post' post.id %}" class="bookmark-toggle-form">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="btn btn-secondary btn-block{% if is_bookmarked %} is-bookmarked{% endif %}">
+          <i data-lucide="{% if is_bookmarked %}bookmark-check{% else %}bookmark{% endif %}" class="icon" aria-hidden="true"></i>
+          {% if is_bookmarked %}В закладках{% else %}В закладки{% endif %}
+        </button>
+      </form>
+    {% elif not user.is_authenticated %}
+      <a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-secondary btn-block">
+        <i data-lucide="bookmark" class="icon" aria-hidden="true"></i>
+        Войти, чтобы сохранить в закладки
+      </a>
+    {% endif %}
+  </div>
+  {% if not user.is_staff %}
+  {% if user.is_authenticated %}
+  <a href="{% url 'listings:report' post.id %}" class="link-muted">
+    <i data-lucide="flag" class="icon icon-xs" aria-hidden="true"></i>
+    Пожаловаться
+  </a>
+  {% else %}
+  <a href="{% url 'accounts:login' %}?next={% url 'listings:report' post.id %}" class="link-muted">
+    <i data-lucide="flag" class="icon icon-xs" aria-hidden="true"></i>
+    Пожаловаться
+  </a>
+  {% endif %}
+  {% endif %}
+</article>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'js/post-gallery.js' %}?v={{ static_version }}"></script>
+<script src="{% static 'js/post-detail.js' %}?v={{ static_version }}"></script>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Отзыв о {{ seller.display_name }} — {{ site_name }}{% endblock %}
+{% block body_class %}page-review-form{% endblock %}
+{% block content %}
+<div class="review-form-page">
+  <a href="{% url 'reviews:seller_profile' seller.id %}" class="back-link">
+    <i data-lucide="arrow-left" class="icon icon-sm" aria-hidden="true"></i>
+    К профилю продавца
+  </a>
+
+  <h1 class="page-title">{% if existing_review %}Изменить отзыв{% else %}Оставить отзыв{% endif %}</h1>
+  <p class="page-lead">Оцените продавца «{{ seller.display_name }}» после общения.</p>
+
+  <form method="post" class="review-form listing-form" novalidate>
+    {% csrf_token %}
+    <fieldset class="review-rating-fieldset">
+      <legend class="field-label">Оценка</legend>
+      <div class="review-rating-options">
+        {% for radio in form.rating %}
+          <label class="review-rating-option">
+            {{ radio.tag }}
+            <span>{{ radio.choice_label }}</span>
+            <i data-lucide="star" class="icon icon-sm" aria-hidden="true"></i>
+          </label>
+        {% endfor %}
+      </div>
+      {% if form.rating.errors %}
+        <p class="field-error">{{ form.rating.errors.0 }}</p>
+      {% endif %}
+    </fieldset>
+
+    <div class="field">
+      <label class="field-label" for="{{ form.comment.id_for_label }}">Комментарий</label>
+      {{ form.comment }}
+      {% if form.comment.errors %}
+        <p class="field-error">{{ form.comment.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block">
+      <i data-lucide="check" class="icon" aria-hidden="true"></i>
+      Сохранить отзыв
+    </button>
+  </form>
+</div>
+{% endblock %}

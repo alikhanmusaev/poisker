@@ -1,0 +1,8 @@
+{% load poisker_tags %}
+{% if items %}
+<ul class="suggest-list" id="suggest-list">
+  {% for item in items %}
+    <li><button type="button" class="suggest-item" data-suggest-value="{{ item }}">{{ item }}</button></li>
+  {% endfor %}
+</ul>
+{% endif %}

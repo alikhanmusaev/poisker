@@ -1,0 +1,22 @@
+{% load poisker_tags %}
+{% if results %}
+  <div class="post-grid" id="post-grid">
+    {% for item in results %}
+      {% with post=item.post|default:item highlight=item.highlight|default:None %}
+        {% include "partials/post_card.html" %}
+      {% endwith %}
+    {% endfor %}
+  </div>
+  {% if has_next %}
+    <nav class="feed-pagination" aria-label="Страницы ленты">
+      <a class="feed-pagination-link" href="{{ listing_path }}?page={{ page|add:1 }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if city and not fixed_city %}&city={{ city }}{% endif %}{% if category and not fixed_category %}&category={{ category }}{% endif %}{% if price_min != None %}&price_min={{ price_min }}{% endif %}{% if price_max != None %}&price_max={{ price_max }}{% endif %}">Далее →</a>
+    </nav>
+  {% endif %}
+{% else %}
+  <div class="empty-state">
+    <i data-lucide="inbox" class="icon empty-state-icon" aria-hidden="true"></i>
+    <p>Объявлений пока нет</p>
+    <p class="empty-state-hint">Станьте первым — зарегистрируйтесь и подайте объявление.</p>
+    <a href="{% url 'accounts:register' %}" class="btn btn-primary">Зарегистрироваться</a>
+  </div>
+{% endif %}

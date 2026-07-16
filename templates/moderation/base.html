@@ -1,0 +1,125 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>{% block title %}{{ page_title }} — Модерация{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'fonts/inter/inter.css' %}">
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}?v={{ static_version }}">
+  <script src="{% static 'vendor/lucide.min.js' %}" defer></script>
+</head>
+<body class="admin-shell">
+  <button type="button" class="admin-mobile-toggle" id="admin-menu-toggle" aria-label="Меню" aria-expanded="false" aria-controls="admin-sidebar">
+    <span class="admin-mobile-toggle__bar"></span>
+    <span class="admin-mobile-toggle__bar"></span>
+    <span class="admin-mobile-toggle__bar"></span>
+  </button>
+  <div class="admin-overlay" id="admin-overlay" hidden></div>
+
+  <aside class="admin-sidebar" id="admin-sidebar">
+    <div class="admin-sidebar__brand">
+      <a href="{% url 'moderation:dashboard' %}" class="admin-sidebar__logo">
+        {{ site_name }} <span>Mod</span>
+      </a>
+      <span class="admin-sidebar__subtitle">Панель модератора</span>
+    </div>
+    <nav class="admin-sidebar__nav" aria-label="Модерация">
+      <div class="admin-sidebar__section">
+        <span class="admin-sidebar__section-title">Работа</span>
+        <a href="{% url 'moderation:dashboard' %}" class="admin-sidebar__link{% if active_nav == 'dashboard' %} is-active{% endif %}">
+          <i data-lucide="layout-dashboard" class="admin-sidebar__icon"></i>
+          Обзор
+        </a>
+        <a href="{% url 'moderation:queue' %}" class="admin-sidebar__link{% if active_nav == 'queue' %} is-active{% endif %}">
+          <i data-lucide="inbox" class="admin-sidebar__icon"></i>
+          Очередь
+          {% if mod_counts.pending %}<span class="admin-sidebar__count">{{ mod_counts.pending }}</span>{% endif %}
+        </a>
+        <a href="{% url 'moderation:reports' %}" class="admin-sidebar__link{% if active_nav == 'reports' %} is-active{% endif %}">
+          <i data-lucide="flag" class="admin-sidebar__icon"></i>
+          Жалобы
+          {% if mod_counts.reports_new %}<span class="admin-sidebar__count">{{ mod_counts.reports_new }}</span>{% endif %}
+        </a>
+      </div>
+      <div class="admin-sidebar__section">
+        <span class="admin-sidebar__section-title">Сайт</span>
+        <a href="{% url 'core:index' %}" class="admin-sidebar__link admin-sidebar__link--muted">
+          <i data-lucide="external-link" class="admin-sidebar__icon"></i>
+          На сайт
+        </a>
+        {% if user.is_superuser %}
+          <a href="/admin/" class="admin-sidebar__link admin-sidebar__link--muted">
+            <i data-lucide="settings" class="admin-sidebar__icon"></i>
+            Django admin
+          </a>
+        {% endif %}
+      </div>
+    </nav>
+    <div class="admin-sidebar__footer">
+      <div class="admin-sidebar__user">{{ user.display_name|default:user.email }}</div>
+      <form method="post" action="{% url 'accounts:logout' %}" class="admin-logout-form">
+        {% csrf_token %}
+        <button type="submit" class="admin-sidebar__link admin-sidebar__link--logout">
+          <i data-lucide="log-out" class="admin-sidebar__icon"></i>
+          Выйти
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <div class="admin-content">
+    <header class="admin-topbar">
+      <div class="admin-topbar__titles">
+        <span class="admin-topbar__eyebrow">Модерация</span>
+        <h1 class="admin-topbar__title">{{ page_title }}</h1>
+      </div>
+      {% block topbar_actions %}{% endblock %}
+    </header>
+    <main class="admin-main">
+      {% if messages %}
+        <div class="admin-flashes">
+          {% for message in messages %}
+            <div class="admin-flash admin-flash--{% if message.tags %}{{ message.tags }}{% else %}success{% endif %}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <nav class="admin-mobile-nav" aria-label="Мобильная навигация модерации">
+    <a href="{% url 'moderation:dashboard' %}" class="admin-mobile-nav__item{% if active_nav == 'dashboard' %} is-active{% endif %}">
+      <i data-lucide="layout-dashboard" class="admin-mobile-nav__icon" aria-hidden="true"></i>
+      <span>Обзор</span>
+    </a>
+    <a href="{% url 'moderation:queue' %}" class="admin-mobile-nav__item{% if active_nav == 'queue' %} is-active{% endif %}">
+      <span class="admin-mobile-nav__icon-wrap">
+        <i data-lucide="inbox" class="admin-mobile-nav__icon" aria-hidden="true"></i>
+        {% if mod_counts.pending %}<span class="admin-mobile-nav__badge">{{ mod_counts.pending }}</span>{% endif %}
+      </span>
+      <span>Очередь</span>
+    </a>
+    <a href="{% url 'moderation:reports' %}" class="admin-mobile-nav__item{% if active_nav == 'reports' %} is-active{% endif %}">
+      <span class="admin-mobile-nav__icon-wrap">
+        <i data-lucide="flag" class="admin-mobile-nav__icon" aria-hidden="true"></i>
+        {% if mod_counts.reports_new %}<span class="admin-mobile-nav__badge">{{ mod_counts.reports_new }}</span>{% endif %}
+      </span>
+      <span>Жалобы</span>
+    </a>
+    <button type="button" class="admin-mobile-nav__item" id="admin-mobile-menu-btn" aria-controls="admin-sidebar" aria-expanded="false">
+      <i data-lucide="menu" class="admin-mobile-nav__icon" aria-hidden="true"></i>
+      <span>Меню</span>
+    </button>
+  </nav>
+
+  <script src="{% static 'js/admin.js' %}?v={{ static_version }}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': 2 } });
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

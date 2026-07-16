@@ -4,13 +4,13 @@ import os
 
 from PIL import Image, ImageDraw, ImageFont
 
-ICONS_DIR = os.path.join(os.path.dirname(__file__), "app", "static", "icons")
-BRAND_DIR = os.path.join(os.path.dirname(__file__), "app", "static", "brand")
+ICONS_DIR = os.path.join(os.path.dirname(__file__), "static", "icons")
+BRAND_DIR = os.path.join(os.path.dirname(__file__), "static", "brand")
 BRAND_ICON_SOURCE = os.path.join(BRAND_DIR, "icon-source.png")
 BRAND_LOGO_SOURCE = os.path.join(BRAND_DIR, "logo-source.png")
 BRAND_ICON = os.path.join(BRAND_DIR, "icon.png")
 BRAND_LOGO = os.path.join(BRAND_DIR, "logo.png")
-DEMO_DIR = os.path.join(os.path.dirname(__file__), "app", "static", "demo")
+DEMO_DIR = os.path.join(os.path.dirname(__file__), "static", "demo")
 
 DEMO_COLORS = {
     "default": "#b91c1c",
@@ -52,10 +52,7 @@ def _demo_image(slug: str, label: str) -> None:
 
 
 def generate_demo_images():
-    import sys
-
-    sys.path.insert(0, os.path.dirname(__file__))
-    from app.constants import CATEGORIES
+    from listings.constants import CATEGORIES
 
     os.makedirs(DEMO_DIR, exist_ok=True)
     for slug, (label, _) in CATEGORIES.items():

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Подать объявление — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="form-page">
+  <div class="page-card post-wizard-card">
+    <h1 class="page-title">Подать объявление</h1>
+    <p class="page-lead">Заполните форму и отправьте на модерацию или сохраните черновик. Телефон для связи берётся из вашего профиля.</p>
+
+    {% if errors %}
+      <div class="errors" role="alert">
+        {% for error in errors %}
+          <p class="error">
+            <i data-lucide="alert-circle" class="icon icon-sm" aria-hidden="true"></i>
+            {{ error }}
+          </p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {{ cities|json_script:"listing-cities" }}
+    <form method="post" enctype="multipart/form-data" class="listing-form" id="create-post-form" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        {% if field.name == 'city' %}
+          {% include "listings/partials/city_autocomplete.html" with field=field suggestions_id='city-suggestions' %}
+        {% elif field.name != 'images' %}
+          <div class="field{% if field.errors %} field-has-error{% endif %}">
+            <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<p class="field-error">{{ field.errors.0 }}</p>{% endif %}
+          </div>
+        {% endif %}
+      {% endfor %}
+      <div class="field">
+        <span class="field-label">Фото</span>
+        {% include "listings/partials/image_picker.html" %}
+      </div>
+      <div class="listing-form-actions">
+        <button type="submit" name="action" value="publish" class="btn btn-primary btn-block">
+          <i data-lucide="send" class="icon" aria-hidden="true"></i>
+          Отправить на модерацию
+        </button>
+        <button type="submit" name="action" value="draft" formnovalidate class="btn btn-secondary btn-block">
+          <i data-lucide="file-pen-line" class="icon" aria-hidden="true"></i>
+          Сохранить черновик
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'js/form-helpers.js' %}?v={{ static_version }}"></script>
+<script src="{% static 'js/image-picker.js' %}?v={{ static_version }}"></script>
+<script src="{% static 'js/listing-city.js' %}?v={{ static_version }}"></script>
+{% endblock %}

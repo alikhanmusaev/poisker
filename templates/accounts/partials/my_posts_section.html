@@ -1,0 +1,49 @@
+{% load poisker_tags %}
+<section class="profile-posts-section">
+  <div class="profile-tabs" role="tablist" aria-label="Объявления в профиле">
+    <a href="{% url 'accounts:profile' %}"
+       class="profile-tab{% if posts_tab == 'active' %} is-active{% endif %}"
+       role="tab"
+       aria-selected="{% if posts_tab == 'active' %}true{% else %}false{% endif %}">
+      Объявления
+      {% if active_posts_count %}<span class="profile-tab-count">{{ active_posts_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'accounts:profile' %}?tab=drafts"
+       class="profile-tab{% if posts_tab == 'drafts' %} is-active{% endif %}"
+       role="tab"
+       aria-selected="{% if posts_tab == 'drafts' %}true{% else %}false{% endif %}">
+      Черновики
+      {% if draft_posts_count %}<span class="profile-tab-count">{{ draft_posts_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'accounts:profile' %}?tab=hidden"
+       class="profile-tab{% if posts_tab == 'hidden' %} is-active{% endif %}"
+       role="tab"
+       aria-selected="{% if posts_tab == 'hidden' %}true{% else %}false{% endif %}">
+      Снятые
+      {% if hidden_posts_count %}<span class="profile-tab-count">{{ hidden_posts_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'accounts:profile' %}?tab=expired"
+       class="profile-tab{% if posts_tab == 'expired' %} is-active{% endif %}"
+       role="tab"
+       aria-selected="{% if posts_tab == 'expired' %}true{% else %}false{% endif %}">
+      Истёкшие
+      {% if expired_posts_count %}<span class="profile-tab-count">{{ expired_posts_count }}</span>{% endif %}
+    </a>
+  </div>
+
+  <div class="profile-tab-panel" role="tabpanel"{% if posts_tab != 'active' %} hidden{% endif %}>
+    {% include "accounts/partials/my_posts_list.html" with posts=active_posts return_url=active_return_url empty_message="У вас пока нет объявлений" empty_hint="Создайте первое — оно появится здесь после модерации." %}
+  </div>
+
+  <div class="profile-tab-panel" role="tabpanel"{% if posts_tab != 'drafts' %} hidden{% endif %}>
+    {% include "accounts/partials/my_posts_list.html" with posts=draft_posts return_url=drafts_return_url empty_message="Нет черновиков" empty_hint="Сохраните объявление как черновик, чтобы дописать позже." %}
+  </div>
+
+  <div class="profile-tab-panel" role="tabpanel"{% if posts_tab != 'hidden' %} hidden{% endif %}>
+    {% include "accounts/partials/my_posts_list.html" with posts=hidden_posts return_url=hidden_return_url empty_message="Нет снятых объявлений" empty_hint="Снятые с публикации объявления появятся здесь." %}
+  </div>
+
+  <div class="profile-tab-panel" role="tabpanel"{% if posts_tab != 'expired' %} hidden{% endif %}>
+    {% include "accounts/partials/my_posts_list.html" with posts=expired_posts return_url=expired_return_url empty_message="Нет истёкших объявлений" empty_hint="Срок публикации закончился — отправьте объявление на модерацию снова." %}
+  </div>
+</section>

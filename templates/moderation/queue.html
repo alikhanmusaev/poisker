@@ -1,0 +1,59 @@
+{% extends "moderation/base.html" %}
+{% load poisker_tags %}
+{% block topbar_actions %}{% endblock %}
+{% block content %}
+  <div class="admin-tabs" role="tablist" aria-label="Очередь">
+    <a href="{% url 'moderation:queue' %}?tab=pending" class="admin-tabs__item{% if tab == 'pending' %} is-active{% endif %}" {% if tab == 'pending' %}aria-current="page"{% endif %}>
+      Новые{% if mod_counts.pending %} <span class="admin-tabs__count">{{ mod_counts.pending }}</span>{% endif %}
+    </a>
+    <a href="{% url 'moderation:queue' %}?tab=revisions" class="admin-tabs__item{% if tab == 'revisions' %} is-active{% endif %}" {% if tab == 'revisions' %}aria-current="page"{% endif %}>
+      Правки{% if mod_counts.revisions %} <span class="admin-tabs__count">{{ mod_counts.revisions }}</span>{% endif %}
+    </a>
+    <a href="{% url 'moderation:queue' %}?tab=hidden" class="admin-tabs__item{% if tab == 'hidden' %} is-active{% endif %}" {% if tab == 'hidden' %}aria-current="page"{% endif %}>
+      Скрытые{% if mod_counts.hidden %} <span class="admin-tabs__count">{{ mod_counts.hidden }}</span>{% endif %}
+    </a>
+  </div>
+  {% if page_obj.object_list %}
+    <div class="admin-moderation-grid">
+      {% for post in page_obj %}
+        {% if tab == 'revisions' %}
+          {% include "moderation/partials/mod_card.html" with show_revision=True %}
+        {% elif tab == 'hidden' %}
+          {% include "moderation/partials/mod_card.html" with queue_mode='hidden' %}
+        {% else %}
+          {% include "moderation/partials/mod_card.html" %}
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% if page_obj.has_other_pages %}
+      <nav class="admin-pagination" aria-label="Страницы">
+        {% if page_obj.has_previous %}
+          <a class="admin-btn admin-btn--sm" href="?tab={{ tab }}&page={{ page_obj.previous_page_number }}">← Назад</a>
+        {% endif %}
+        <span class="admin-pagination__info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a class="admin-btn admin-btn--sm" href="?tab={{ tab }}&page={{ page_obj.next_page_number }}">Далее →</a>
+        {% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="admin-empty">
+      <p class="admin-empty__title">
+        {% if tab == 'revisions' %}
+          Нет правок на проверке
+        {% elif tab == 'hidden' %}
+          Нет скрытых объявлений
+        {% else %}
+          Очередь пуста
+        {% endif %}
+      </p>
+      <p class="admin-empty__hint">
+        {% if tab == 'hidden' %}
+          Отклонённые и скрытые объявления появятся здесь.
+        {% else %}
+          Новые объявления появятся здесь после отправки на модерацию.
+        {% endif %}
+      </p>
+    </div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load poisker_tags %}
+{% block title %}Сообщения — {{ site_name }}{% endblock %}
+{% block body_class %}page-messages{% endblock %}
+{% block content %}
+<div class="messages-page">
+  <div class="messages-page-header">
+    <h1 class="page-title">Сообщения</h1>
+  </div>
+
+  {% if conversations %}
+    <div class="conversation-list">
+      {% for conversation in conversations %}
+        {% post_cover_image conversation.post as cover_image %}
+        <div class="conversation-row">
+          <a href="{% url 'messaging:thread' conversation.id %}" class="conversation-item{% if conversation.unread_count %} is-unread{% endif %}">
+            <div class="conversation-item-media">
+              {% if cover_image %}
+                <img src="{{ cover_image }}" alt="" class="conversation-item-img" loading="lazy" width="56" height="56">
+              {% else %}
+                <div class="conversation-item-img conversation-item-img-placeholder" aria-hidden="true">
+                  <i data-lucide="image" class="icon" aria-hidden="true"></i>
+                </div>
+              {% endif %}
+            </div>
+            <div class="conversation-item-body">
+              <div class="conversation-item-top">
+                <p class="conversation-item-post">{{ conversation.post.title }}</p>
+                {% if conversation.last_message_at %}
+                  <time class="conversation-item-time" datetime="{{ conversation.last_message_at|date:'c' }}">{{ conversation.last_message_at|relative_time }}</time>
+                {% endif %}
+              </div>
+              <p class="conversation-item-user">
+                {% if user.id == conversation.buyer_id %}
+                  {{ conversation.seller.display_name }}
+                {% else %}
+                  {{ conversation.buyer.display_name }}
+                {% endif %}
+              </p>
+              <p class="conversation-item-meta">
+                {{ cities|get_item:conversation.post.city }} · {{ category_labels|get_item:conversation.post.category }}
+                {% if conversation.post.price is not None %} · {{ conversation.post.price|format_price }} ₽{% endif %}
+              </p>
+              {% if conversation.last_message_body %}
+                <p class="conversation-item-preview{% if conversation.unread_count %} conversation-item-preview-unread{% endif %}">{{ conversation.last_message_body|truncatechars:120 }}</p>
+              {% elif conversation.last_message_image %}
+                <p class="conversation-item-preview conversation-item-preview-photo{% if conversation.unread_count %} conversation-item-preview-unread{% endif %}">
+                  <i data-lucide="image" class="icon icon-xs" aria-hidden="true"></i>
+                  Фото
+                </p>
+              {% else %}
+                <p class="conversation-item-preview conversation-item-preview-muted">Нет сообщений</p>
+              {% endif %}
+              {% if conversation.unread_count %}
+                <p class="conversation-item-status conversation-item-status-unread">Непрочитано</p>
+              {% elif conversation.last_message_sender_id == user.id %}
+                {% if conversation.last_message_read_at %}
+                  <p class="conversation-item-status conversation-item-status-read">Прочитано</p>
+                {% else %}
+                  <p class="conversation-item-status conversation-item-status-pending">Не прочитано</p>
+                {% endif %}
+              {% endif %}
+            </div>
+            {% if conversation.unread_count %}
+              <span class="conversation-unread-badge" aria-label="Непрочитанных: {{ conversation.unread_count }}">{{ conversation.unread_count }}</span>
+            {% endif %}
+          </a>
+          <form method="post" action="{% url 'messaging:delete' conversation.id %}" class="conversation-delete-form" onsubmit="return confirm('Удалить этот чат из списка?')">
+            {% csrf_token %}
+            <button type="submit" class="conversation-delete-btn" aria-label="Удалить чат" title="Удалить чат">
+              <i data-lucide="trash-2" class="icon icon-sm" aria-hidden="true"></i>
+            </button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state empty-state-compact messages-empty">
+      <i data-lucide="messages-square" class="icon empty-state-icon" aria-hidden="true"></i>
+      <p>Пока нет переписок</p>
+      <p class="empty-state-hint">Откройте объявление и нажмите «Написать продавцу», чтобы начать диалог.</p>
+      <a href="{% url 'core:index' %}" class="btn btn-primary btn-sm">К объявлениям</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

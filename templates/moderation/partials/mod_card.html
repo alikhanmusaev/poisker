@@ -1,0 +1,90 @@
+{% load poisker_tags %}
+<article class="admin-mod-card">
+  <div class="admin-mod-card__head">
+    <div class="admin-mod-card__info">
+      <a href="{% url 'moderation:post_detail' post.id %}" class="admin-table__title">{{ post.title }}</a>
+      <div class="admin-mod-card__meta">
+        <span class="admin-badge admin-badge--{{ post.status }}">{{ post.get_status_display }}</span>
+        <span>{{ cities|get_item:post.city }} · {{ category_labels|get_item:post.category }}</span>
+        {% if post.price is not None %}<span>{{ post.price }} ₽</span>{% endif %}
+        <span>{{ post.created_at|date:"d.m.Y H:i" }}</span>
+      </div>
+    </div>
+    <div class="admin-actions admin-actions--mod">
+      {% if queue_mode != 'hidden' %}
+        <form method="post" action="{% url 'moderation:approve' post.id %}" class="admin-inline-form">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" class="admin-btn admin-btn--success">Одобрить</button>
+        </form>
+        <form
+          method="post"
+          action="{% url 'moderation:reject' post.id %}"
+          class="admin-inline-form"
+          data-prompt-reason="{% if post.status == 'published' and post.pending_revision %}Причина отклонения правок{% else %}Причина отклонения для продавца{% endif %}"
+        >
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" class="admin-btn admin-btn--danger">Отклонить</button>
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'moderation:approve' post.id %}" class="admin-inline-form">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" class="admin-btn admin-btn--success">Опубликовать</button>
+        </form>
+      {% endif %}
+      <a href="{% url 'moderation:post_detail' post.id %}" class="admin-btn">Подробнее</a>
+    </div>
+  </div>
+  <div class="admin-mod-card__body">
+    {{ post.body|truncatechars:220 }}
+  </div>
+  {% if post.moderation_note %}
+    <div class="admin-mod-note">
+      <strong>Комментарий модератора:</strong> {{ post.moderation_note }}
+    </div>
+  {% endif %}
+  {% if show_revision and post.pending_revision %}
+    <div class="admin-diff">
+      {% if post.pending_revision.title %}
+        <div class="admin-diff__item">
+          <span class="admin-diff__label">Заголовок:</span>
+          <span class="admin-diff__old">{{ post.title }}</span>
+          →
+          <span class="admin-diff__new">{{ post.pending_revision.title }}</span>
+        </div>
+      {% endif %}
+      {% if post.pending_revision.body %}
+        <div class="admin-diff__item">
+          <span class="admin-diff__label">Описание:</span>
+          <span class="admin-diff__new">{{ post.pending_revision.body|truncatechars:160 }}</span>
+        </div>
+      {% endif %}
+      {% if post.pending_revision.category and post.pending_revision.category != post.category %}
+        <div class="admin-diff__item">
+          <span class="admin-diff__label">Категория:</span>
+          <span class="admin-diff__old">{{ category_labels|get_item:post.category }}</span>
+          →
+          <span class="admin-diff__new">{{ category_labels|get_item:post.pending_revision.category }}</span>
+        </div>
+      {% endif %}
+      {% if post.pending_revision.city and post.pending_revision.city != post.city %}
+        <div class="admin-diff__item">
+          <span class="admin-diff__label">Город:</span>
+          <span class="admin-diff__old">{{ cities|get_item:post.city }}</span>
+          →
+          <span class="admin-diff__new">{{ cities|get_item:post.pending_revision.city }}</span>
+        </div>
+      {% endif %}
+      {% if 'price' in post.pending_revision and post.pending_revision.price != post.price %}
+        <div class="admin-diff__item">
+          <span class="admin-diff__label">Цена:</span>
+          <span class="admin-diff__old">{% if post.price is not None %}{{ post.price }} ₽{% else %}—{% endif %}</span>
+          →
+          <span class="admin-diff__new">{% if post.pending_revision.price is not None %}{{ post.pending_revision.price }} ₽{% else %}—{% endif %}</span>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+</article>

@@ -1,0 +1,70 @@
+{% extends "moderation/base.html" %}
+{% load poisker_tags %}
+{% block topbar_actions %}{% endblock %}
+{% block content %}
+  <div class="admin-tabs" role="tablist" aria-label="Жалобы">
+    <a href="{% url 'moderation:reports' %}?status=new" class="admin-tabs__item{% if status_filter == 'new' %} is-active{% endif %}" {% if status_filter == 'new' %}aria-current="page"{% endif %}>Новые</a>
+    <a href="{% url 'moderation:reports' %}?status=reviewed" class="admin-tabs__item{% if status_filter == 'reviewed' %} is-active{% endif %}" {% if status_filter == 'reviewed' %}aria-current="page"{% endif %}>Рассмотренные</a>
+    <a href="{% url 'moderation:reports' %}?status=all" class="admin-tabs__item{% if status_filter == 'all' %} is-active{% endif %}" {% if status_filter == 'all' %}aria-current="page"{% endif %}>Все</a>
+  </div>
+  {% if page_obj.object_list %}
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Объявление</th>
+            <th>Причина</th>
+            <th>Статус</th>
+            <th>Дата</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in page_obj %}
+            <tr>
+              <td data-label="Объявление">
+                <a class="admin-table__title" href="{% url 'moderation:post_detail' report.post_id %}">{{ report.post.title }}</a>
+                <div class="admin-table__meta">{{ cities|get_item:report.post.city }} · жалоб: {{ report.post.reports_count }}</div>
+              </td>
+              <td data-label="Причина">
+                {{ report_reasons|get_item:report.reason }}
+                {% if report.comment %}<div class="admin-table__muted admin-table__clip">{{ report.comment }}</div>{% endif %}
+              </td>
+              <td data-label="Статус">
+                <span class="admin-badge admin-badge--{{ report.status }}">{{ report_status_labels|get_item:report.status }}</span>
+              </td>
+              <td data-label="Дата">{{ report.created_at|date:"d.m.Y H:i" }}</td>
+              <td>
+                <div class="admin-actions">
+                  <a class="admin-btn admin-btn--sm" href="{% url 'moderation:post_detail' report.post_id %}">Открыть</a>
+                  {% if report.status == 'new' %}
+                    <form method="post" action="{% url 'moderation:report_review' report.id %}" class="admin-inline-form">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <button type="submit" class="admin-btn admin-btn--sm">Рассмотрено</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if page_obj.has_other_pages %}
+      <nav class="admin-pagination" aria-label="Страницы">
+        {% if page_obj.has_previous %}
+          <a class="admin-btn admin-btn--sm" href="?status={{ status_filter }}&page={{ page_obj.previous_page_number }}">← Назад</a>
+        {% endif %}
+        <span class="admin-pagination__info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a class="admin-btn admin-btn--sm" href="?status={{ status_filter }}&page={{ page_obj.next_page_number }}">Далее →</a>
+        {% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="admin-empty">
+      <p class="admin-empty__title">Жалоб нет</p>
+    </div>
+  {% endif %}
+{% endblock %}

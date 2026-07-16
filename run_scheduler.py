@@ -1,51 +1,46 @@
-"""Dedicated scheduler process — run once per deployment, not per Gunicorn worker."""
+#!/usr/bin/env python
+"""Background scheduler for Poisker Django."""
 
 import os
-import signal
-import sys
 import time
 
-sys.path.insert(0, os.path.dirname(__file__))
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
-from app import create_app
-from app.jobs.scheduler import init_scheduler, scheduler
+import django
 
+django.setup()
 
-def _wait_for_postgres():
-    database_url = os.environ.get("DATABASE_URL", "")
-    if not database_url.startswith("postgresql"):
-        return
+from apscheduler.schedulers.blocking import BlockingScheduler
+from django.conf import settings
 
-    import psycopg
+from listings.services.cleanup import cleanup_deleted_posts
+from listings.services.ranking import expire_old_posts, recalculate_all_rank_scores
+from listings.services.search import reindex_published_posts, upsert_published_rank_scores
 
-    url = database_url.replace("postgresql+psycopg://", "postgresql://")
-    for _ in range(30):
-        try:
-            psycopg.connect(url).close()
-            return
-        except Exception:
-            time.sleep(1)
-    raise SystemExit("PostgreSQL not ready")
+scheduler = BlockingScheduler(timezone=settings.TIME_ZONE)
 
 
-def main():
-    _wait_for_postgres()
-    app = create_app()
-    with app.app_context():
-        init_scheduler(app)
-        app.logger.info("Scheduler started (pid %s)", os.getpid())
+@scheduler.scheduled_job("interval", minutes=30, id="recalc_ranks")
+def recalc_job():
+    recalculate_all_rank_scores()
+    upsert_published_rank_scores()
 
-    def shutdown(signum, _frame):
-        if scheduler.running:
-            scheduler.shutdown(wait=False)
-        raise SystemExit(0)
 
-    signal.signal(signal.SIGTERM, shutdown)
-    signal.signal(signal.SIGINT, shutdown)
+@scheduler.scheduled_job("interval", hours=1, id="expire_posts")
+def expire_job():
+    expire_old_posts()
 
-    while True:
-        time.sleep(3600)
+
+@scheduler.scheduled_job("cron", hour=3, id="reindex_all")
+def reindex_job():
+    reindex_published_posts()
+
+
+@scheduler.scheduled_job("cron", hour=3, minute=30, id="cleanup_deleted")
+def cleanup_job():
+    cleanup_deleted_posts()
 
 
 if __name__ == "__main__":
-    main()
+    print("Starting Poisker scheduler...")
+    scheduler.start()

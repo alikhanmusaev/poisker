@@ -14,7 +14,7 @@ alwaysApply: true
 
 ## Production
 
-- Сервер: `root@161.104.51.103`
+- Сервер: `root@45.131.43.217`
 - Путь: `/opt/poisker`
 - Домен: `https://poisker.ru`
 - Репозиторий: `https://github.com/alikhanmusaev/poisker.git` (ветка `master`)
@@ -25,13 +25,15 @@ alwaysApply: true
 # Синхронизация кода (не перезаписывать .env на сервере)
 rsync -az --delete \
   --exclude '.venv' --exclude '__pycache__' --exclude '.pytest_cache' \
-  --exclude '.git' --exclude '*.db' --exclude '.env' \
-  ./ root@161.104.51.103:/opt/poisker/
+  --exclude '.git' --exclude '*.db' --exclude '*.sqlite3' --exclude '.env' \
+  --exclude 'staticfiles' --exclude 'media' --exclude 'backups' \
+  --exclude '.agents' --exclude '.cursor' \
+  ./ root@45.131.43.217:/opt/poisker/
 
 # Пересборка и перезапуск
-ssh root@161.104.51.103 'cd /opt/poisker && \
-  docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache web scheduler && \
-  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d web scheduler nginx'
+ssh root@45.131.43.217 'cd /opt/poisker && \
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.server.yml build web scheduler && \
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.server.yml up -d --force-recreate web scheduler'
 ```
 
 Миграции применяются автоматически при старте `web` (`RUN_DB_UPGRADE=true`).

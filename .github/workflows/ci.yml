@@ -24,4 +24,8 @@ jobs:
         run: python generate_icons.py
 
       - name: Run tests
+        env:
+          USE_SQLITE: "1"
+          DJANGO_DEBUG: "true"
+          SECRET_KEY: test-secret
         run: python -m pytest tests/ -q

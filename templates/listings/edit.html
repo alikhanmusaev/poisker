@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load static poisker_tags %}
+{% block title %}Редактировать — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="form-page">
+  <a href="{% post_public_url post %}" class="back-link">
+    <i data-lucide="arrow-left" class="icon icon-sm" aria-hidden="true"></i>
+    Назад к объявлению
+  </a>
+  <div class="page-card post-wizard-card">
+    <h1 class="page-title">{% if is_draft %}Черновик{% else %}Редактировать объявление{% endif %}</h1>
+    <p class="page-lead">{{ post.title }}</p>
+
+    {% if is_draft %}
+      <div class="post-wizard-draft-banner">
+        <span>Это черновик — допишите объявление и отправьте на модерацию, когда будете готовы.</span>
+      </div>
+    {% elif awaits_moderation %}
+      <div class="moderation-notice" role="status">
+        <i data-lucide="clock" class="icon icon-sm" aria-hidden="true"></i>
+        <span>
+          {% if post.pending_revision %}
+            Есть правки на модерации. Пока на сайте показывается прежняя версия объявления.
+          {% else %}
+            Объявление ожидает модерации и пока не видно в поиске.
+          {% endif %}
+        </span>
+      </div>
+    {% endif %}
+
+    {% if errors %}
+      <div class="errors" role="alert">
+        <p class="error">
+          <i data-lucide="alert-circle" class="icon icon-sm" aria-hidden="true"></i>
+          {{ errors.0 }}
+        </p>
+      </div>
+    {% endif %}
+
+    {{ cities|json_script:"listing-cities" }}
+    <form method="post" enctype="multipart/form-data" class="listing-form" id="edit-post-form" novalidate>
+      {% csrf_token %}
+      {% include "listings/partials/form_fields.html" with suggestions_id='city-suggestions-edit' %}
+      <div class="field">
+        <span class="field-label">Фото</span>
+        {% if post.images %}
+          <div class="current-images" aria-label="Текущие фото">
+            {% for url in post.images %}
+              <label class="current-image-item">
+                <img src="{{ url }}" alt="" width="96" height="96" loading="lazy">
+                <span class="current-image-remove">
+                  <input type="checkbox" name="remove_images" value="{{ forloop.counter0 }}">
+                  Удалить
+                </span>
+              </label>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% include "listings/partials/image_picker.html" with existing_count=existing_image_count cover_index=post.cover_index %}
+      </div>
+      {% if is_draft %}
+        <div class="listing-form-actions">
+          <button type="submit" name="action" value="publish" class="btn btn-primary btn-block">
+            <i data-lucide="send" class="icon" aria-hidden="true"></i>
+            Отправить на модерацию
+          </button>
+          <button type="submit" name="action" value="draft" formnovalidate class="btn btn-secondary btn-block">
+            <i data-lucide="save" class="icon" aria-hidden="true"></i>
+            Сохранить черновик
+          </button>
+        </div>
+      {% else %}
+        <button type="submit" class="btn btn-primary btn-block">
+          <i data-lucide="save" class="icon" aria-hidden="true"></i>
+          Сохранить изменения
+        </button>
+      {% endif %}
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'js/form-helpers.js' %}?v={{ static_version }}"></script>
+<script src="{% static 'js/image-picker.js' %}?v={{ static_version }}"></script>
+<script src="{% static 'js/listing-city.js' %}?v={{ static_version }}"></script>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load static poisker_tags %}
+{% block title %}{{ seller.display_name }} — {{ site_name }}{% endblock %}
+{% block meta_description %}Профиль продавца {{ seller.display_name }} на {{ site_name }}{% endblock %}
+{% block body_class %}page-seller-profile{% endblock %}
+{% block content %}
+<div class="seller-profile-page">
+  <div class="seller-profile-header">
+    <div class="profile-avatar" aria-hidden="true">{{ seller.display_name.0|upper }}</div>
+    <div class="seller-profile-meta">
+      <h1 class="seller-profile-name">{{ seller.display_name }}</h1>
+      {% if seller.rating_count %}
+        <p class="seller-rating" aria-label="Рейтинг {{ seller.rating_avg|floatformat:1 }} из 5, отзывов {{ seller.rating_count }}">
+          <i data-lucide="star" class="icon icon-xs is-filled" aria-hidden="true"></i>
+          <strong>{{ seller.rating_avg|floatformat:1 }}</strong>
+          <span class="seller-rating-count">
+            · {{ seller.rating_count }}
+            {% if seller.rating_count == 1 %}отзыв{% elif seller.rating_count < 5 %}отзыва{% else %}отзывов{% endif %}
+          </span>
+        </p>
+      {% else %}
+        <p class="seller-rating seller-rating-empty">Пока нет отзывов</p>
+      {% endif %}
+      <p class="seller-profile-stats">
+        {{ posts_total }}
+        {% if posts_total == 1 %}объявление{% elif posts_total < 5 %}объявления{% else %}объявлений{% endif %}
+      </p>
+    </div>
+  </div>
+
+  {% if can_review %}
+    <div class="seller-review-cta">
+      <a href="{% url 'reviews:review_seller' seller.id %}" class="btn btn-primary">
+        <i data-lucide="star" class="icon" aria-hidden="true"></i>
+        {% if existing_review %}Изменить отзыв{% else %}Оставить отзыв{% endif %}
+      </a>
+    </div>
+  {% elif phone_review_unlock_at %}
+    <p class="seller-profile-hint">
+      Вы смотрели телефон продавца. Оставить отзыв можно примерно с
+      {{ phone_review_unlock_at|date:"d.m H:i" }}.
+    </p>
+  {% elif user.is_authenticated and user.id == seller.id %}
+    <p class="seller-profile-hint">Это ваш публичный профиль. Отзывы оставляют покупатели после переписки или звонка.</p>
+  {% endif %}
+
+  <section class="seller-section" aria-labelledby="seller-reviews-heading">
+    <h2 id="seller-reviews-heading" class="seller-section-title">Отзывы</h2>
+    {% if reviews %}
+      <ul class="seller-reviews-list">
+        {% for review in reviews %}
+          <li class="seller-review-item" id="review-{{ review.id }}">
+            <div class="seller-review-head">
+              <span class="seller-review-author">{{ review.reviewer.display_name }}</span>
+              <span class="seller-review-score" aria-label="Оценка {{ review.rating }} из 5">
+                {% for i in "12345" %}
+                  <i data-lucide="star" class="icon icon-xs{% if forloop.counter <= review.rating %} is-filled{% endif %}" aria-hidden="true"></i>
+                {% endfor %}
+              </span>
+              <time class="seller-review-date" datetime="{{ review.created_at|date:'c' }}">{{ review.created_at|relative_time }}</time>
+            </div>
+            {% if review.comment %}
+              <p class="seller-review-comment">{{ review.comment }}</p>
+            {% endif %}
+            {% if review.post_id %}
+              <p class="seller-review-post">
+                По объявлению:
+                <a href="{% post_public_url review.post %}">{{ review.post.title }}</a>
+              </p>
+            {% endif %}
+            {% if review.reply_text %}
+              <div class="seller-review-reply">
+                <p class="seller-review-reply-label">Ответ продавца</p>
+                <p class="seller-review-reply-text">{{ review.reply_text }}</p>
+                {% if review.replied_at %}
+                  <time class="seller-review-reply-date" datetime="{{ review.replied_at|date:'c' }}">{{ review.replied_at|relative_time }}</time>
+                {% endif %}
+              </div>
+            {% elif is_seller_owner %}
+              <form method="post" action="{% url 'reviews:reply_review' seller.id review.id %}" class="seller-review-reply-form">
+                {% csrf_token %}
+                <label class="sr-only" for="reply-{{ review.id }}">Ответ на отзыв</label>
+                <textarea
+                  id="reply-{{ review.id }}"
+                  name="reply_text"
+                  class="input textarea-input"
+                  rows="3"
+                  maxlength="1000"
+                  placeholder="Ответьте покупателю…"
+                  required
+                ></textarea>
+                <button type="submit" class="btn btn-secondary btn-sm">
+                  <i data-lucide="reply" class="icon icon-xs" aria-hidden="true"></i>
+                  Ответить
+                </button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="seller-reviews-empty">Отзывов пока нет.</p>
+    {% endif %}
+  </section>
+
+  {% if posts %}
+    <section class="seller-section" aria-labelledby="seller-posts-heading">
+      <h2 id="seller-posts-heading" class="seller-section-title">Объявления</h2>
+      <div class="post-grid seller-posts-grid">
+        {% for post in posts %}
+          {% include "partials/post_card.html" with post=post %}
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+</div>
+{% endblock %}

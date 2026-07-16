@@ -1,0 +1,28 @@
+{% load poisker_tags %}
+<div class="field city-autocomplete-field{% if field.errors %} field-has-error{% endif %}">
+  <label class="field-label" for="city-input">{{ field.label }}</label>
+  <div class="city-autocomplete">
+    <input
+      type="text"
+      id="city-input"
+      class="input"
+      placeholder="Начните вводить название…"
+      autocomplete="off"
+      spellcheck="false"
+      role="combobox"
+      aria-autocomplete="list"
+      aria-expanded="false"
+      aria-controls="{{ suggestions_id|default:'city-suggestions' }}"
+      value="{% if field.value %}{{ cities|get_item:field.value }}{% endif %}"
+    >
+    {{ field }}
+    <ul
+      id="{{ suggestions_id|default:'city-suggestions' }}"
+      class="suggest-list city-suggest-list"
+      role="listbox"
+      hidden
+    ></ul>
+  </div>
+  <p class="field-help">Введите название и выберите город из списка.</p>
+  {% if field.errors %}<p class="field-error">{{ field.errors.0 }}</p>{% endif %}
+</div>

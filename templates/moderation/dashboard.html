@@ -1,0 +1,114 @@
+{% extends "moderation/base.html" %}
+{% load poisker_tags %}
+{% block content %}
+<section class="admin-stats">
+  <a href="{% url 'moderation:queue' %}?tab=pending" class="admin-stat">
+    <span class="admin-stat__value{% if counts.pending %}{% else %} admin-stat__value--muted{% endif %}">{{ counts.pending }}</span>
+    <span class="admin-stat__label">На модерации</span>
+  </a>
+  <a href="{% url 'moderation:queue' %}?tab=revisions" class="admin-stat">
+    <span class="admin-stat__value{% if counts.revisions %}{% else %} admin-stat__value--muted{% endif %}">{{ counts.revisions }}</span>
+    <span class="admin-stat__label">Правки</span>
+  </a>
+  <a href="{% url 'moderation:reports' %}" class="admin-stat">
+    <span class="admin-stat__value{% if counts.reports_new %} admin-stat__value--danger{% else %} admin-stat__value--muted{% endif %}">{{ counts.reports_new }}</span>
+    <span class="admin-stat__label">Новые жалобы</span>
+  </a>
+  <a href="{% url 'moderation:queue' %}?tab=hidden" class="admin-stat">
+    <span class="admin-stat__value{% if counts.hidden %}{% else %} admin-stat__value--muted{% endif %}">{{ counts.hidden }}</span>
+    <span class="admin-stat__label">Скрытые</span>
+  </a>
+  <div class="admin-stat">
+    <span class="admin-stat__value admin-stat__value--success">{{ counts.published_today }}</span>
+    <span class="admin-stat__label">Опубликовано сегодня</span>
+  </div>
+</section>
+
+{% if not counts.pending and not counts.revisions and not counts.reports_new %}
+  <div class="admin-all-clear">Очередь пуста — всё рассмотрено</div>
+{% endif %}
+
+<section class="admin-priority">
+  <div class="admin-section-heading">
+    <div>
+      <h2>Новые объявления</h2>
+      <p>Ожидают первой публикации</p>
+    </div>
+    <a href="{% url 'moderation:queue' %}?tab=pending" class="admin-btn admin-btn--sm">Вся очередь</a>
+  </div>
+  {% if pending_preview %}
+    <div class="admin-moderation-grid">
+      {% for post in pending_preview %}
+        {% include "moderation/partials/mod_card.html" %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="admin-empty">
+      <p class="admin-empty__title">Нет объявлений на модерации</p>
+    </div>
+  {% endif %}
+</section>
+
+<section class="admin-priority">
+  <div class="admin-section-heading">
+    <div>
+      <h2>Правки опубликованных</h2>
+      <p>Изменения заголовка или описания</p>
+    </div>
+    <a href="{% url 'moderation:queue' %}?tab=revisions" class="admin-btn admin-btn--sm">Все правки</a>
+  </div>
+  {% if revision_preview %}
+    <div class="admin-moderation-grid">
+      {% for post in revision_preview %}
+        {% include "moderation/partials/mod_card.html" with show_revision=True %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="admin-empty">
+      <p class="admin-empty__title">Нет правок на проверке</p>
+    </div>
+  {% endif %}
+</section>
+
+<section class="admin-priority">
+  <div class="admin-section-heading">
+    <div>
+      <h2>Жалобы</h2>
+      <p>Новые обращения пользователей</p>
+    </div>
+    <a href="{% url 'moderation:reports' %}" class="admin-btn admin-btn--sm">Все жалобы</a>
+  </div>
+  {% if report_preview %}
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Объявление</th>
+            <th>Причина</th>
+            <th>Дата</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in report_preview %}
+            <tr>
+              <td data-label="Объявление">
+                <a class="admin-table__title" href="{% url 'moderation:post_detail' report.post_id %}">{{ report.post.title }}</a>
+              </td>
+              <td data-label="Причина">{{ report_reasons|get_item:report.reason }}</td>
+              <td data-label="Дата">{{ report.created_at|date:"d.m.Y H:i" }}</td>
+              <td>
+                <a class="admin-btn admin-btn--sm" href="{% url 'moderation:post_detail' report.post_id %}">Открыть</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="admin-empty">
+      <p class="admin-empty__title">Новых жалоб нет</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

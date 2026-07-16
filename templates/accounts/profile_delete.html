@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Удаление профиля — {{ site_name }}{% endblock %}
+{% block body_class %}auth-body{% endblock %}
+{% block content %}
+<div class="form-page">
+  <a href="{% url 'accounts:profile_edit' %}" class="back-link">
+    <i data-lucide="arrow-left" class="icon icon-xs" aria-hidden="true"></i>
+    Назад к данным
+  </a>
+
+  <div class="page-card">
+    <h1 class="page-title">Удалить профиль?</h1>
+    <p class="page-lead">Это действие нельзя отменить.</p>
+
+    <ul class="profile-delete-warnings">
+      <li>Аккаунт и вход по email будут удалены</li>
+      <li>Все ваши объявления исчезнут с сайта{% if posts_count %} (сейчас: {{ posts_count }}){% endif %}</li>
+      <li>Переписки в сообщениях будут удалены</li>
+    </ul>
+
+    <form method="post" class="profile-delete-form">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger btn-block">
+        <i data-lucide="trash-2" class="icon" aria-hidden="true"></i>
+        Удалить профиль навсегда
+      </button>
+      <a href="{% url 'accounts:profile_edit' %}" class="btn btn-secondary btn-block">Отмена</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Личные данные — {{ site_name }}{% endblock %}
+{% block body_class %}auth-body{% endblock %}
+{% block content %}
+<div class="form-page">
+  <a href="{% url 'accounts:profile' %}" class="back-link">
+    <i data-lucide="arrow-left" class="icon icon-xs" aria-hidden="true"></i>
+    Назад в профиль
+  </a>
+
+  <div class="page-card">
+    <div class="profile-edit-header">
+      <div class="profile-avatar" aria-hidden="true">{{ user.display_name.0|upper }}</div>
+      <div class="profile-user-meta">
+        <h1 class="page-title">Личные данные</h1>
+        <p class="page-lead">{{ user.email }}</p>
+      </div>
+    </div>
+
+    <form method="post" class="listing-form profile-settings-form" novalidate>
+      {% csrf_token %}
+      {% include "accounts/partials/form_fields.html" %}
+      <p class="field-help">Номер используется во всех ваших объявлениях.</p>
+      <button type="submit" class="btn btn-primary btn-block">
+        <i data-lucide="save" class="icon" aria-hidden="true"></i>
+        Сохранить
+      </button>
+    </form>
+
+    <div class="profile-account-actions">
+      <a href="{% url 'accounts:password_change' %}" class="profile-account-link">
+        <i data-lucide="key-round" class="icon icon-xs" aria-hidden="true"></i>
+        Сменить пароль
+      </a>
+      <form method="post" action="{% url 'accounts:logout' %}" class="profile-logout-form">
+        {% csrf_token %}
+        <button type="submit" class="profile-account-link profile-account-link-muted">Выйти</button>
+      </form>
+    </div>
+
+    <div class="profile-danger-zone">
+      <p class="profile-danger-title">Удаление аккаунта</p>
+      <p class="profile-danger-hint">Профиль, объявления и переписки будут удалены без возможности восстановления.</p>
+      <a href="{% url 'accounts:profile_delete' %}" class="profile-account-link profile-account-link-danger">
+        <i data-lucide="trash-2" class="icon icon-xs" aria-hidden="true"></i>
+        Удалить профиль
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

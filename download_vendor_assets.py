@@ -1,4 +1,4 @@
-"""Download third-party frontend assets into app/static (run after version bumps)."""
+"""Download third-party frontend assets into static/ (run after version bumps)."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-VENDOR = ROOT / "app" / "static" / "vendor"
-FONTS = ROOT / "app" / "static" / "fonts" / "inter"
+VENDOR = ROOT / "static" / "vendor"
+FONTS = ROOT / "static" / "fonts" / "inter"
 
 HTMX_URL = "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
 LUCIDE_URL = "https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"

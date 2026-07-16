@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static poisker_tags %}
+{% block title %}Написать — {{ post.title }} — {{ site_name }}{% endblock %}
+{% block body_class %}page-messages page-message-thread{% endblock %}
+{% block content %}
+<div class="messages-page message-thread-page">
+  <a href="{% post_public_url post %}" class="back-link">
+    <i data-lucide="arrow-left" class="icon icon-sm" aria-hidden="true"></i>
+    К объявлению
+  </a>
+
+  <section class="message-chat-card">
+    <article class="message-post-context">
+      {% post_cover_image post as cover_image %}
+      <a href="{% post_public_url post %}" class="message-post-context-media" aria-label="{{ post.title }}">
+        {% if cover_image %}
+          <img src="{{ cover_image }}" alt="" class="message-post-context-img" loading="lazy" width="64" height="64">
+        {% else %}
+          <div class="message-post-context-img message-post-context-img-placeholder" aria-hidden="true">
+            <i data-lucide="image" class="icon" aria-hidden="true"></i>
+          </div>
+        {% endif %}
+      </a>
+      <div class="message-post-context-body">
+        <p class="message-post-context-label">Объявление</p>
+        <h1 class="message-post-context-title">
+          <a href="{% post_public_url post %}" class="message-post-context-title-link">{{ post.title }}</a>
+        </h1>
+        <p class="message-post-context-meta">
+          {{ cities|get_item:post.city }} · {{ category_labels|get_item:post.category }}
+          {% if post.price is not None %} · {{ post.price|format_price }} ₽{% endif %}
+        </p>
+        <p class="message-thread-participant">
+          Продавец: <strong>{{ other_user.display_name }}</strong>
+        </p>
+      </div>
+    </article>
+
+    <div class="message-thread" id="message-thread">
+      <div class="message-thread-empty">
+        <p>Напишите продавцу по объявлению «{{ post.title }}».</p>
+      </div>
+    </div>
+
+    <form method="post" class="message-compose-form" id="message-compose-form" action="{% url 'messaging:start' post.id %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="flash flash-error" role="alert">
+          <i data-lucide="alert-circle" class="icon" aria-hidden="true"></i>
+          <span>{{ form.non_field_errors.0 }}</span>
+        </div>
+      {% endif %}
+      <label class="sr-only" for="id_body">Сообщение</label>
+      {{ form.body }}
+      {% if form.body.errors %}
+        <p class="field-error">{{ form.body.errors.0 }}</p>
+      {% endif %}
+      <div class="message-compose-actions">
+        <label class="message-compose-attach" for="id_image">
+          <i data-lucide="image-plus" class="icon icon-sm" aria-hidden="true"></i>
+          <span>Фото</span>
+        </label>
+        {{ form.image }}
+        <div class="message-compose-preview" id="message-image-preview" hidden>
+          <img src="" alt="" class="message-compose-preview-img" id="message-image-preview-img">
+          <button type="button" class="message-compose-preview-clear" id="message-image-preview-clear" aria-label="Убрать фото">
+            <i data-lucide="x" class="icon icon-xs" aria-hidden="true"></i>
+          </button>
+        </div>
+        <button type="submit" class="btn btn-primary message-compose-submit">
+          <i data-lucide="send" class="icon" aria-hidden="true"></i>
+          Отправить
+        </button>
+      </div>
+      {% if form.image.errors %}
+        <p class="field-error">{{ form.image.errors.0 }}</p>
+      {% endif %}
+    </form>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'js/messages.js' %}?v={{ static_version }}"></script>
+{% endblock %}

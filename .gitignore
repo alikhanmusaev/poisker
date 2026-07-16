@@ -13,6 +13,8 @@ build/
 *-deploy.tar.gz
 docker-compose.audit.yml
 *.db
+*.sqlite3
+db.sqlite3
 .chechnya_board.db
 .DS_Store
 Thumbs.db

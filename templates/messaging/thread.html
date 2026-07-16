@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% load static poisker_tags %}
+{% block title %}Чат — {{ post.title }} — {{ site_name }}{% endblock %}
+{% block body_class %}page-messages page-message-thread{% endblock %}
+{% block content %}
+<div class="messages-page message-thread-page">
+  <div class="message-thread-toolbar">
+    <a href="{% url 'messaging:inbox' %}" class="back-link">
+      <i data-lucide="arrow-left" class="icon icon-sm" aria-hidden="true"></i>
+      Все сообщения
+    </a>
+    <form method="post" action="{% url 'messaging:delete' conversation.id %}" class="message-thread-delete-form" onsubmit="return confirm('Удалить этот чат из списка?')">
+      {% csrf_token %}
+      <button type="submit" class="message-thread-delete-btn">
+        <i data-lucide="trash-2" class="icon icon-sm" aria-hidden="true"></i>
+        Удалить чат
+      </button>
+    </form>
+  </div>
+
+  <section class="message-chat-card">
+    <article class="message-post-context">
+      {% post_cover_image post as cover_image %}
+      <a href="{% post_public_url post %}" class="message-post-context-media" aria-label="{{ post.title }}">
+        {% if cover_image %}
+          <img src="{{ cover_image }}" alt="" class="message-post-context-img" loading="lazy" width="64" height="64">
+        {% else %}
+          <div class="message-post-context-img message-post-context-img-placeholder" aria-hidden="true">
+            <i data-lucide="image" class="icon" aria-hidden="true"></i>
+          </div>
+        {% endif %}
+      </a>
+      <div class="message-post-context-body">
+        <p class="message-post-context-label">Объявление</p>
+        <h1 class="message-post-context-title">
+          <a href="{% post_public_url post %}" class="message-post-context-title-link">{{ post.title }}</a>
+        </h1>
+        <p class="message-post-context-meta">
+          {{ cities|get_item:post.city }} · {{ category_labels|get_item:post.category }}
+          {% if post.price is not None %} · {{ post.price|format_price }} ₽{% endif %}
+        </p>
+        <p class="message-thread-participant">
+          {% if user.id == conversation.buyer_id %}
+            Продавец:
+            <a href="{% url 'reviews:seller_profile' other_user.id %}" class="message-participant-link">{{ other_user.display_name }}</a>
+          {% else %}
+            Покупатель:
+            <a href="{% url 'reviews:seller_profile' other_user.id %}" class="message-participant-link">{{ other_user.display_name }}</a>
+          {% endif %}
+        </p>
+        {% if can_review_seller %}
+          <p class="message-review-cta">
+            <a href="{% url 'reviews:review_seller' other_user.id %}" class="btn btn-secondary btn-sm">
+              <i data-lucide="star" class="icon icon-xs" aria-hidden="true"></i>
+              {% if existing_seller_review %}Изменить отзыв{% else %}Оставить отзыв{% endif %}
+            </a>
+          </p>
+        {% endif %}
+        {% if post.status != 'published' %}
+          <p class="message-post-context-note">Объявление сейчас не опубликовано</p>
+        {% endif %}
+      </div>
+    </article>
+
+    <div class="message-thread" id="message-thread">
+      {% if thread_messages %}
+        <div class="message-list">
+          {% for message in thread_messages %}
+            {% if message.body or message.image %}
+              <div class="message-bubble{% if message.sender_id == user.id %} is-mine{% else %} is-theirs{% endif %}{% if message.image and not message.body %} is-media-only{% endif %}">
+                {% if message.image %}
+                  <a href="{{ message.image }}" class="message-bubble-image-link" target="_blank" rel="noopener">
+                    <img src="{{ message.image }}" alt="Фото в сообщении" class="message-bubble-image" loading="lazy" width="240" height="180">
+                  </a>
+                {% endif %}
+                {% if message.body %}
+                  <p class="message-bubble-text">{{ message.body|linebreaksbr }}</p>
+                {% endif %}
+                <div class="message-bubble-meta">
+                  <time class="message-bubble-time" datetime="{{ message.created_at|date:'c' }}">{{ message.created_at|relative_time }}</time>
+                  {% if message.sender_id == user.id %}
+                    {% if message.read_at %}
+                      <span class="message-read-status is-read">Прочитано</span>
+                    {% else %}
+                      <span class="message-read-status is-unread">Не прочитано</span>
+                    {% endif %}
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="message-thread-empty">
+          <p>Напишите {% if user.id == conversation.buyer_id %}продавцу{% else %}покупателю{% endif %} по объявлению «{{ post.title }}».</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <form method="post" class="message-compose-form" id="message-compose-form" action="{% url 'messaging:thread' conversation.id %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="flash flash-error" role="alert">
+          <i data-lucide="alert-circle" class="icon" aria-hidden="true"></i>
+          <span>{{ form.non_field_errors.0 }}</span>
+        </div>
+      {% endif %}
+      <label class="sr-only" for="id_body">Сообщение</label>
+      {{ form.body }}
+      {% if form.body.errors %}
+        <p class="field-error">{{ form.body.errors.0 }}</p>
+      {% endif %}
+      <div class="message-compose-actions">
+        <label class="message-compose-attach" for="id_image">
+          <i data-lucide="image-plus" class="icon icon-sm" aria-hidden="true"></i>
+          <span>Фото</span>
+        </label>
+        {{ form.image }}
+        <div class="message-compose-preview" id="message-image-preview" hidden>
+          <img src="" alt="" class="message-compose-preview-img" id="message-image-preview-img">
+          <button type="button" class="message-compose-preview-clear" id="message-image-preview-clear" aria-label="Убрать фото">
+            <i data-lucide="x" class="icon icon-xs" aria-hidden="true"></i>
+          </button>
+        </div>
+        <button type="submit" class="btn btn-primary message-compose-submit">
+          <i data-lucide="send" class="icon" aria-hidden="true"></i>
+          Отправить
+        </button>
+      </div>
+      {% if form.image.errors %}
+        <p class="field-error">{{ form.image.errors.0 }}</p>
+      {% endif %}
+    </form>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'js/messages.js' %}?v={{ static_version }}"></script>
+{% endblock %}

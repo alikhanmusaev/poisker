@@ -1,0 +1,199 @@
+{% load static poisker_tags %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#b91c1c">
+  <meta name="description" content="{% block meta_description %}{{ site_description }}{% endblock %}">
+  {% if robots_noindex %}<meta name="robots" content="noindex,follow">{% endif %}
+  <meta name="static-version" content="{{ static_version }}">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'icons/favicon-32.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/icon-180.png' %}" sizes="180x180">
+  <link rel="stylesheet" href="{% static 'fonts/inter/inter.css' %}">
+  <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v={{ static_version }}">
+  <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+  <script src="{% static 'vendor/lucide.min.js' %}" defer></script>
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <a href="#main-content" class="skip-link">Перейти к содержимому</a>
+
+  <div class="app-shell">
+    <header class="site-header" role="banner">
+      <div class="container header-inner">
+        <a href="{% url 'core:index' %}" class="brand" aria-label="{{ site_name }} — на главную">
+          <span class="brand-mark" aria-hidden="true">
+            <img src="{% static 'brand/logo.png' %}" alt="" width="40" height="40" decoding="async">
+          </span>
+          <span class="brand-text">
+            <span class="brand-title">{{ site_name }}</span>
+            <span class="brand-sub">{{ site_tagline }}</span>
+          </span>
+        </a>
+        {% if user.is_authenticated %}
+          {% if not user.is_staff %}
+          <a href="{% url 'bookmarks:notifications' %}" class="header-bell-mobile" aria-label="Уведомления{% if notifications_unread_count %}, непрочитанных: {{ notifications_unread_count }}{% endif %}">
+            <span class="header-nav-icon-badge">
+              <i data-lucide="bell" class="icon" aria-hidden="true"></i>
+              {% if notifications_unread_count %}<span class="nav-unread-badge">{{ notifications_unread_count }}</span>{% endif %}
+            </span>
+          </a>
+          {% endif %}
+        {% endif %}
+        <nav class="header-nav" aria-label="Основная навигация">
+          <a href="{% url 'core:index' %}" class="header-nav-link">
+            <i data-lucide="layout-grid" class="icon" aria-hidden="true"></i>
+            <span>Главная</span>
+          </a>
+        {% if user.is_authenticated %}
+          {% if user.is_staff %}
+            <a href="{% url 'moderation:dashboard' %}" class="header-nav-link">
+              <i data-lucide="shield-check" class="icon" aria-hidden="true"></i>
+              <span>Модерация</span>
+            </a>
+            <form method="post" action="{% url 'accounts:logout' %}" class="header-logout-form">
+              {% csrf_token %}
+              <button type="submit" class="header-nav-link header-nav-link-btn">Выйти</button>
+            </form>
+          {% else %}
+            <a href="{% url 'messaging:inbox' %}" class="header-nav-link header-nav-link-messages">
+              <span class="header-nav-icon-badge">
+                <i data-lucide="messages-square" class="icon" aria-hidden="true"></i>
+                {% if messages_unread_count %}<span class="nav-unread-badge">{{ messages_unread_count }}</span>{% endif %}
+              </span>
+              <span>Сообщения</span>
+            </a>
+            <a href="{% url 'bookmarks:notifications' %}" class="header-nav-link header-nav-link-notifications">
+              <span class="header-nav-icon-badge">
+                <i data-lucide="bell" class="icon" aria-hidden="true"></i>
+                {% if notifications_unread_count %}<span class="nav-unread-badge">{{ notifications_unread_count }}</span>{% endif %}
+              </span>
+              <span>Уведомления</span>
+            </a>
+            <a href="{% url 'bookmarks:index' %}" class="header-nav-link">
+              <i data-lucide="bookmark" class="icon" aria-hidden="true"></i>
+              <span>Закладки</span>
+            </a>
+            <a href="{% url 'accounts:profile' %}" class="header-nav-link">
+              <i data-lucide="user" class="icon" aria-hidden="true"></i>
+              <span>Профиль</span>
+            </a>
+            <a href="{% url 'listings:create' %}" class="btn btn-primary btn-sm header-cta">
+              <i data-lucide="plus" class="icon" aria-hidden="true"></i>
+              <span>Подать</span>
+            </a>
+          {% endif %}
+        {% else %}
+          <a href="{% url 'accounts:login' %}" class="header-nav-link">
+            <i data-lucide="log-in" class="icon" aria-hidden="true"></i>
+            <span>Вход</span>
+          </a>
+          <a href="{% url 'accounts:register' %}" class="header-nav-link">
+            <i data-lucide="user-plus" class="icon" aria-hidden="true"></i>
+            <span>Регистрация</span>
+          </a>
+        {% endif %}
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content" class="site-main" role="main" tabindex="-1">
+      <div class="container">
+        {% if messages %}
+          <div class="flash-messages" aria-live="polite">
+            {% for message in messages %}
+              <div class="flash flash-{{ message.tags }}" role="alert">
+                <i data-lucide="{% if message.tags == 'error' %}alert-circle{% else %}check-circle{% endif %}" class="icon" aria-hidden="true"></i>
+                <span>{{ message }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+      <div class="container footer-inner">
+        <p class="footer-copy">© 2026 {{ site_name }}</p>
+        <nav class="footer-nav" aria-label="Правовая информация">
+          <a href="{% url 'core:privacy' %}" class="footer-link">Конфиденциальность</a>
+          <a href="{% url 'core:terms' %}" class="footer-link">Условия</a>
+          <a href="{% url 'core:guidelines' %}" class="footer-link">Правила</a>
+        </nav>
+      </div>
+    </footer>
+
+    <nav class="mobile-nav{% if user.is_authenticated %} mobile-nav-auth{% endif %}" aria-label="Мобильная навигация">
+      <a href="{% url 'core:index' %}" class="mobile-nav-item">
+        <i data-lucide="layout-grid" class="icon" aria-hidden="true"></i>
+        <span>Главная</span>
+      </a>
+      {% if user.is_authenticated %}
+        {% if user.is_staff %}
+          <a href="{% url 'moderation:queue' %}" class="mobile-nav-item">
+            <i data-lucide="inbox" class="icon" aria-hidden="true"></i>
+            <span>Очередь</span>
+          </a>
+          <a href="{% url 'moderation:dashboard' %}" class="mobile-nav-item mobile-nav-fab" aria-label="Модерация">
+            <i data-lucide="shield-check" class="icon icon-lg" aria-hidden="true"></i>
+            <span>Модерация</span>
+          </a>
+          <a href="{% url 'moderation:reports' %}" class="mobile-nav-item">
+            <i data-lucide="flag" class="icon" aria-hidden="true"></i>
+            <span>Жалобы</span>
+          </a>
+          <form method="post" action="{% url 'accounts:logout' %}" class="mobile-nav-logout-form">
+            {% csrf_token %}
+            <button type="submit" class="mobile-nav-item mobile-nav-item-btn">
+              <i data-lucide="log-out" class="icon" aria-hidden="true"></i>
+              <span>Выйти</span>
+            </button>
+          </form>
+        {% else %}
+          <a href="{% url 'bookmarks:index' %}" class="mobile-nav-item">
+            <i data-lucide="bookmark" class="icon" aria-hidden="true"></i>
+            <span>Закладки</span>
+          </a>
+          <a href="{% url 'listings:create' %}" class="mobile-nav-item mobile-nav-fab" aria-label="Подать объявление">
+            <i data-lucide="plus" class="icon icon-lg" aria-hidden="true"></i>
+            <span>Подать</span>
+          </a>
+          <a href="{% url 'messaging:inbox' %}" class="mobile-nav-item mobile-nav-item-messages">
+            <span class="mobile-nav-icon-badge">
+              <i data-lucide="messages-square" class="icon" aria-hidden="true"></i>
+              {% if messages_unread_count %}<span class="mobile-nav-badge">{{ messages_unread_count }}</span>{% endif %}
+            </span>
+            <span>Сообщения</span>
+          </a>
+          <a href="{% url 'accounts:profile' %}" class="mobile-nav-item">
+            <i data-lucide="user" class="icon" aria-hidden="true"></i>
+            <span>Профиль</span>
+          </a>
+        {% endif %}
+      {% else %}
+        <a href="{% url 'accounts:login' %}" class="mobile-nav-item">
+          <i data-lucide="log-in" class="icon" aria-hidden="true"></i>
+          <span>Вход</span>
+        </a>
+        <a href="{% url 'accounts:register' %}" class="mobile-nav-item">
+          <i data-lucide="user-plus" class="icon" aria-hidden="true"></i>
+          <span>Регистрация</span>
+        </a>
+      {% endif %}
+    </nav>
+  </div>
+
+  <div id="htmx-indicator" class="htmx-indicator" aria-hidden="true" role="status">
+    <span class="htmx-spinner"></span>
+    <span class="sr-only">Загрузка…</span>
+  </div>
+
+  <script src="{% static 'js/core.js' %}?v={{ static_version }}"></script>
+  <script src="{% static 'js/app.js' %}?v={{ static_version }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,199 @@
+{% extends "moderation/base.html" %}
+{% load poisker_tags %}
+{% block content %}
+<div class="admin-actions admin-detail-nav">
+  <a href="{% url 'moderation:queue' %}" class="admin-btn admin-btn--sm">← К очереди</a>
+  {% if post.status == 'published' %}
+    <a href="{% post_public_url post %}" class="admin-btn admin-btn--sm" target="_blank" rel="noopener">На сайте</a>
+  {% endif %}
+</div>
+
+<div class="admin-card admin-detail-card">
+  <div class="admin-mod-card__head">
+    <div class="admin-mod-card__info">
+      <h2 class="admin-card__title admin-detail-title">{{ post.title }}</h2>
+      <div class="admin-mod-card__meta">
+        <span class="admin-badge admin-badge--{{ post.status }}">{{ post.get_status_display }}</span>
+        <span>{{ cities|get_item:post.city }} · {{ category_labels|get_item:post.category }}</span>
+        {% if post.price is not None %}<span>{{ post.price }} ₽</span>{% endif %}
+        <span>Автор: {{ post.user.display_name|default:post.user.email }}</span>
+        <span>Тел.: {{ post.contact_phone|default:post.user.phone|default:"—" }}</span>
+        {% if post.published_at %}<span>Публ.: {{ post.published_at|date:"d.m.Y H:i" }}</span>{% endif %}
+      </div>
+    </div>
+    {% if post.status == 'pending' or post.pending_revision or post.status == 'hidden' %}
+      <div class="admin-actions admin-actions--stacked admin-detail-approve-desk">
+        <form method="post" action="{% url 'moderation:approve' post.id %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" class="admin-btn admin-btn--success">Одобрить / опубликовать</button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if post.moderation_note %}
+    <div class="admin-mod-note">
+      <strong>Последний комментарий модератора:</strong> {{ post.moderation_note }}
+    </div>
+  {% endif %}
+
+  {% if images %}
+    <div class="admin-gallery">
+      {% for img in images %}
+        <a href="{{ img }}" target="_blank" rel="noopener" class="admin-gallery__item">
+          <img src="{{ img }}" alt="" loading="lazy">
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="admin-detail-body">{{ post.body }}</div>
+
+  {% if revision.title or revision.body or revision.category or revision.city or 'price' in revision %}
+    <div class="admin-diff">
+      <strong>Ожидающие правки</strong>
+      {% if revision.title %}
+        <div class="admin-diff__item">
+          <span class="admin-diff__label">Заголовок:</span>
+          <span class="admin-diff__old">{{ post.title }}</span> →
+          <span class="admin-diff__new">{{ revision.title }}</span>
+        </div>
+      {% endif %}
+      {% if revision.body %}
+        <div class="admin-diff__item">
+          <span class="admin-diff__label">Описание (новое):</span>
+          <div class="admin-diff__new admin-detail-body">{{ revision.body }}</div>
+        </div>
+      {% endif %}
+      {% if revision.category and revision.category != post.category %}
+        <div class="admin-diff__item">
+          <span class="admin-diff__label">Категория:</span>
+          <span class="admin-diff__old">{{ category_labels|get_item:post.category }}</span> →
+          <span class="admin-diff__new">{{ category_labels|get_item:revision.category }}</span>
+        </div>
+      {% endif %}
+      {% if revision.city and revision.city != post.city %}
+        <div class="admin-diff__item">
+          <span class="admin-diff__label">Город:</span>
+          <span class="admin-diff__old">{{ cities|get_item:post.city }}</span> →
+          <span class="admin-diff__new">{{ cities|get_item:revision.city }}</span>
+        </div>
+      {% endif %}
+      {% if 'price' in revision and revision.price != post.price %}
+        <div class="admin-diff__item">
+          <span class="admin-diff__label">Цена:</span>
+          <span class="admin-diff__old">{% if post.price is not None %}{{ post.price }} ₽{% else %}—{% endif %}</span> →
+          <span class="admin-diff__new">{% if revision.price is not None %}{{ revision.price }} ₽{% else %}—{% endif %}</span>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+
+{% if post.status == 'pending' or post.pending_revision %}
+  <div class="admin-card" id="reject-form">
+    <h2 class="admin-card__title">Отклонить</h2>
+    <p class="admin-table__muted admin-card__hint">Причина увидит продавец в уведомлении и в профиле.</p>
+    <form method="post" action="{% url 'moderation:reject' post.id %}" class="admin-reason-form">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{% url 'moderation:queue' %}">
+      <label class="admin-field-label" for="reject-reason">Причина</label>
+      <div class="admin-reason-chips" role="group" aria-label="Быстрые причины">
+        {% for reason in reject_reasons %}
+          <button type="button" class="admin-chip" data-reason-chip="{{ reason }}" data-reason-target="#reject-reason">{{ reason }}</button>
+        {% endfor %}
+      </div>
+      <textarea
+        id="reject-reason"
+        name="reason"
+        class="admin-input admin-textarea"
+        rows="3"
+        maxlength="400"
+        required
+        placeholder="Например: слишком общее описание, нет цены, запрещённый товар…"
+      ></textarea>
+      <div class="admin-actions admin-actions--block">
+        <button type="submit" class="admin-btn admin-btn--danger">
+          {% if post.status == 'published' and post.pending_revision %}Отклонить правки{% else %}Отклонить и скрыть{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+{% endif %}
+
+{% if post.status == 'published' and not post.pending_revision %}
+  <div class="admin-card" id="hide-form">
+    <h2 class="admin-card__title">Скрыть с сайта</h2>
+    <form method="post" action="{% url 'moderation:hide' post.id %}" class="admin-reason-form">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <label class="admin-field-label" for="hide-reason">Причина</label>
+      <div class="admin-reason-chips" role="group" aria-label="Быстрые причины">
+        {% for reason in reject_reasons %}
+          <button type="button" class="admin-chip" data-reason-chip="{{ reason }}" data-reason-target="#hide-reason">{{ reason }}</button>
+        {% endfor %}
+      </div>
+      <textarea
+        id="hide-reason"
+        name="reason"
+        class="admin-input admin-textarea"
+        rows="3"
+        maxlength="400"
+        required
+        placeholder="Причина для продавца"
+      ></textarea>
+      <div class="admin-actions admin-actions--block">
+        <button type="submit" class="admin-btn admin-btn--warning">Скрыть</button>
+      </div>
+    </form>
+  </div>
+{% endif %}
+
+{% if open_reports %}
+  <div class="admin-card">
+    <h2 class="admin-card__title">Открытые жалобы ({{ open_reports|length }})</h2>
+    <div class="admin-actions admin-actions--block admin-actions--reports">
+      <form method="post" action="{% url 'moderation:resolve_reports' post.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="keep">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="admin-btn">Оставить объявление, закрыть жалобы</button>
+      </form>
+      <form
+        method="post"
+        action="{% url 'moderation:resolve_reports' post.id %}"
+        class="admin-inline-form"
+        data-prompt-reason="Причина скрытия для продавца"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="action" value="hide">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="admin-btn admin-btn--danger">Скрыть и закрыть жалобы</button>
+      </form>
+    </div>
+    <ul class="admin-report-list">
+      {% for report in open_reports %}
+        <li>
+          <strong>{{ report_reasons|get_item:report.reason }}</strong>
+          · {{ report.created_at|date:"d.m.Y H:i" }}
+          {% if report.comment %}<div class="admin-table__muted">{{ report.comment }}</div>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+{% if post.status == 'pending' or post.pending_revision or post.status == 'hidden' %}
+  <div class="admin-sticky-actions" aria-label="Быстрые действия">
+    {% if post.status == 'pending' or post.pending_revision %}
+      <a href="#reject-form" class="admin-btn admin-btn--danger">Отклонить</a>
+    {% endif %}
+    <form method="post" action="{% url 'moderation:approve' post.id %}" class="admin-sticky-actions__approve">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <button type="submit" class="admin-btn admin-btn--success">Одобрить</button>
+    </form>
+  </div>
+{% endif %}
+{% endblock %}
