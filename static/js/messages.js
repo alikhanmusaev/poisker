@@ -25,6 +25,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const imageButtons = [...document.querySelectorAll('[data-message-image-open]')];
+  if (imageButtons.length && window.PoiskerLightbox) {
+    const urls = imageButtons.map((btn) => btn.dataset.imageUrl).filter(Boolean);
+    imageButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const index = urls.indexOf(btn.dataset.imageUrl);
+        window.PoiskerLightbox.open(urls, index >= 0 ? index : 0);
+      });
+    });
+  }
+
   if (!fileInput || !preview || !previewImg) {
     return;
   }

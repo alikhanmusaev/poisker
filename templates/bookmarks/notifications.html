@@ -36,8 +36,10 @@
                   <i data-lucide="check-circle" class="icon" aria-hidden="true"></i>
                 {% elif item.kind == 'post_expired' %}
                   <i data-lucide="clock" class="icon" aria-hidden="true"></i>
-                {% elif item.kind == 'new_review' or item.kind == 'review_reply' %}
+                {% elif item.kind == 'new_review' or item.kind == 'review_reply' or item.kind == 'review_unlocked' or item.kind == 'review_reminder' %}
                   <i data-lucide="star" class="icon" aria-hidden="true"></i>
+                {% elif item.kind == 'deal_confirm_request' %}
+                  <i data-lucide="handshake" class="icon" aria-hidden="true"></i>
                 {% else %}
                   <i data-lucide="sparkles" class="icon" aria-hidden="true"></i>
                 {% endif %}

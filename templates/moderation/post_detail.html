@@ -42,7 +42,7 @@
     <div class="admin-gallery">
       {% for img in images %}
         <a href="{{ img }}" target="_blank" rel="noopener" class="admin-gallery__item">
-          <img src="{{ img }}" alt="" loading="lazy">
+          <img src="{{ img|image_sm }}" alt="" loading="lazy">
         </a>
       {% endfor %}
     </div>

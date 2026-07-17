@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Подтвердите email — {{ site_name }}{% endblock %}
+{% block body_class %}auth-body{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="page-card auth-card auth-card-status">
+    <div class="auth-card-header">
+      <i data-lucide="mail-check" class="icon auth-card-icon auth-card-icon-success" aria-hidden="true"></i>
+      <h1 class="page-title">Проверьте почту</h1>
+      <p class="page-lead">
+        {% if email %}
+          Мы отправили ссылку для подтверждения на <strong>{{ email }}</strong>.
+        {% else %}
+          Мы отправили ссылку для подтверждения на ваш email.
+        {% endif %}
+      </p>
+    </div>
+    <p class="auth-note">Не пришло письмо? Проверьте «Спам» или запросите письмо ещё раз.</p>
+    <div class="auth-footer">
+      <a href="{% url 'accounts:resend_verification' %}" class="btn btn-secondary btn-block">Отправить снова</a>
+      <a href="{% url 'accounts:login' %}" class="btn btn-primary btn-block">Ко входу</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

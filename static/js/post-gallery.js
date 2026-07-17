@@ -2,47 +2,110 @@
   const MIN_ZOOM = 1;
   const MAX_ZOOM = 3;
   const ZOOM_STEP = 0.5;
+  const REDUCE = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  function hydrateSlide(slide) {
+    if (!slide) return;
+    slide.querySelectorAll('source[data-srcset]').forEach((source) => {
+      source.setAttribute('srcset', source.dataset.srcset);
+      delete source.dataset.srcset;
+    });
+    slide.querySelectorAll('img[data-src]').forEach((img) => {
+      if (img.dataset.srcset) {
+        img.setAttribute('srcset', img.dataset.srcset);
+        delete img.dataset.srcset;
+      }
+      if (img.dataset.sizes) {
+        img.setAttribute('sizes', img.dataset.sizes);
+        delete img.dataset.sizes;
+      }
+      img.setAttribute('src', img.dataset.src);
+      delete img.dataset.src;
+    });
+  }
+
+  function slideUrl(slide) {
+    const img = slide.querySelector('img');
+    if (!img) return '';
+    return img.getAttribute('data-full-src') || img.currentSrc || img.src || img.getAttribute('data-src') || '';
+  }
+
+  function nearestIndex(track, slides) {
+    const left = track.scrollLeft;
+    let best = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < slides.length; i += 1) {
+      const dist = Math.abs(slides[i].offsetLeft - left);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = i;
+      }
+    }
+    return best;
+  }
 
   function initGallery(root) {
     const track = root.querySelector('[data-gallery-track]');
+    const viewport = root.querySelector('[data-gallery-viewport]');
     const slides = [...root.querySelectorAll('[data-gallery-slide]')];
     if (!track || !slides.length) return null;
 
-    const urls = slides
-      .map((slide) => slide.querySelector('img')?.currentSrc || slide.querySelector('img')?.src)
-      .filter(Boolean);
-
     const prevBtn = root.querySelector('[data-gallery-prev]');
     const nextBtn = root.querySelector('[data-gallery-next]');
-    const dotsRoot = root.querySelector('[data-gallery-dots]');
-    const counter = root.querySelector('[data-gallery-counter]');
-    const dots = dotsRoot ? [...dotsRoot.querySelectorAll('button')] : [];
+    const dots = [...root.querySelectorAll('[data-gallery-dot]')];
+    const multi = slides.length > 1;
 
     let index = 0;
-    let touchStartX = 0;
-    let touchStartY = 0;
+    let raf = 0;
 
-    function update() {
-      track.style.transform = `translate3d(-${index * 100}%, 0, 0)`;
-      if (counter) counter.textContent = `${index + 1} / ${slides.length}`;
-      dots.forEach((dot, i) => {
-        dot.classList.toggle('is-active', i === index);
-        dot.setAttribute('aria-selected', i === index ? 'true' : 'false');
-      });
-      if (prevBtn) prevBtn.disabled = index === 0;
-      if (nextBtn) nextBtn.disabled = index === slides.length - 1;
+    function setActive(next) {
+      index = next;
+      root.setAttribute('data-slide', String(index + 1));
+      if (viewport) {
+        viewport.setAttribute('aria-label', `${index + 1} / ${slides.length}`);
+      }
+      for (let i = 0; i < dots.length; i += 1) {
+        dots[i].classList.toggle('is-active', i === index);
+      }
+      for (let i = 0; i < slides.length; i += 1) {
+        slides[i].setAttribute('aria-hidden', i === index ? 'false' : 'true');
+      }
+      if (prevBtn) prevBtn.hidden = index === 0;
+      if (nextBtn) nextBtn.hidden = index === slides.length - 1;
+      hydrateSlide(slides[index]);
+      hydrateSlide(slides[index + 1]);
+      hydrateSlide(slides[index - 1]);
     }
 
-    function goTo(nextIndex) {
-      index = Math.max(0, Math.min(slides.length - 1, nextIndex));
-      update();
+    function goTo(nextIndex, behavior) {
+      const clamped = Math.max(0, Math.min(slides.length - 1, nextIndex));
+      const slide = slides[clamped];
+      if (!slide) return;
+      hydrateSlide(slide);
+      hydrateSlide(slides[clamped + 1]);
+      hydrateSlide(slides[clamped - 1]);
+      const left = slide.offsetLeft;
+      if (behavior === 'auto' || REDUCE.matches) {
+        track.scrollLeft = left;
+      } else {
+        track.scrollTo({ left, behavior: behavior || 'smooth' });
+      }
+      setActive(clamped);
     }
 
-    prevBtn?.addEventListener('click', () => goTo(index - 1));
-    nextBtn?.addEventListener('click', () => goTo(index + 1));
-    dots.forEach((dot, i) => dot.addEventListener('click', () => goTo(i)));
+    prevBtn?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      goTo(index - 1);
+    });
+    nextBtn?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      goTo(index + 1);
+    });
 
-    root.querySelector('[data-gallery-viewport]')?.addEventListener('keydown', (event) => {
+    viewport?.addEventListener('keydown', (event) => {
+      if (!multi) return;
       if (event.key === 'ArrowLeft') {
         event.preventDefault();
         goTo(index - 1);
@@ -53,36 +116,29 @@
       }
     });
 
-    root.addEventListener(
-      'touchstart',
-      (event) => {
-        if (event.touches.length !== 1) return;
-        touchStartX = event.touches[0].clientX;
-        touchStartY = event.touches[0].clientY;
-      },
-      { passive: true }
-    );
-
-    root.addEventListener(
-      'touchend',
-      (event) => {
-        if (event.changedTouches.length !== 1 || slides.length < 2) return;
-        const dx = event.changedTouches[0].clientX - touchStartX;
-        const dy = event.changedTouches[0].clientY - touchStartY;
-        if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy)) return;
-        goTo(index + (dx < 0 ? 1 : -1));
-      },
-      { passive: true }
-    );
+    if (multi) {
+      track.addEventListener(
+        'scroll',
+        () => {
+          if (raf) return;
+          raf = requestAnimationFrame(() => {
+            raf = 0;
+            setActive(nearestIndex(track, slides));
+          });
+        },
+        { passive: true }
+      );
+    }
 
     slides.forEach((slide, i) => {
       slide.querySelector('[data-gallery-open]')?.addEventListener('click', () => {
-        openLightbox(urls, i, (next) => goTo(next));
+        const urls = slides.map(slideUrl).filter(Boolean);
+        openLightbox(urls, i, (next) => goTo(next, 'auto'));
       });
     });
 
-    update();
-    return { goTo, getIndex: () => index, urls };
+    setActive(0);
+    return { goTo, getIndex: () => index };
   }
 
   function initLightbox() {
@@ -104,7 +160,6 @@
     let panX = 0;
     let panY = 0;
     let onIndexChange = null;
-
     let dragStart = null;
     let pinchStart = null;
 
@@ -223,8 +278,7 @@
         if (!pinchStart || event.touches.length !== 2) return;
         const [a, b] = event.touches;
         const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-        const ratio = distance / pinchStart.distance;
-        setZoom(pinchStart.zoom * ratio);
+        setZoom(pinchStart.zoom * (distance / pinchStart.distance));
       },
       { passive: true }
     );
@@ -251,6 +305,8 @@
     if (!lightboxApi) lightboxApi = initLightbox();
     lightboxApi?.open(urls, index, onIndexChange);
   }
+
+  window.PoiskerLightbox = { open: openLightbox };
 
   function boot() {
     lightboxApi = initLightbox();

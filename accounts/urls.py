@@ -9,6 +9,9 @@ app_name = "accounts"
 
 urlpatterns = [
     path("register/", views.register, name="register"),
+    path("register/done/", views.register_done, name="register_done"),
+    path("verify/<uidb64>/<token>/", views.verify_email, name="verify_email"),
+    path("verify/resend/", views.resend_verification, name="resend_verification"),
     path("login/", views.login_view, name="login"),
     path("logout/", views.UserLogoutView.as_view(), name="logout"),
     path("profile/", views.profile, name="profile"),
@@ -16,12 +19,13 @@ urlpatterns = [
     path("profile/delete/", views.profile_delete, name="profile_delete"),
     path(
         "password-reset/",
-        auth_views.PasswordResetView.as_view(
+        views.RateLimitedPasswordResetView.as_view(
             template_name="accounts/password_reset.html",
             email_template_name="accounts/email/password_reset_email.txt",
             subject_template_name="accounts/email/password_reset_subject.txt",
             form_class=StyledPasswordResetForm,
             success_url=reverse_lazy("accounts:password_reset_done"),
+            from_email=settings.DEFAULT_FROM_EMAIL,
             extra_email_context={"site_name": settings.SITE_NAME},
         ),
         name="password_reset",

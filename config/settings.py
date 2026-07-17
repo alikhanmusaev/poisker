@@ -171,6 +171,7 @@ SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE")
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
 CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
+CSRF_FAILURE_VIEW = "core.views.csrf_failure"
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https") if env_bool("TRUST_PROXY") else None
 TRUST_PROXY = env_bool("TRUST_PROXY")
@@ -188,6 +189,8 @@ CONTACT_RATE_LIMIT_PER_HOUR = env_int("CONTACT_RATE_LIMIT_PER_HOUR", 30)
 AUTH_RATE_LIMIT_PER_HOUR = env_int("AUTH_RATE_LIMIT_PER_HOUR", 30)
 MESSAGING_RATE_LIMIT_PER_HOUR = env_int("MESSAGING_RATE_LIMIT_PER_HOUR", 60)
 REVIEW_AFTER_PHONE_HOURS = env_int("REVIEW_AFTER_PHONE_HOURS", 2)
+DEAL_CONFIRM_TIMEOUT_DAYS = env_int("DEAL_CONFIRM_TIMEOUT_DAYS", 3)
+REVIEW_REMINDER_DAYS = env_int("REVIEW_REMINDER_DAYS", 1)
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 CACHES = {
@@ -214,17 +217,38 @@ SITE_DESCRIPTION = os.getenv(
     "Поискер — бесплатные объявления по Чеченской Республике.",
 )
 SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "info@poisker.ru")
-STATIC_VERSION = os.getenv("STATIC_VERSION", "django-46")
+STATIC_VERSION = os.getenv("STATIC_VERSION", "django-57")
+# Version of the separate PD consent document (152-FZ / 156-FZ). Bump when text changes.
+PDN_CONSENT_VERSION = os.getenv("PDN_CONSENT_VERSION", "2026-07-16b")
+OPERATOR_NAME = os.getenv(
+    "OPERATOR_NAME",
+    "Индивидуальный предприниматель Мусаев Алихан Хизирович",
+)
+OPERATOR_INN = os.getenv("OPERATOR_INN", "201404274205")
+OPERATOR_OGRNIP = os.getenv("OPERATOR_OGRNIP", "326200000008112")
+OPERATOR_ADDRESS = os.getenv(
+    "OPERATOR_ADDRESS",
+    "Чеченская Республика, с. Автуры, ул. Махмуда Махаджиева, д. 2",
+)
 
-MAX_UPLOAD_SIZE = 5 * 1024 * 1024
+MAX_UPLOAD_SIZE = env_int("MAX_UPLOAD_SIZE", 20 * 1024 * 1024)
 MAX_IMAGE_PIXELS = env_int("MAX_IMAGE_PIXELS", 20000000)
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = env_int("EMAIL_PORT", 587)
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", "false")
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", "false")
+EMAIL_TIMEOUT = env_int("EMAIL_TIMEOUT", 20)
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", f"noreply@{APP_DOMAIN}")
+SERVER_EMAIL = os.getenv("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 NOTIFY_SELLER_EMAIL = env_bool("NOTIFY_SELLER_EMAIL", "true")
 
 SECURITY_HEADERS_ENABLED = env_bool("SECURITY_HEADERS_ENABLED", "true")
+CONTENT_SECURITY_POLICY = os.getenv("CONTENT_SECURITY_POLICY", "")
 
 if not DEBUG:
     SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT")

@@ -10,8 +10,12 @@ urlpatterns = [
     path("ready", views.ready, name="ready"),
     path("robots.txt", views.robots_txt, name="robots"),
     path("sitemap.xml", views.sitemap_xml, name="sitemap"),
+    path("offline", views.offline, name="offline"),
+    path("manifest.webmanifest", views.web_manifest, name="web_manifest"),
+    path("sw.js", views.service_worker, name="service_worker"),
     path("privacy", views.privacy, name="privacy"),
     path("terms", views.terms, name="terms"),
+    path("consent", views.pdn_consent, name="pdn_consent"),
     path("guidelines", views.guidelines, name="guidelines"),
     path(
         "obyavlenie/<slug:city_slug>/<slug:category_slug>/<slug:slug>/<uuid:post_id>/",

@@ -35,13 +35,13 @@
         {% if existing_review %}Изменить отзыв{% else %}Оставить отзыв{% endif %}
       </a>
     </div>
-  {% elif phone_review_unlock_at %}
+  {% elif needs_deal_confirmation %}
     <p class="seller-profile-hint">
-      Вы смотрели телефон продавца. Оставить отзыв можно примерно с
-      {{ phone_review_unlock_at|date:"d.m H:i" }}.
+      Подтвердите успешную сделку в чате. Отзыв откроется после подтверждения обеими сторонами
+      или через {{ deal_confirm_timeout_days|default:3 }} дн. после вашего подтверждения.
     </p>
   {% elif user.is_authenticated and user.id == seller.id %}
-    <p class="seller-profile-hint">Это ваш публичный профиль. Отзывы оставляют покупатели после переписки или звонка.</p>
+    <p class="seller-profile-hint">Это ваш публичный профиль. Отзывы оставляют покупатели после подтверждения сделки в чате.</p>
   {% endif %}
 
   <section class="seller-section" aria-labelledby="seller-reviews-heading">

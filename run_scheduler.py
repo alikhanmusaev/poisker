@@ -16,6 +16,7 @@ from django.conf import settings
 from listings.services.cleanup import cleanup_deleted_posts
 from listings.services.ranking import expire_old_posts, recalculate_all_rank_scores
 from listings.services.search import reindex_published_posts, upsert_published_rank_scores
+from reviews.services import process_deal_review_jobs
 
 scheduler = BlockingScheduler(timezone=settings.TIME_ZONE)
 
@@ -29,6 +30,11 @@ def recalc_job():
 @scheduler.scheduled_job("interval", hours=1, id="expire_posts")
 def expire_job():
     expire_old_posts()
+
+
+@scheduler.scheduled_job("interval", hours=1, id="deal_review_jobs")
+def deal_review_job():
+    process_deal_review_jobs()
 
 
 @scheduler.scheduled_job("cron", hour=3, id="reindex_all")

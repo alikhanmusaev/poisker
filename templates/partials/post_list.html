@@ -3,7 +3,7 @@
   <div class="post-grid" id="post-grid">
     {% for item in results %}
       {% with post=item.post|default:item highlight=item.highlight|default:None %}
-        {% include "partials/post_card.html" %}
+        {% include "partials/post_card.html" with lcp_priority=forloop.first %}
       {% endwith %}
     {% endfor %}
   </div>
@@ -16,7 +16,12 @@
   <div class="empty-state">
     <i data-lucide="inbox" class="icon empty-state-icon" aria-hidden="true"></i>
     <p>Объявлений пока нет</p>
-    <p class="empty-state-hint">Станьте первым — зарегистрируйтесь и подайте объявление.</p>
-    <a href="{% url 'accounts:register' %}" class="btn btn-primary">Зарегистрироваться</a>
+    {% if user.is_authenticated %}
+      <p class="empty-state-hint">Станьте первым — подайте объявление.</p>
+      <a href="{% url 'listings:create' %}" class="btn btn-primary">Подать объявление</a>
+    {% else %}
+      <p class="empty-state-hint">Станьте первым — зарегистрируйтесь и подайте объявление.</p>
+      <a href="{% url 'accounts:register' %}" class="btn btn-primary">Зарегистрироваться</a>
+    {% endif %}
   </div>
 {% endif %}

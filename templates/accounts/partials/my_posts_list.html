@@ -6,7 +6,7 @@
       <article class="my-post-card">
         <a href="{% post_public_url post %}" class="my-post-card-media" aria-label="{{ post.title }}">
           {% if cover_image %}
-            <img src="{{ cover_image }}" alt="" class="my-post-card-img" loading="lazy" width="72" height="72">
+            <img src="{{ cover_image|image_sm }}" alt="" class="my-post-card-img" loading="lazy" width="72" height="72">
           {% else %}
             <div class="my-post-card-img my-post-card-img-placeholder" aria-hidden="true">
               <i data-lucide="image" class="icon" aria-hidden="true"></i>
@@ -39,10 +39,39 @@
           {% endif %}
           <p class="my-post-card-date">
             {{ cities|get_item:post.city }} · {{ category_labels|get_item:post.category }}
-            {% if post.price is not None %} · {{ post.price|format_price }} ₽{% endif %}
+            · {{ post.price|post_price_display }}
+            · {{ condition_labels|get_item:post.condition }}
           </p>
+          {% if post.status != 'draft' %}
+            <ul class="my-post-stats" aria-label="Статистика объявления">
+              <li title="Просмотры">
+                <i data-lucide="eye" class="icon icon-xs" aria-hidden="true"></i>
+                <span>{{ post.views }}</span>
+              </li>
+              <li title="Показы телефона">
+                <i data-lucide="phone" class="icon icon-xs" aria-hidden="true"></i>
+                <span>{{ post.contact_clicks }}</span>
+              </li>
+              <li title="Чаты">
+                <i data-lucide="message-circle" class="icon icon-xs" aria-hidden="true"></i>
+                <span>{{ post.conversations_count|default:0 }}</span>
+              </li>
+              <li title="В закладках">
+                <i data-lucide="bookmark" class="icon icon-xs" aria-hidden="true"></i>
+                <span>{{ post.bookmarks_count|default:0 }}</span>
+              </li>
+              {% with days=post|days_until_expiry %}
+                {% if days is not None %}
+                  <li title="Дней до снятия" class="{% if days <= 3 %}is-warning{% endif %}">
+                    <i data-lucide="clock" class="icon icon-xs" aria-hidden="true"></i>
+                    <span>{{ days }} дн.</span>
+                  </li>
+                {% endif %}
+              {% endwith %}
+            </ul>
+          {% endif %}
           <div class="my-post-card-actions">
-            {% if post.status != 'hidden' and post.status != 'expired' %}
+            {% if post.status != 'expired' and post.status != 'hidden' or not post.ever_published and post.status == 'hidden' %}
               <a href="{% url 'listings:edit' post.id %}" class="btn btn-secondary btn-sm">
                 <i data-lucide="pencil" class="icon icon-xs" aria-hidden="true"></i>
                 Редактировать

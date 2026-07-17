@@ -1,0 +1,32 @@
+{# Responsive listing image: WebP + JPEG srcset, optional deferred hydrate. #}
+<picture>
+  {% if deferred %}
+    <source type="image/webp" data-srcset="{{ webp_srcset }}" sizes="{{ sizes }}">
+    <img
+      src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+      data-src="{{ jpeg_src }}"
+      data-srcset="{{ jpeg_srcset }}"
+      data-sizes="{{ sizes }}"
+      data-full-src="{{ jpeg_full }}"
+      alt="{{ alt }}"
+      class="{{ img_class }}"
+      {% if width %}width="{{ width }}"{% endif %}
+      {% if height %}height="{{ height }}"{% endif %}
+    >
+  {% else %}
+    <source type="image/webp" srcset="{{ webp_srcset }}" sizes="{{ sizes }}">
+    <img
+      src="{{ jpeg_src }}"
+      srcset="{{ jpeg_srcset }}"
+      sizes="{{ sizes }}"
+      data-full-src="{{ jpeg_full }}"
+      alt="{{ alt }}"
+      class="{{ img_class }}"
+      loading="{{ loading }}"
+      {% if fetchpriority %}fetchpriority="{{ fetchpriority }}"{% endif %}
+      decoding="async"
+      {% if width %}width="{{ width }}"{% endif %}
+      {% if height %}height="{{ height }}"{% endif %}
+    >
+  {% endif %}
+</picture>

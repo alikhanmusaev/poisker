@@ -112,10 +112,15 @@ def ensure_collection(recreate: bool = False, *, sync_synonyms: bool = True):
 
 
 def ensure_collection_exists():
-    """Fast path for search — skip synonym sync on every request."""
+    """Fast path for search — skip synonym sync and avoid retrieve on every request."""
+    global _collection_ready
+    if _collection_ready:
+        return True
     client = get_typesense_client()
     try:
-        return client.collections[COLLECTION_NAME].retrieve()
+        client.collections[COLLECTION_NAME].retrieve()
+        _collection_ready = True
+        return True
     except typesense.exceptions.ObjectNotFound:
         return ensure_collection(sync_synonyms=True)
 
@@ -262,7 +267,10 @@ def _build_search_query(query: str, expanded_terms: list[str] | None) -> str:
 def _typesense_search(query, city, category, price_min, price_max, with_photo, with_price, sort, limit, offset, expanded_terms=None):
     ensure_collection_exists()
     has_query = bool(query)
-    use_rerank = uses_hybrid_ranking(sort) or (has_query and sort in {"price_asc", "price_desc"})
+    # Empty browse feed: trust Typesense rank_score sort — no 3× candidate over-fetch.
+    use_rerank = bool(has_query) and (
+        uses_hybrid_ranking(sort) or sort in {"price_asc", "price_desc"}
+    )
     if use_rerank:
         per_page = _candidate_limit(limit, offset)
         page = 1
@@ -274,12 +282,15 @@ def _typesense_search(query, city, category, price_min, price_max, with_photo, w
         "q": _build_search_query(query, expanded_terms),
         "query_by": "title,body",
         "query_by_weights": "3,1",
-        "num_typos": 2,
         "filter_by": _build_filter(city, category, price_min, price_max, with_photo, with_price),
         "per_page": per_page,
         "page": page,
-        "highlight_fields": "title,body",
     }
+    if has_query:
+        params["num_typos"] = 2
+        params["highlight_fields"] = "title,body"
+    else:
+        params["num_typos"] = 0
     sort_by = _typesense_sort(sort, has_query)
     if sort_by:
         params["sort_by"] = sort_by
@@ -333,7 +344,7 @@ def search_posts_fallback(query, city=None, category=None, price_min=None, price
     qs = _apply_text_filter(qs, query, expanded_terms)
     total = qs.count()
 
-    if uses_hybrid_ranking(sort) or (query and sort in {"price_asc", "price_desc"}):
+    if query and (uses_hybrid_ranking(sort) or sort in {"price_asc", "price_desc"}):
         posts = list(qs[: _candidate_limit(limit, offset)])
         hits = [{"document": {"id": str(p.pk)}, "text_match": 0, "highlights": []} for p in posts]
         posts_map = {str(p.pk): p for p in posts}
@@ -354,29 +365,83 @@ def search_posts_fallback(query, city=None, category=None, price_min=None, price
     return [{"post": p, "highlight": {}, "score": p.rank_score or 0} for p in posts], total
 
 
+def _hydrate_posts_map(post_ids: list[str]) -> dict:
+    if not post_ids:
+        return {}
+    # Fields needed for feed cards, SEO URLs, and light seller diversity.
+    qs = _live_posts_qs().filter(pk__in=post_ids).only(
+        "id",
+        "title",
+        "slug",
+        "price",
+        "condition",
+        "city",
+        "category",
+        "images",
+        "cover_index",
+        "user_id",
+        "rank_score",
+        "created_at",
+        "status",
+        "expires_at",
+    )
+    return {str(p.pk): p for p in qs}
+
+
+def _results_from_typesense_order(hits, posts_map, *, diversify: bool = False):
+    from listings.services.search_ranking import diversify_by_seller
+
+    results = []
+    for hit in hits:
+        doc = hit.get("document") or {}
+        post = posts_map.get(doc.get("id"))
+        if not post:
+            continue
+        results.append(
+            {
+                "post": post,
+                "highlight": {},
+                "score": post.rank_score or 0,
+            }
+        )
+    if diversify:
+        results = diversify_by_seller(results)
+    return results
+
+
 def search_posts(query, city=None, category=None, price_min=None, price_max=None, with_photo=False, with_price=False, sort=DEFAULT_SORT, limit=20, offset=0, expanded_terms=None, boost_city=None):
     sort = _resolve_sort(sort, query)
+    use_rerank = bool(query) and (
+        uses_hybrid_ranking(sort) or sort in {"price_asc", "price_desc"}
+    )
+    # Empty browse: keep Typesense order (optional light seller diversity for default rank).
+    trust_typesense_order = not query
     try:
         result = _typesense_search(query, city, category, price_min, price_max, with_photo, with_price, sort, limit, offset, expanded_terms)
         hits = result.get("hits", [])
         post_ids = [h["document"]["id"] for h in hits if h.get("document", {}).get("id")]
-        posts_map = (
-            {str(p.pk): p for p in _live_posts_qs().filter(pk__in=post_ids)} if post_ids else {}
-        )
-        mode = "search" if query else "feed"
-        results = rerank_hits(
-            hits,
-            posts_map,
-            query=query,
-            mode=mode,
-            sort=sort,
-            price_min=price_min,
-            price_max=price_max,
-            boost_city=boost_city,
-            extract_highlight=_extract_highlight,
-        )
-        if uses_hybrid_ranking(sort) or (query and sort in {"price_asc", "price_desc"}):
-            results = results[offset : offset + limit]
+        posts_map = _hydrate_posts_map(post_ids)
+        if trust_typesense_order:
+            results = _results_from_typesense_order(
+                hits,
+                posts_map,
+                diversify=(sort == "rank"),
+            )
+        else:
+            mode = "search" if query else "feed"
+            results = rerank_hits(
+                hits,
+                posts_map,
+                query=query,
+                mode=mode,
+                sort=sort,
+                price_min=price_min,
+                price_max=price_max,
+                boost_city=boost_city,
+                extract_highlight=_extract_highlight,
+            )
+            if use_rerank:
+                results = results[offset : offset + limit]
         if not results and hits:
             return search_posts_fallback(
                 query, city, category, price_min, price_max, with_photo, with_price,

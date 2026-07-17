@@ -8,12 +8,28 @@ from django.utils import timezone
 from accounts.models import User
 from listings.services.ranking import calculate_rank_score, seller_reputation_score
 from messaging.models import Conversation, Message
+from messaging.services import confirm_deal_completed
 from reviews.models import PhoneReveal, SellerReview
-from reviews.services import can_review_seller, record_phone_reveal, reply_to_review, upsert_review
+from reviews.services import (
+    ReviewError,
+    can_review_seller,
+    process_deal_review_jobs,
+    record_phone_reveal,
+    reply_to_review,
+    upsert_review,
+)
 from bookmarks.models import Notification
 
 
+def confirm_deal_both_sides(conversation):
+    now = timezone.now()
+    conversation.buyer_deal_confirmed_at = now
+    conversation.seller_deal_confirmed_at = now
+    conversation.save(update_fields=["buyer_deal_confirmed_at", "seller_deal_confirmed_at"])
+
+
 def test_upsert_review_notifies_seller(conversation_with_message, buyer, seller):
+    confirm_deal_both_sides(conversation_with_message)
     upsert_review(reviewer=buyer, seller=seller, rating=5, comment="Отлично")
     note = Notification.objects.filter(user=seller, kind=Notification.KIND_NEW_REVIEW).first()
     assert note is not None
@@ -22,6 +38,7 @@ def test_upsert_review_notifies_seller(conversation_with_message, buyer, seller)
 
 
 def test_seller_reply_notifies_reviewer(conversation_with_message, buyer, seller):
+    confirm_deal_both_sides(conversation_with_message)
     review = upsert_review(reviewer=buyer, seller=seller, rating=4, comment="Норм")
     reply_to_review(seller=seller, review_id=review.id, text="Спасибо за отзыв!")
     review.refresh_from_db()
@@ -33,6 +50,7 @@ def test_seller_reply_notifies_reviewer(conversation_with_message, buyer, seller
 
 
 def test_seller_cannot_reply_twice(conversation_with_message, buyer, seller):
+    confirm_deal_both_sides(conversation_with_message)
     review = upsert_review(reviewer=buyer, seller=seller, rating=5, comment="Топ")
     reply_to_review(seller=seller, review_id=review.id, text="Спасибо")
     with pytest.raises(Exception):
@@ -77,24 +95,30 @@ def test_cannot_review_without_contact(buyer, seller):
 
 
 def test_can_review_after_messaging(conversation_with_message, buyer, seller):
+    assert can_review_seller(buyer, seller) is False
+    confirm_deal_both_sides(conversation_with_message)
     assert can_review_seller(buyer, seller) is True
     assert can_review_seller(seller, buyer) is False
 
 
-def test_phone_reveal_unlocks_after_delay(published_post, buyer, seller, settings):
+def test_phone_reveal_does_not_unlock_review_without_deal(published_post, buyer, seller, settings):
     settings.REVIEW_AFTER_PHONE_HOURS = 2
     assert can_review_seller(buyer, seller) is False
     record_phone_reveal(reviewer=buyer, post=published_post)
-    assert can_review_seller(buyer, seller) is False
     PhoneReveal.objects.filter(reviewer=buyer, seller=seller).update(
         created_at=timezone.now() - timedelta(hours=3)
     )
-    assert can_review_seller(buyer, seller) is True
+    assert can_review_seller(buyer, seller) is False
 
 
-def test_upsert_review_via_phone(published_post, buyer, seller, settings):
+def test_upsert_review_via_phone_requires_deal_confirmation(
+    published_post, buyer, seller, conversation_with_message, settings
+):
     settings.REVIEW_AFTER_PHONE_HOURS = 0
     record_phone_reveal(reviewer=buyer, post=published_post)
+    with pytest.raises(ReviewError):
+        upsert_review(reviewer=buyer, seller=seller, rating=4, comment="По телефону ок")
+    confirm_deal_both_sides(conversation_with_message)
     upsert_review(reviewer=buyer, seller=seller, rating=4, comment="По телефону ок")
     seller.refresh_from_db()
     assert seller.rating_count == 1
@@ -104,6 +128,7 @@ def test_upsert_review_via_phone(published_post, buyer, seller, settings):
 
 
 def test_upsert_review_updates_aggregates_and_rank(conversation_with_message, buyer, seller, published_post):
+    confirm_deal_both_sides(conversation_with_message)
     before = published_post.rank_score
     upsert_review(reviewer=buyer, seller=seller, rating=5, comment="Отличный продавец")
     seller.refresh_from_db()
@@ -150,6 +175,41 @@ def test_high_rating_beats_low_rating(seller, make_post):
     assert calculate_rank_score(high_post) > calculate_rank_score(low_post)
 
 
+def test_confirm_deal_idempotent(conversation_with_message, buyer, seller):
+    confirm_deal_completed(conversation_with_message, buyer)
+    confirm_deal_completed(conversation_with_message, buyer)
+    conversation_with_message.refresh_from_db()
+    assert conversation_with_message.buyer_deal_confirmed_at is not None
+    assert conversation_with_message.seller_deal_confirmed_at is None
+
+
+@pytest.mark.django_db
+def test_confirm_deal_view(client, conversation_with_message, buyer):
+    client.force_login(buyer)
+    url = reverse("messaging:confirm_deal", args=[conversation_with_message.id])
+    response = client.post(url)
+    assert response.status_code == 302
+    conversation_with_message.refresh_from_db()
+    assert conversation_with_message.buyer_deal_confirmed_at is not None
+
+
+@pytest.mark.django_db
+def test_review_requires_both_deal_confirmations(client, conversation_with_message, buyer, seller):
+    client.force_login(buyer)
+    url = reverse("reviews:review_seller", args=[seller.id])
+    assert client.get(url).status_code == 302
+
+    confirm_deal_completed(conversation_with_message, buyer)
+    assert client.get(url).status_code == 302
+
+    confirm_deal_completed(conversation_with_message, seller)
+    assert client.get(url).status_code == 200
+    response = client.post(url, {"rating": "5", "comment": "Супер"})
+    assert response.status_code == 302
+    seller.refresh_from_db()
+    assert seller.rating_count == 1
+
+
 @pytest.mark.django_db
 def test_seller_profile_public(client, seller, published_post):
     url = reverse("reviews:seller_profile", args=[seller.id])
@@ -168,6 +228,7 @@ def test_review_form_requires_messaging(client, buyer, seller):
 
 @pytest.mark.django_db
 def test_review_form_ok_after_chat(client, conversation_with_message, buyer, seller):
+    confirm_deal_both_sides(conversation_with_message)
     client.force_login(buyer)
     url = reverse("reviews:review_seller", args=[seller.id])
     response = client.get(url)
@@ -177,3 +238,62 @@ def test_review_form_ok_after_chat(client, conversation_with_message, buyer, sel
     seller.refresh_from_db()
     assert seller.rating_count == 1
     assert seller.rating_avg == 5.0
+
+
+def test_buyer_can_review_after_timeout_without_seller(conversation_with_message, buyer, seller, settings):
+    settings.DEAL_CONFIRM_TIMEOUT_DAYS = 3
+    confirm_deal_completed(conversation_with_message, buyer)
+    assert can_review_seller(buyer, seller) is False
+    Conversation.objects.filter(pk=conversation_with_message.pk).update(
+        buyer_deal_confirmed_at=timezone.now() - timedelta(days=3, hours=1)
+    )
+    assert can_review_seller(buyer, seller) is True
+
+
+def test_confirm_notifies_other_party(conversation_with_message, buyer, seller):
+    confirm_deal_completed(conversation_with_message, buyer)
+    note = Notification.objects.filter(
+        user=seller, kind=Notification.KIND_DEAL_CONFIRM_REQUEST
+    ).first()
+    assert note is not None
+    assert str(conversation_with_message.id) == note.payload.get("conversation_id")
+
+
+def test_both_confirm_unlocks_review_notification(conversation_with_message, buyer, seller):
+    confirm_deal_completed(conversation_with_message, buyer)
+    confirm_deal_completed(conversation_with_message, seller)
+    note = Notification.objects.filter(
+        user=buyer, kind=Notification.KIND_REVIEW_UNLOCKED
+    ).first()
+    assert note is not None
+    assert "отзыв" in note.body.lower() or "Отзыв" in note.title or "отзыв" in note.title.lower()
+
+
+def test_process_deal_review_jobs_timeout_and_reminder(
+    conversation_with_message, buyer, seller, settings
+):
+    settings.DEAL_CONFIRM_TIMEOUT_DAYS = 3
+    settings.REVIEW_REMINDER_DAYS = 1
+    confirm_deal_completed(conversation_with_message, buyer)
+    Conversation.objects.filter(pk=conversation_with_message.pk).update(
+        buyer_deal_confirmed_at=timezone.now() - timedelta(days=4)
+    )
+    result = process_deal_review_jobs()
+    assert result["unlocked"] >= 1
+    unlock = Notification.objects.filter(
+        user=buyer, kind=Notification.KIND_REVIEW_UNLOCKED
+    ).first()
+    assert unlock is not None
+
+    # Make unlock old enough for reminder
+    Notification.objects.filter(pk=unlock.pk).update(
+        created_at=timezone.now() - timedelta(days=2)
+    )
+    Conversation.objects.filter(pk=conversation_with_message.pk).update(
+        buyer_deal_confirmed_at=timezone.now() - timedelta(days=5)
+    )
+    result = process_deal_review_jobs()
+    assert result["reminded"] >= 1
+    assert Notification.objects.filter(
+        user=buyer, kind=Notification.KIND_REVIEW_REMINDER
+    ).exists()

@@ -5,18 +5,39 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#b91c1c">
-  <meta name="description" content="{% block meta_description %}{{ site_description }}{% endblock %}">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="{% block meta_description %}{% if seo_description %}{{ seo_description }}{% else %}{{ site_description }}{% endif %}{% endblock %}">
   {% if robots_noindex %}<meta name="robots" content="noindex,follow">{% endif %}
+  {% block canonical %}{% if canonical_url %}<link rel="canonical" href="{{ canonical_url }}">{% endif %}{% endblock %}
+  {% block open_graph %}
+  <meta property="og:site_name" content="{{ site_name }}">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}{% if seo_title %}{{ seo_title }}{% else %}{{ site_name }} — {{ site_tagline }}{% endif %}{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}{% if seo_description %}{{ seo_description }}{% else %}{{ site_description }}{% endif %}{% endblock %}">
+  <meta property="og:url" content="{% block og_url %}{% if canonical_url %}{{ canonical_url }}{% else %}https://{{ request.get_host }}{{ request.path }}{% endif %}{% endblock %}">
+  <meta property="og:image" content="{% block og_image %}https://{{ request.get_host }}{% static 'icons/icon-512.png' %}{% endblock %}">
+  <meta name="twitter:card" content="{% block twitter_card %}summary{% endblock %}">
+  <meta name="twitter:title" content="{% block twitter_title %}{% if seo_title %}{{ seo_title }}{% else %}{{ site_name }}{% endif %}{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}{% if seo_description %}{{ seo_description }}{% else %}{{ site_description }}{% endif %}{% endblock %}">
+  {% endblock %}
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="{{ site_name }}">
   <meta name="static-version" content="{{ static_version }}">
   <meta name="csrf-token" content="{{ csrf_token }}">
-  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'icons/favicon-32.png' %}">
-  <link rel="apple-touch-icon" href="{% static 'icons/icon-180.png' %}" sizes="180x180">
-  <link rel="stylesheet" href="{% static 'fonts/inter/inter.css' %}">
+  <link rel="manifest" href="{% url 'core:web_manifest' %}?v={{ static_version }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'icons/favicon-32.png' %}?v={{ static_version }}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/icon-192.png' %}?v={{ static_version }}">
+  <link rel="apple-touch-icon" href="{% static 'icons/icon-180.png' %}?v={{ static_version }}" sizes="180x180">
+  <link rel="stylesheet" href="{% static 'fonts/inter/inter.css' %}?v={{ static_version }}">
   <title>{% block title %}{{ site_name }}{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/style.css' %}?v={{ static_version }}">
-  <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
-  <script src="{% static 'vendor/lucide.min.js' %}" defer></script>
+  <script src="{% static 'vendor/htmx.min.js' %}?v={{ static_version }}" defer></script>
+  <script src="{% static 'vendor/lucide-subset.min.js' %}?v={{ static_version }}" defer></script>
   {% block head %}{% endblock %}
+  {% block structured_data %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
   <a href="#main-content" class="skip-link">Перейти к содержимому</a>
@@ -26,7 +47,7 @@
       <div class="container header-inner">
         <a href="{% url 'core:index' %}" class="brand" aria-label="{{ site_name }} — на главную">
           <span class="brand-mark" aria-hidden="true">
-            <img src="{% static 'brand/logo.png' %}" alt="" width="40" height="40" decoding="async">
+            <img src="{% static 'brand/logo.png' %}?v={{ static_version }}" alt="" width="40" height="40" decoding="async">
           </span>
           <span class="brand-text">
             <span class="brand-title">{{ site_name }}</span>
@@ -121,6 +142,7 @@
         <p class="footer-copy">© 2026 {{ site_name }}</p>
         <nav class="footer-nav" aria-label="Правовая информация">
           <a href="{% url 'core:privacy' %}" class="footer-link">Конфиденциальность</a>
+          <a href="{% url 'core:pdn_consent' %}" class="footer-link">Согласие на ПДн</a>
           <a href="{% url 'core:terms' %}" class="footer-link">Условия</a>
           <a href="{% url 'core:guidelines' %}" class="footer-link">Правила</a>
         </nav>
@@ -192,8 +214,9 @@
     <span class="sr-only">Загрузка…</span>
   </div>
 
-  <script src="{% static 'js/core.js' %}?v={{ static_version }}"></script>
-  <script src="{% static 'js/app.js' %}?v={{ static_version }}"></script>
+  <script src="{% static 'js/core.js' %}?v={{ static_version }}" defer></script>
+  <script src="{% static 'js/app.js' %}?v={{ static_version }}" defer></script>
+  <script src="{% static 'js/post-card-slider.js' %}?v={{ static_version }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

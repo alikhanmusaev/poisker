@@ -14,7 +14,7 @@
       {% post_cover_image post as cover_image %}
       <a href="{% post_public_url post %}" class="message-post-context-media" aria-label="{{ post.title }}">
         {% if cover_image %}
-          <img src="{{ cover_image }}" alt="" class="message-post-context-img" loading="lazy" width="64" height="64">
+          <img src="{{ cover_image|image_sm }}" alt="" class="message-post-context-img" loading="lazy" width="64" height="64">
         {% else %}
           <div class="message-post-context-img message-post-context-img-placeholder" aria-hidden="true">
             <i data-lucide="image" class="icon" aria-hidden="true"></i>

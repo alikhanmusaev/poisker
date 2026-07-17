@@ -29,6 +29,8 @@ class Conversation(models.Model):
     updated_at = models.DateTimeField(default=timezone.now, db_index=True)
     buyer_hidden_at = models.DateTimeField(null=True, blank=True)
     seller_hidden_at = models.DateTimeField(null=True, blank=True)
+    buyer_deal_confirmed_at = models.DateTimeField(null=True, blank=True)
+    seller_deal_confirmed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-updated_at"]
@@ -82,6 +84,20 @@ class Conversation(models.Model):
             buyer_hidden_at=None,
             seller_hidden_at=None,
         )
+
+    @property
+    def both_deal_confirmed(self) -> bool:
+        return (
+            self.buyer_deal_confirmed_at is not None
+            and self.seller_deal_confirmed_at is not None
+        )
+
+    def deal_confirmed_by(self, user) -> bool:
+        if user.id == self.buyer_id:
+            return self.buyer_deal_confirmed_at is not None
+        if user.id == self.seller_id:
+            return self.seller_deal_confirmed_at is not None
+        return False
 
 
 class Message(models.Model):

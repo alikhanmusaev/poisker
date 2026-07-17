@@ -16,7 +16,7 @@
           <a href="{% url 'messaging:thread' conversation.id %}" class="conversation-item{% if conversation.unread_count %} is-unread{% endif %}">
             <div class="conversation-item-media">
               {% if cover_image %}
-                <img src="{{ cover_image }}" alt="" class="conversation-item-img" loading="lazy" width="56" height="56">
+                <img src="{{ cover_image|image_sm }}" alt="" class="conversation-item-img" loading="lazy" width="56" height="56">
               {% else %}
                 <div class="conversation-item-img conversation-item-img-placeholder" aria-hidden="true">
                   <i data-lucide="image" class="icon" aria-hidden="true"></i>

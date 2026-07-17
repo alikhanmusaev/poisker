@@ -19,6 +19,7 @@
     </form>
     <div class="auth-footer">
       <a href="{% url 'accounts:password_reset' %}" class="auth-link">Забыли пароль?</a>
+      <a href="{% url 'accounts:resend_verification' %}" class="auth-link">Не пришло письмо подтверждения?</a>
       <p class="auth-switch">Нет аккаунта? <a href="{% url 'accounts:register' %}">Регистрация</a></p>
     </div>
   </div>

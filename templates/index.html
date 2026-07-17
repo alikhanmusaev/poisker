@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 {% load static poisker_tags %}
 {% block title %}{{ seo_title }}{% endblock %}
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "{{ site_name }}",
+  "url": "https://{{ request.get_host }}/",
+  "description": "{{ seo_description|default:site_description|escapejs }}",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": "https://{{ request.get_host }}/?q={search_term_string}",
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
+{% endblock %}
 {% block body_class %}page-home{% endblock %}
 {% block content %}
 <div class="home-page">

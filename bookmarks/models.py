@@ -58,6 +58,9 @@ class Notification(models.Model):
     KIND_POST_EXPIRED = "post_expired"
     KIND_NEW_REVIEW = "new_review"
     KIND_REVIEW_REPLY = "review_reply"
+    KIND_DEAL_CONFIRM_REQUEST = "deal_confirm_request"
+    KIND_REVIEW_UNLOCKED = "review_unlocked"
+    KIND_REVIEW_REMINDER = "review_reminder"
     KIND_CHOICES = [
         (KIND_PRICE_CHANGED, "Изменение цены"),
         (KIND_POST_UNPUBLISHED, "Снятие объявления"),
@@ -67,6 +70,9 @@ class Notification(models.Model):
         (KIND_POST_EXPIRED, "Срок истёк"),
         (KIND_NEW_REVIEW, "Новый отзыв"),
         (KIND_REVIEW_REPLY, "Ответ на отзыв"),
+        (KIND_DEAL_CONFIRM_REQUEST, "Подтвердите сделку"),
+        (KIND_REVIEW_UNLOCKED, "Можно оставить отзыв"),
+        (KIND_REVIEW_REMINDER, "Напоминание об отзыве"),
     ]
 
     user = models.ForeignKey(

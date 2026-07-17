@@ -9,6 +9,9 @@ cd "$ROOT"
 source "$ROOT/scripts/lib/env.sh"
 
 COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.prod.yml)
+if [[ -f "$ROOT/docker-compose.edge.yml" ]]; then
+  COMPOSE+=(-f docker-compose.edge.yml)
+fi
 STATE_FILE="${MONITOR_STATE_FILE:-$ROOT/backups/.monitor-state}"
 LOG_DIR="$ROOT/backups/logs"
 ALERT_INTERVAL="${MONITOR_ALERT_INTERVAL_SEC:-1800}"
@@ -19,7 +22,10 @@ mkdir -p "$LOG_DIR"
 MONITOR_TELEGRAM_BOT_TOKEN=""
 MONITOR_TELEGRAM_CHAT_ID=""
 APP_DOMAIN="poisker.ru"
-URL="${MONITOR_URL:-https://poisker.ru/ready}"
+# Default: hit local edge with Host header (works before DNS cutover).
+# Set MONITOR_URL=https://poisker.ru/health after DNS points here for external check.
+URL=""
+USE_LOCAL_HEALTH=1
 
 if [[ -f "$ROOT/.env" ]]; then
   MONITOR_TELEGRAM_BOT_TOKEN="$(get_env MONITOR_TELEGRAM_BOT_TOKEN)"
@@ -28,10 +34,15 @@ if [[ -f "$ROOT/.env" ]]; then
   env_url="$(get_env MONITOR_URL)"
   if [[ -n "$env_url" ]]; then
     URL="$env_url"
+    USE_LOCAL_HEALTH=0
   fi
 fi
 if [[ -n "${MONITOR_URL:-}" ]]; then
   URL="$MONITOR_URL"
+  USE_LOCAL_HEALTH=0
+fi
+if [[ "${MONITOR_USE_LOCAL:-}" == "1" || "${MONITOR_USE_LOCAL:-}" == "true" ]]; then
+  USE_LOCAL_HEALTH=1
 fi
 
 send_alert() {
@@ -93,10 +104,24 @@ fail() {
   exit 1
 }
 
-# HTTP health
-HTTP_CODE="$(curl -sf -m 20 -o /dev/null -w '%{http_code}' "$URL" || echo 000)"
+# Public/local HTTP health (no dependency details)
+if [[ "$USE_LOCAL_HEALTH" == "1" ]]; then
+  HTTP_CODE="$(curl -sf -m 20 -o /dev/null -w '%{http_code}' \
+    -H "Host: ${APP_DOMAIN}" http://127.0.0.1/health || echo 000)"
+  URL="http://127.0.0.1/health (Host: ${APP_DOMAIN})"
+else
+  HTTP_CODE="$(curl -sf -m 20 -o /dev/null -w '%{http_code}' "$URL" || echo 000)"
+fi
 if [[ "$HTTP_CODE" != "200" ]]; then
   fail "health check failed (HTTP $HTTP_CODE) $URL"
+fi
+
+# Internal readiness (DB + Typesense) via web container — not exposed publicly
+READY_CODE="$("${COMPOSE[@]}" exec -T web \
+  python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/ready').status)" \
+  2>/dev/null || echo 000)"
+if [[ "$READY_CODE" != "200" ]]; then
+  fail "internal ready check failed (HTTP $READY_CODE)"
 fi
 
 # Docker services
@@ -117,4 +142,4 @@ if [[ "$DISK_USE" -ge "$DISK_WARN_PCT" ]]; then
 fi
 
 mark_ok
-echo "[$(date -Iseconds)] OK health=$HTTP_CODE disk=${DISK_USE}%" >> "$LOG_DIR/monitor.log"
+echo "[$(date -Iseconds)] OK health=$HTTP_CODE ready=$READY_CODE disk=${DISK_USE}%" >> "$LOG_DIR/monitor.log"

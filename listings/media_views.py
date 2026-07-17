@@ -11,7 +11,12 @@ from listings.forms import ReportForm
 from listings.models import Post, Report
 from listings.services.ranking import maybe_auto_hide
 from listings.services.seo_urls import post_public_url
-from listings.services.storage import generate_presigned_get_url, get_object_bytes
+from listings.services.storage import (
+    canonical_media_key,
+    ensure_variant_exists,
+    generate_presigned_get_url,
+    get_object_bytes,
+)
 
 
 def _media_url(key: str) -> str:
@@ -19,8 +24,8 @@ def _media_url(key: str) -> str:
 
 
 def _posts_with_key(key: str):
-    """Exact JSON membership lookup — avoids full-text icontains scans."""
-    media_url = _media_url(key)
+    """Exact JSON membership lookup — variants resolve to the stored full JPEG URL."""
+    media_url = _media_url(canonical_media_key(key))
     return list(Post.objects.filter(images__contains=[media_url]).only(
         "id", "status", "expires_at", "user_id", "images"
     ))
@@ -45,30 +50,50 @@ def serve_media(request, key: str):
                 break
         if not allowed:
             raise Http404
-        # Offload public images to object storage when a usable public endpoint exists.
+        # Prefer direct GET (no HEAD round-trip). Materialize only on miss.
+        try:
+            data, content_type = get_object_bytes(key)
+        except Exception:
+            try:
+                ensure_variant_exists(key)
+                data, content_type = get_object_bytes(key)
+            except Exception as exc:
+                raise Http404 from exc
         if is_public:
             signed = generate_presigned_get_url(key, expires=900)
             if signed:
                 return HttpResponseRedirect(signed)
+        # UUID filenames are content-addressed — long cache helps repeat views / Lighthouse reruns.
+        return HttpResponse(
+            data,
+            content_type=content_type,
+            headers={"Cache-Control": "public, max-age=31536000, immutable"},
+        )
     elif key.startswith("messages/"):
         if not request.user.is_authenticated:
             raise Http404
         from messaging.models import Message
 
-        image_url = _media_url(key)
+        image_url = _media_url(canonical_media_key(key))
         allowed = Message.objects.filter(image=image_url).filter(
             Q(conversation__buyer=request.user) | Q(conversation__seller=request.user)
         ).exists()
         if not allowed and not request.user.is_staff:
             raise Http404
-    else:
-        raise Http404
-    try:
-        data, content_type = get_object_bytes(key)
-    except Exception as exc:
-        raise Http404 from exc
-    cache_control = "public, max-age=3600" if key.startswith("posts/") else "private, max-age=300"
-    return HttpResponse(data, content_type=content_type, headers={"Cache-Control": cache_control})
+        try:
+            data, content_type = get_object_bytes(key)
+        except Exception:
+            try:
+                ensure_variant_exists(key)
+                data, content_type = get_object_bytes(key)
+            except Exception as exc:
+                raise Http404 from exc
+        return HttpResponse(
+            data,
+            content_type=content_type,
+            headers={"Cache-Control": "private, max-age=300"},
+        )
+    raise Http404
 
 
 @login_required

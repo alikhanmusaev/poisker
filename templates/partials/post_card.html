@@ -1,24 +1,56 @@
 {% load static poisker_tags %}
 <article class="post-card">
-  <a href="{% post_public_url post %}" class="post-card-link">
-    <div class="post-card-media">
-      {% post_cover_image post as cover_image %}
-      {% if cover_image %}
-        <img src="{{ cover_image }}" alt="{{ post.title }}" class="post-card-img" loading="lazy" width="320" height="240">
+  <div class="post-card-media{% if post.images|length > 1 %} post-card-media-slider{% endif %}"{% if post.images|length > 1 %} data-post-card-slider{% endif %}>
+    {% if post.images %}
+      {% if post.images|length > 1 %}
+        <div class="post-card-track" data-post-card-track>
+          {% for img in post.images %}
+            <a href="{% post_public_url post %}" class="post-card-slide" data-post-card-slide aria-label="{{ post.title }} — фото {{ forloop.counter }} из {{ post.images|length }}">
+              {% if forloop.first %}
+                {% if lcp_priority %}
+                  {% responsive_img img alt=post.title img_class="post-card-img" sizes="(max-width: 640px) 50vw, 320px" width=320 height=240 loading="eager" fetchpriority="high" card=True %}
+                {% else %}
+                  {% responsive_img img alt=post.title img_class="post-card-img" sizes="(max-width: 640px) 50vw, 320px" width=320 height=240 loading="lazy" card=True %}
+                {% endif %}
+              {% else %}
+                {% responsive_img img alt=post.title img_class="post-card-img" sizes="(max-width: 640px) 50vw, 320px" width=320 height=240 deferred=True card=True %}
+              {% endif %}
+            </a>
+          {% endfor %}
+        </div>
+        <div class="post-card-dots" data-post-card-dots aria-hidden="true">
+          {% for img in post.images %}
+            <span class="post-card-dot{% if forloop.first %} is-active{% endif %}" data-post-card-dot></span>
+          {% endfor %}
+        </div>
       {% else %}
+        <a href="{% post_public_url post %}" class="post-card-slide">
+          {% if lcp_priority %}
+            {% responsive_img post.images.0 alt=post.title img_class="post-card-img" sizes="(max-width: 640px) 50vw, 320px" width=320 height=240 loading="eager" fetchpriority="high" card=True %}
+          {% else %}
+            {% responsive_img post.images.0 alt=post.title img_class="post-card-img" sizes="(max-width: 640px) 50vw, 320px" width=320 height=240 loading="lazy" card=True %}
+          {% endif %}
+        </a>
+      {% endif %}
+    {% else %}
+      <a href="{% post_public_url post %}" class="post-card-slide">
         <div class="post-card-img post-card-img-placeholder" aria-hidden="true">
           <i data-lucide="image" class="icon icon-xl" aria-hidden="true"></i>
         </div>
-      {% endif %}
-    </div>
+      </a>
+    {% endif %}
+  </div>
+  <a href="{% post_public_url post %}" class="post-card-link">
     <div class="post-card-body">
       {% if post.price is not None %}
-        <p class="post-card-price">{{ post.price|floatformat:0 }} ₽</p>
+        <p class="post-card-price">{{ post.price|post_price_display }}</p>
       {% else %}
-        <p class="post-card-price post-card-price-muted">Цена не указана</p>
+        <p class="post-card-price post-card-price-muted">{{ post.price|post_price_display }}</p>
       {% endif %}
       <h3 class="post-card-title">{{ post.title }}</h3>
       <p class="post-card-meta">
+        <span class="post-card-condition">{{ condition_labels|get_item:post.condition }}</span>
+        <span class="meta-dot">·</span>
         <i data-lucide="map-pin" class="icon icon-xs" aria-hidden="true"></i>
         <span>{{ cities|get_item:post.city }}</span>
         <span class="meta-dot">·</span>

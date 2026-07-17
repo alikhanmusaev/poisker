@@ -1,0 +1,15 @@
+# Edge profile for VPS where nginx runs in Docker with Let's Encrypt volumes.
+services:
+  web:
+    ports: !reset []
+
+  nginx:
+    profiles: !reset []
+    ports: !override
+      - "80:80"
+      - "443:443"
+    volumes: !override
+      - ./nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./staticfiles:/app/static:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_certs:/etc/letsencrypt:ro

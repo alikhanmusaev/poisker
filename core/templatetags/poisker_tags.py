@@ -42,6 +42,63 @@ def post_cover_image(post):
     return images[0] if images else ""
 
 
+@register.filter
+def image_sm(url):
+    """Thumb JPEG URL for compact UI (avatars-sized previews)."""
+    from listings.services.storage import image_variant_url
+
+    return image_variant_url(url, size="sm", fmt="jpeg")
+
+
+@register.inclusion_tag("partials/responsive_img.html")
+def responsive_img(
+    url,
+    alt="",
+    img_class="",
+    sizes="(max-width: 640px) 50vw, 320px",
+    width=None,
+    height=None,
+    loading="lazy",
+    deferred=False,
+    prefer="sm",
+    fetchpriority=None,
+    card=False,
+):
+    """WebP + JPEG srcset. prefer=sm for cards, prefer=full for detail gallery.
+
+    card=True limits srcset to thumb only (better LCP on feed).
+    """
+    from listings.services.storage import image_variant_url
+
+    jpeg_full = image_variant_url(url, size="full", fmt="jpeg")
+    jpeg_sm = image_variant_url(url, size="sm", fmt="jpeg")
+    webp_full = image_variant_url(url, size="full", fmt="webp")
+    webp_sm = image_variant_url(url, size="sm", fmt="webp")
+    if card:
+        jpeg_srcset = f"{jpeg_sm} 360w"
+        webp_srcset = f"{webp_sm} 360w"
+        jpeg_src = jpeg_sm
+    else:
+        jpeg_srcset = f"{jpeg_sm} 360w, {jpeg_full} 960w"
+        webp_srcset = f"{webp_sm} 360w, {webp_full} 960w"
+        jpeg_src = jpeg_sm if prefer == "sm" else jpeg_full
+    return {
+        "alt": alt,
+        "img_class": img_class,
+        "sizes": sizes,
+        "width": width,
+        "height": height,
+        "loading": loading,
+        "deferred": bool(deferred),
+        "fetchpriority": fetchpriority or "",
+        "jpeg_full": jpeg_full,
+        "jpeg_sm": jpeg_sm,
+        "jpeg_src": jpeg_src,
+        "jpeg_srcset": jpeg_srcset,
+        "webp_srcset": webp_srcset,
+    }
+
+
 @register.simple_tag
 def post_public_url(post):
     return build_post_public_url(post)
@@ -74,6 +131,13 @@ def format_price(value):
 
 
 @register.filter
+def post_price_display(price):
+    if price is None:
+        return "По договорённости"
+    return f"{format_price(price)} ₽"
+
+
+@register.filter
 def relative_time(value):
     if not value:
         return ""
@@ -98,3 +162,10 @@ def relative_time(value):
 @register.filter
 def plural_ru(count, forms):
     return _plural_ru(count, forms)
+
+
+@register.filter
+def days_until_expiry(post):
+    from accounts.services.seller_stats import days_until_expiry as _days
+
+    return _days(post)

@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -12,7 +13,7 @@ from reviews.services import (
     ReviewError,
     can_review_seller,
     get_review,
-    phone_review_unlock_at,
+    needs_deal_confirmation,
     reply_to_review,
     review_denied_message,
     seller_reviews_qs,
@@ -33,11 +34,11 @@ def seller_profile(request, user_id):
     can_review = (
         can_review_seller(request.user, seller) if request.user.is_authenticated else False
     )
-    unlock_at = None
-    if request.user.is_authenticated and not can_review:
-        unlock_at = phone_review_unlock_at(request.user, seller)
-        if unlock_at and unlock_at <= timezone.now():
-            unlock_at = None
+    pending_deal = (
+        needs_deal_confirmation(request.user, seller)
+        if request.user.is_authenticated and not can_review
+        else False
+    )
     is_owner = request.user.is_authenticated and request.user.id == seller.id
     return render(
         request,
@@ -49,8 +50,9 @@ def seller_profile(request, user_id):
             "posts_total": live_posts.count(),
             "can_review": can_review,
             "existing_review": existing,
-            "phone_review_unlock_at": unlock_at,
+            "needs_deal_confirmation": pending_deal,
             "is_seller_owner": is_owner,
+            "deal_confirm_timeout_days": int(getattr(settings, "DEAL_CONFIRM_TIMEOUT_DAYS", 3)),
             "page_title": seller.display_name,
         },
     )

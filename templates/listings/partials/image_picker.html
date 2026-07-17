@@ -1,7 +1,7 @@
 <div
   class="image-picker"
   data-total-max="5"
-  data-max-bytes="5242880"
+  data-max-bytes="20971520"
   data-existing-count="{{ existing_count|default:0 }}"
 >
   <div class="image-picker-control">
@@ -22,5 +22,5 @@
   <p class="image-picker-error" hidden role="alert"></p>
   <div class="image-picker-preview" hidden></div>
   <input type="hidden" name="cover_index" id="cover-index-field" value="{{ cover_index|default:0 }}">
-  <p class="field-help">До 5 фото · JPG, PNG или WebP · до 5 МБ. Можно выбрать несколько сразу или по одному. Нажмите на новое фото, чтобы сделать его обложкой.</p>
+  <p class="field-help">До 5 фото · JPG, PNG или WebP · до 20 МБ. Большие снимки сжимаются автоматически. Можно выбрать несколько сразу или по одному. Нажмите на новое фото, чтобы сделать его обложкой.</p>
 </div>

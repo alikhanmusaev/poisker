@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Нет сети — {{ site_name }}{% endblock %}
+{% block body_class %}page-offline{% endblock %}
+{% block content %}
+<div class="empty-state" role="alert">
+  <i data-lucide="wifi-off" class="icon icon-xl" aria-hidden="true"></i>
+  <h1>Нет подключения к интернету</h1>
+  <p>Проверьте Wi‑Fi или мобильную сеть и попробуйте снова.</p>
+  <button type="button" data-reload-page class="btn btn-primary">Обновить</button>
+  <p class="empty-state-hint"><a href="{% url 'core:index' %}">Вернуться на главную</a></p>
+</div>
+{% endblock %}

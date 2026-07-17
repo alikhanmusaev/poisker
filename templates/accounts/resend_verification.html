@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Подтверждение email — {{ site_name }}{% endblock %}
+{% block body_class %}auth-body{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="page-card auth-card">
+    <div class="auth-card-header">
+      <i data-lucide="mail" class="icon auth-card-icon" aria-hidden="true"></i>
+      <h1 class="page-title">Подтверждение email</h1>
+      <p class="page-lead">Укажите email — отправим ссылку для подтверждения ещё раз.</p>
+    </div>
+    <form method="post" class="auth-form" novalidate>
+      {% csrf_token %}
+      {% include "accounts/partials/form_fields.html" %}
+      <button type="submit" class="btn btn-primary btn-block">
+        <i data-lucide="send" class="icon" aria-hidden="true"></i>
+        Отправить письмо
+      </button>
+    </form>
+    <div class="auth-footer">
+      <a href="{% url 'accounts:login' %}" class="auth-link">Вернуться ко входу</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

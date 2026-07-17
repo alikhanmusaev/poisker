@@ -1,4 +1,4 @@
-"""Generate PWA / Google Play icons from brand assets."""
+"""Generate PWA icons and demo images from brand assets."""
 
 import os
 
@@ -143,7 +143,7 @@ def _render(size: int) -> Image.Image:
 
 
 def _render_maskable(size: int) -> Image.Image:
-    """Keep the lightning inside Android's 80% safe zone."""
+    """Keep the icon inside the maskable safe zone."""
     source = _load_brand_icon()
     canvas = Image.new("RGBA", (size, size), (*BRAND_RGB, 255))
     inner = int(size * 0.8)

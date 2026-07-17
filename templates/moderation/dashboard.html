@@ -22,6 +22,26 @@
     <span class="admin-stat__value admin-stat__value--success">{{ counts.published_today }}</span>
     <span class="admin-stat__label">Опубликовано сегодня</span>
   </div>
+  <div class="admin-stat">
+    <span class="admin-stat__value">{{ counts.users_total }}</span>
+    <span class="admin-stat__label">Зарегистрировано всего</span>
+  </div>
+  <div class="admin-stat">
+    <span class="admin-stat__value{% if counts.users_today %}{% else %} admin-stat__value--muted{% endif %}">{{ counts.users_today }}</span>
+    <span class="admin-stat__label">Новых сегодня</span>
+  </div>
+  <div class="admin-stat">
+    <span class="admin-stat__value{% if counts.users_7d %}{% else %} admin-stat__value--muted{% endif %}">{{ counts.users_7d }}</span>
+    <span class="admin-stat__label">Новых за 7 дней</span>
+  </div>
+  <div class="admin-stat">
+    <span class="admin-stat__value admin-stat__value--success{% if counts.users_verified_today %}{% else %} admin-stat__value--muted{% endif %}">{{ counts.users_verified_today }}</span>
+    <span class="admin-stat__label">Верифицировано сегодня</span>
+  </div>
+  <div class="admin-stat">
+    <span class="admin-stat__value{% if counts.users_blocked %} admin-stat__value--danger{% else %} admin-stat__value--muted{% endif %}">{{ counts.users_blocked }}</span>
+    <span class="admin-stat__label">Заблокировано</span>
+  </div>
 </section>
 
 {% if not counts.pending and not counts.revisions and not counts.reports_new %}

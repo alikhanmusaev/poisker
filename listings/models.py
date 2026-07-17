@@ -4,6 +4,8 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from listings.constants import CONDITION_CHOICES
+
 
 class Post(models.Model):
     STATUS_CHOICES = [
@@ -26,6 +28,13 @@ class Post(models.Model):
     body = models.TextField()
     category = models.CharField(max_length=50, db_index=True)
     city = models.CharField(max_length=50, db_index=True)
+    condition = models.CharField(
+        "Состояние",
+        max_length=10,
+        choices=CONDITION_CHOICES,
+        default="used",
+        db_index=True,
+    )
     price = models.PositiveIntegerField(null=True, blank=True)
     contact_phone = models.CharField(max_length=20, blank=True)
     slug = models.SlugField(max_length=120, null=True, blank=True, db_index=True)

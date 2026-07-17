@@ -24,6 +24,7 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email, password, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("email_verified", True)
         if extra_fields.get("is_staff") is not True:
             raise ValueError("Superuser must have is_staff=True.")
         if extra_fields.get("is_superuser") is not True:
@@ -40,6 +41,11 @@ class User(AbstractUser):
     phone = models.CharField("Телефон", max_length=20)
     phone_digits = models.CharField("Телефон (цифры)", max_length=11, unique=True, editable=False)
     phone_verified = models.BooleanField(default=False)
+    email_verified = models.BooleanField("Email подтверждён", default=True, db_index=True)
+    terms_accepted_at = models.DateTimeField("Условия приняты", null=True, blank=True)
+    pdn_consent_at = models.DateTimeField("Согласие на ПДн", null=True, blank=True)
+    pdn_consent_version = models.CharField("Версия согласия ПДн", max_length=32, blank=True, default="")
+    consent_ip = models.GenericIPAddressField("IP согласия", null=True, blank=True)
     is_blocked = models.BooleanField("Заблокирован", default=False, db_index=True)
     rating_avg = models.FloatField("Средняя оценка", default=0.0)
     rating_count = models.PositiveIntegerField("Число отзывов", default=0)

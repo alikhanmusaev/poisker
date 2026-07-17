@@ -29,7 +29,7 @@
                 <div class="bookmark-post-media">
                   {% post_cover_image post as cover_image %}
                   {% if cover_image %}
-                    <img src="{{ cover_image }}" alt="" class="bookmark-post-img" loading="lazy" width="64" height="64">
+                    <img src="{{ cover_image|image_sm }}" alt="" class="bookmark-post-img" loading="lazy" width="64" height="64">
                   {% else %}
                     <div class="bookmark-post-img bookmark-post-img-placeholder" aria-hidden="true">
                       <i data-lucide="image" class="icon" aria-hidden="true"></i>

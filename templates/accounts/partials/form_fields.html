@@ -7,6 +7,22 @@
 {% for field in form %}
   {% if field.name == 'website' %}
     <div class="hp-wrap" aria-hidden="true">{{ field }}</div>
+  {% elif field.name == 'accept_terms' %}
+    <div class="field field-consent{% if field.errors %} field-has-error{% endif %}">
+      <label class="consent-label">
+        {{ field }}
+        <span>Я принимаю <a href="{% url 'core:terms' %}" target="_blank" rel="noopener noreferrer">условия использования</a> и <a href="{% url 'core:guidelines' %}" target="_blank" rel="noopener noreferrer">правила</a></span>
+      </label>
+      {% if field.errors %}<p class="field-error">{{ field.errors.0 }}</p>{% endif %}
+    </div>
+  {% elif field.name == 'accept_pdn' %}
+    <div class="field field-consent{% if field.errors %} field-has-error{% endif %}">
+      <label class="consent-label">
+        {{ field }}
+        <span>Я даю <a href="{% url 'core:pdn_consent' %}" target="_blank" rel="noopener noreferrer">согласие на обработку персональных данных</a> (отдельный документ) и ознакомлен(а) с <a href="{% url 'core:privacy' %}" target="_blank" rel="noopener noreferrer">политикой конфиденциальности</a></span>
+      </label>
+      {% if field.errors %}<p class="field-error">{{ field.errors.0 }}</p>{% endif %}
+    </div>
   {% else %}
     <div class="field{% if field.errors %} field-has-error{% endif %}">
       {% if field.label %}

@@ -8,6 +8,7 @@ CATEGORIES = {
     "avto": ("Авто", "car"),
     "zapchasti": ("Запчасти", "cog"),
     "elektronika": ("Электроника", "smartphone"),
+    "odezhda": ("Одежда", "shirt"),
     "prodazha": ("Личные вещи", "shopping-bag"),
     "dlya-doma": ("Для дома", "sofa"),
     "uslugi": ("Услуги", "wrench"),
@@ -25,6 +26,12 @@ CATEGORIES = {
 # Flat labels for forms/selects
 CATEGORY_LABELS = {slug: label for slug, (label, _) in CATEGORIES.items()}
 
+CONDITION_CHOICES = (
+    ("used", "Б/У"),
+    ("new", "Новый"),
+)
+CONDITION_LABELS = dict(CONDITION_CHOICES)
+
 # Paths that must not be handled by /<slug>/ listing routes
 RESERVED_SLUGS = frozenset({
     "accounts",
@@ -36,6 +43,7 @@ RESERVED_SLUGS = frozenset({
     "posts",
     "privacy",
     "terms",
+    "consent",
     "guidelines",
     "reports",
     "promotions",
@@ -116,8 +124,13 @@ CATEGORY_KEYWORDS = {
     "телефон": "elektronika",
     "смартфон": "elektronika",
     "ноутбук": "elektronika",
+    "одежда": "odezhda",
+    "куртка": "odezhda",
+    "обувь": "odezhda",
+    "кроссовки": "odezhda",
+    "платье": "odezhda",
+    "джинсы": "odezhda",
     "диван": "dlya-doma",
-    "куртка": "prodazha",
     "велосипед": "sport",
     "собака": "zhivotnye",
     "кот": "zhivotnye",

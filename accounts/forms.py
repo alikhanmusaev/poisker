@@ -48,6 +48,18 @@ class RegistrationForm(HoneypotFormMixin, UserCreationForm):
         label="Повтор пароля",
         widget=forms.PasswordInput(attrs={"class": "input", "autocomplete": "new-password"}),
     )
+    accept_terms = forms.BooleanField(
+        required=True,
+        label="Условия использования",
+        widget=forms.CheckboxInput(attrs={"class": "consent-checkbox"}),
+        error_messages={"required": "Примите условия использования"},
+    )
+    accept_pdn = forms.BooleanField(
+        required=True,
+        label="Согласие на обработку персональных данных",
+        widget=forms.CheckboxInput(attrs={"class": "consent-checkbox"}),
+        error_messages={"required": "Дайте согласие на обработку персональных данных"},
+    )
 
     class Meta:
         model = User
@@ -57,15 +69,31 @@ class RegistrationForm(HoneypotFormMixin, UserCreationForm):
         super().__init__(*args, **kwargs)
         self._init_honeypot()
         _style_auth_fields(self)
+        # Never pre-check consent (152-FZ / 156-FZ)
+        self.fields["accept_terms"].widget.attrs.pop("checked", None)
+        self.fields["accept_pdn"].widget.attrs.pop("checked", None)
+        self.fields["accept_terms"].initial = False
+        self.fields["accept_pdn"].initial = False
 
     def clean_phone(self):
         return ensure_phone_available(self.cleaned_data.get("phone", ""))
+
+    def clean_accept_terms(self):
+        if not self.cleaned_data.get("accept_terms"):
+            raise forms.ValidationError("Примите условия использования")
+        return True
+
+    def clean_accept_pdn(self):
+        if not self.cleaned_data.get("accept_pdn"):
+            raise forms.ValidationError("Дайте согласие на обработку персональных данных")
+        return True
 
     def save(self, commit=True):
         user = super().save(commit=False)
         user.display_name = self.cleaned_data["display_name"].strip()
         user.email = self.cleaned_data["email"].strip().lower()
         user.phone = self.cleaned_data["phone"]
+        user.email_verified = False
         if commit:
             user.save()
         return user
@@ -84,6 +112,7 @@ class LoginForm(forms.Form):
     def __init__(self, request=None, *args, **kwargs):
         self.request = request
         self.user_cache = None
+        self.unverified_email = None
         super().__init__(*args, **kwargs)
         _style_auth_fields(self)
 
@@ -99,11 +128,31 @@ class LoginForm(forms.Form):
                 raise forms.ValidationError("Аккаунт заблокирован.")
             if not user.is_active:
                 raise forms.ValidationError("Аккаунт деактивирован.")
+            if not user.email_verified and not user.is_staff:
+                self.unverified_email = user.email
+                raise forms.ValidationError(
+                    "Подтвердите email — мы отправили ссылку при регистрации. "
+                    "Можно запросить письмо повторно."
+                )
             self.user_cache = user
         return cleaned
 
     def get_user(self):
         return self.user_cache
+
+
+class ResendVerificationForm(forms.Form):
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={"class": "input", "autocomplete": "email"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _style_auth_fields(self)
+
+    def clean_email(self):
+        return self.cleaned_data["email"].strip().lower()
 
 
 class ProfileForm(forms.ModelForm):

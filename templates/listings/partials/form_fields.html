@@ -7,6 +7,19 @@
 {% for field in form %}
   {% if field.name == 'city' %}
     {% include "listings/partials/city_autocomplete.html" with field=field suggestions_id=suggestions_id %}
+  {% elif field.name == 'condition' %}
+    <div class="field{% if field.errors %} field-has-error{% endif %}">
+      <span class="field-label">{{ field.label }}</span>
+      <div class="condition-segment" role="radiogroup" aria-label="{{ field.label }}">
+        {% for radio in field %}
+          <label class="condition-segment-item">
+            {{ radio.tag }}
+            <span>{{ radio.choice_label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      {% if field.errors %}<p class="field-error">{{ field.errors.0 }}</p>{% endif %}
+    </div>
   {% elif field.name != 'images' and field.name != 'website' %}
     <div class="field{% if field.errors %} field-has-error{% endif %}">
       <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}</label>

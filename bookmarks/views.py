@@ -146,14 +146,25 @@ def mark_read(request, notification_id):
     if notification.kind in (
         Notification.KIND_NEW_REVIEW,
         Notification.KIND_REVIEW_REPLY,
+        Notification.KIND_REVIEW_UNLOCKED,
+        Notification.KIND_REVIEW_REMINDER,
     ):
         seller_id = (notification.payload or {}).get("seller_id")
         review_id = (notification.payload or {}).get("review_id")
         if seller_id:
+            if notification.kind in (
+                Notification.KIND_REVIEW_UNLOCKED,
+                Notification.KIND_REVIEW_REMINDER,
+            ):
+                return redirect("reviews:review_seller", user_id=seller_id)
             url = reverse("reviews:seller_profile", args=[seller_id])
             if review_id:
                 url = f"{url}#review-{review_id}"
             return redirect(url)
+    if notification.kind == Notification.KIND_DEAL_CONFIRM_REQUEST:
+        conversation_id = (notification.payload or {}).get("conversation_id")
+        if conversation_id:
+            return redirect("messaging:thread", conversation_id=conversation_id)
     if notification.post_id and notification.post and notification.post.status == "published":
         return redirect(notification.post.get_absolute_url())
     if notification.category and notification.category in CATEGORIES:

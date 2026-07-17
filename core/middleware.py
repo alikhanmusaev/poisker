@@ -1,5 +1,22 @@
 from django.conf import settings
 
+# 'unsafe-inline' for styles/scripts: templates use a few inline styles and one
+# small admin bootstrap script; tighten later if those move to static files.
+_DEFAULT_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: blob:; "
+    "font-src 'self'; "
+    "connect-src 'self'; "
+    "object-src 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "frame-ancestors 'none'; "
+    "upgrade-insecure-requests"
+)
+_DEFAULT_PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=()"
+
 
 class SecurityHeadersMiddleware:
     def __init__(self, get_response):
@@ -11,6 +28,11 @@ class SecurityHeadersMiddleware:
             response.headers.setdefault("X-Content-Type-Options", "nosniff")
             response.headers.setdefault("X-Frame-Options", "DENY")
             response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+            response.headers.setdefault("Permissions-Policy", _DEFAULT_PERMISSIONS_POLICY)
+            response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+            csp = getattr(settings, "CONTENT_SECURITY_POLICY", "") or _DEFAULT_CSP
+            if csp:
+                response.headers.setdefault("Content-Security-Policy", csp)
         return response
 
 

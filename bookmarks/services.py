@@ -294,6 +294,86 @@ def notify_new_review(*, seller_id, reviewer_name: str, rating: int, post=None, 
     return 1
 
 
+def _deal_notification_exists(user_id, kind, conversation_id) -> bool:
+    return Notification.objects.filter(
+        user_id=user_id,
+        kind=kind,
+        payload__conversation_id=str(conversation_id),
+    ).exists()
+
+
+def notify_deal_confirm_request(*, user_id, post, conversation_id, other_name: str) -> int:
+    if not user_id or _deal_notification_exists(
+        user_id, Notification.KIND_DEAL_CONFIRM_REQUEST, conversation_id
+    ):
+        return 0
+    title = "Подтвердите сделку"
+    body = f"{other_name} подтвердил сделку по «{post.title}». Подтвердите и вы в чате."
+    Notification.objects.create(
+        user_id=user_id,
+        kind=Notification.KIND_DEAL_CONFIRM_REQUEST,
+        title=title,
+        body=body[:500],
+        post=post,
+        payload={"conversation_id": str(conversation_id)},
+    )
+    _maybe_email_user(user_id, subject=title, body=body)
+    return 1
+
+
+def notify_review_unlocked(*, buyer_id, post, conversation_id, seller_id, via_timeout=False) -> int:
+    if not buyer_id or _deal_notification_exists(
+        buyer_id, Notification.KIND_REVIEW_UNLOCKED, conversation_id
+    ):
+        return 0
+    from django.conf import settings
+
+    title = "Можно оставить отзыв"
+    days = int(getattr(settings, "DEAL_CONFIRM_TIMEOUT_DAYS", 3))
+    if via_timeout:
+        body = (
+            f"Прошло {days} дн. после вашего подтверждения сделки по «{post.title}». "
+            "Отзыв о продавце уже доступен."
+        )
+    else:
+        body = f"Сделка по «{post.title}» подтверждена. Оставьте отзыв о продавце."
+    Notification.objects.create(
+        user_id=buyer_id,
+        kind=Notification.KIND_REVIEW_UNLOCKED,
+        title=title,
+        body=body[:500],
+        post=post,
+        payload={
+            "conversation_id": str(conversation_id),
+            "seller_id": seller_id,
+        },
+    )
+    _maybe_email_user(buyer_id, subject=title, body=body)
+    return 1
+
+
+def notify_review_reminder(*, buyer_id, post, conversation_id, seller_id) -> int:
+    if not buyer_id or _deal_notification_exists(
+        buyer_id, Notification.KIND_REVIEW_REMINDER, conversation_id
+    ):
+        return 0
+    title = "Как прошла сделка?"
+    body = f"Напоминаем: вы ещё можете оставить отзыв о продавце по «{post.title}»."
+    Notification.objects.create(
+        user_id=buyer_id,
+        kind=Notification.KIND_REVIEW_REMINDER,
+        title=title,
+        body=body[:500],
+        post=post,
+        payload={
+            "conversation_id": str(conversation_id),
+            "seller_id": seller_id,
+        },
+    )
+    _maybe_email_user(buyer_id, subject=title, body=body)
+    return 1
+
+
 def notify_review_reply(*, reviewer_id, seller_name: str, post=None, review_id, seller_id) -> int:
     if not reviewer_id:
         return 0

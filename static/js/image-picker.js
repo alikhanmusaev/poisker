@@ -5,6 +5,9 @@
 (function () {
   const ALLOWED_EXT = /\.(jpe?g|png|webp)$/i;
   const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/pjpeg']);
+  const COMPRESS_MAX_DIM = 1920;
+  const COMPRESS_QUALITY = 0.82;
+  const COMPRESS_SKIP_BYTES = 450 * 1024;
 
   function isAllowedImage(file) {
     if (!file) return false;
@@ -20,6 +23,91 @@
   function formatBytes(bytes) {
     if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} КБ`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+  }
+
+  function compressFileName(name) {
+    const base = (name || 'photo').replace(/\.[^.]+$/, '');
+    return `${base}.jpg`;
+  }
+
+  async function loadImageElement(file) {
+    if (typeof createImageBitmap === 'function') {
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        bitmap.close();
+        throw new Error('canvas');
+      }
+      ctx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      return canvas;
+    }
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('canvas'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('image'));
+      };
+      img.src = url;
+    });
+  }
+
+  async function compressImage(file) {
+    if (!file || !isAllowedImage(file)) return file;
+    let canvas;
+    try {
+      canvas = await loadImageElement(file);
+    } catch (_err) {
+      return file;
+    }
+    const { width, height } = canvas;
+    const longest = Math.max(width, height);
+    const needsResize = longest > COMPRESS_MAX_DIM;
+    const needsReencode = file.size > COMPRESS_SKIP_BYTES || file.type === 'image/png' || needsResize;
+    if (!needsReencode) {
+      return file;
+    }
+    const scale = needsResize ? COMPRESS_MAX_DIM / longest : 1;
+    const targetW = Math.max(1, Math.round(width * scale));
+    const targetH = Math.max(1, Math.round(height * scale));
+    let output = canvas;
+    if (scale < 1) {
+      const resized = document.createElement('canvas');
+      resized.width = targetW;
+      resized.height = targetH;
+      const ctx = resized.getContext('2d');
+      if (!ctx) return file;
+      ctx.drawImage(canvas, 0, 0, targetW, targetH);
+      output = resized;
+    }
+    const blob = await new Promise((resolve) => {
+      output.toBlob(resolve, 'image/jpeg', COMPRESS_QUALITY);
+    });
+    if (!blob) return file;
+    if (blob.size >= file.size && file.type === 'image/jpeg' && !needsResize) {
+      return file;
+    }
+    return new File([blob], compressFileName(file.name), {
+      type: 'image/jpeg',
+      lastModified: Date.now(),
+    });
   }
 
   function syncInputFiles(input, files) {
@@ -47,17 +135,23 @@
       this.form = root.closest('form');
 
       this.totalMax = Math.max(parseInt(root.dataset.totalMax || '5', 10), 0);
-      this.maxBytes = Math.max(parseInt(root.dataset.maxBytes || String(5 * 1024 * 1024), 10), 1);
+      this.maxBytes = Math.max(parseInt(root.dataset.maxBytes || String(20 * 1024 * 1024), 10), 1);
       this.baseExisting = Math.max(parseInt(root.dataset.existingCount || '0', 10), 0);
 
       this.files = [];
       this.objectUrls = [];
       this.errorTimer = null;
+      this.processing = 0;
 
       this.onChange = this.onChange.bind(this);
       this.onAddClick = this.onAddClick.bind(this);
       this.onFormSubmit = this.onFormSubmit.bind(this);
       this.onExistingToggle = this.onExistingToggle.bind(this);
+      this._handleFormSubmit = (event) => {
+        if (this.onFormSubmit() === false) {
+          event.preventDefault();
+        }
+      };
     }
 
     init() {
@@ -67,7 +161,7 @@
 
       this.input.addEventListener('change', this.onChange);
       this.addBtn?.addEventListener('click', this.onAddClick);
-      this.form?.addEventListener('submit', this.onFormSubmit);
+      this.form?.addEventListener('submit', this._handleFormSubmit);
 
       this.form
         ?.querySelectorAll('input[name="remove_images"]')
@@ -81,7 +175,7 @@
       this.clearObjectUrls();
       this.input?.removeEventListener('change', this.onChange);
       this.addBtn?.removeEventListener('click', this.onAddClick);
-      this.form?.removeEventListener('submit', this.onFormSubmit);
+      this.form?.removeEventListener('submit', this._handleFormSubmit);
       this.form
         ?.querySelectorAll('input[name="remove_images"]')
         .forEach((checkbox) => checkbox.removeEventListener('change', this.onExistingToggle));
@@ -138,33 +232,61 @@
     }
 
     onFormSubmit() {
+      if (this.processing > 0) {
+        this.showError('Подождите, фото ещё обрабатываются…');
+        return false;
+      }
       this.syncInput();
+      return true;
     }
 
-    onChange() {
+    async onChange() {
       const selected = Array.from(this.input.files || []);
+      if (!selected.length) return;
+
+      this.processing += 1;
+      this.root.classList.add('is-processing');
+      this.updateControls();
+
       const seen = new Set(this.files.map(fileKey));
       const limit = this.maxNewFiles();
       const rejected = [];
       let trimmed = false;
 
-      for (const file of selected) {
-        if (!isAllowedImage(file)) {
-          rejected.push('поддерживаются только JPG, PNG и WebP');
-          continue;
+      try {
+        for (const file of selected) {
+          if (!isAllowedImage(file)) {
+            rejected.push('поддерживаются только JPG, PNG и WebP');
+            continue;
+          }
+          if (file.size > this.maxBytes) {
+            rejected.push(`${file.name || 'Файл'} — больше ${formatBytes(this.maxBytes)}`);
+            continue;
+          }
+          let prepared = file;
+          try {
+            prepared = await compressImage(file);
+          } catch (_err) {
+            prepared = file;
+          }
+          if (prepared.size > this.maxBytes) {
+            rejected.push(`${file.name || 'Файл'} — больше ${formatBytes(this.maxBytes)}`);
+            continue;
+          }
+          const key = fileKey(prepared);
+          if (seen.has(key)) continue;
+          if (this.files.length >= limit) {
+            trimmed = true;
+            break;
+          }
+          seen.add(key);
+          this.files.push(prepared);
         }
-        if (file.size > this.maxBytes) {
-          rejected.push(`${file.name || 'Файл'} — больше ${formatBytes(this.maxBytes)}`);
-          continue;
+      } finally {
+        this.processing = Math.max(0, this.processing - 1);
+        if (this.processing === 0) {
+          this.root.classList.remove('is-processing');
         }
-        const key = fileKey(file);
-        if (seen.has(key)) continue;
-        if (this.files.length >= limit) {
-          trimmed = true;
-          break;
-        }
-        seen.add(key);
-        this.files.push(file);
       }
 
       if (trimmed) {
@@ -208,7 +330,8 @@
 
     updateControls() {
       const limit = this.maxNewFiles();
-      const canAdd = this.files.length < limit && limit > 0;
+      const busy = this.processing > 0;
+      const canAdd = !busy && this.files.length < limit && limit > 0;
 
       if (this.addBtn) {
         this.addBtn.disabled = !canAdd;
@@ -216,14 +339,20 @@
         this.addBtn.setAttribute('aria-disabled', canAdd ? 'false' : 'true');
         const label = this.addBtn.querySelector('.image-picker-button-label');
         if (label) {
-          label.textContent = this.files.length === 0 ? 'Добавить фото' : 'Добавить ещё';
+          if (busy) {
+            label.textContent = 'Обработка…';
+          } else {
+            label.textContent = this.files.length === 0 ? 'Добавить фото' : 'Добавить ещё';
+          }
         }
       }
 
       if (this.statusEl) {
         const existing = this.existingCount();
         const totalAfter = existing + this.files.length;
-        if (limit === 0) {
+        if (busy) {
+          this.statusEl.textContent = 'Сжимаем фото перед отправкой…';
+        } else if (limit === 0) {
           this.statusEl.textContent = 'Достигнут лимит 5 фото';
         } else if (this.files.length === 0) {
           this.statusEl.textContent = existing

@@ -105,6 +105,34 @@ def hide_conversation(conversation: Conversation, user) -> None:
     conversation.hide_for(user)
 
 
+def confirm_deal_completed(conversation: Conversation, user) -> Conversation:
+    if getattr(user, "is_blocked", False):
+        raise MessagingError("Аккаунт заблокирован.")
+    if not conversation.involves(user):
+        raise MessagingError("Нет доступа к переписке.")
+    if not Conversation.objects.filter(pk=conversation.pk).filter(has_visible_messages_q()).exists():
+        raise MessagingError("Сначала обменяйтесь сообщениями в чате.")
+
+    now = timezone.now()
+    already_confirmed = conversation.deal_confirmed_by(user)
+    if user.id == conversation.buyer_id:
+        if conversation.buyer_deal_confirmed_at is not None:
+            return conversation
+        Conversation.objects.filter(pk=conversation.pk).update(buyer_deal_confirmed_at=now)
+        conversation.buyer_deal_confirmed_at = now
+    elif user.id == conversation.seller_id:
+        if conversation.seller_deal_confirmed_at is not None:
+            return conversation
+        Conversation.objects.filter(pk=conversation.pk).update(seller_deal_confirmed_at=now)
+        conversation.seller_deal_confirmed_at = now
+
+    if not already_confirmed:
+        from reviews.services import handle_deal_confirmation_side_effects
+
+        handle_deal_confirmation_side_effects(conversation, user)
+    return conversation
+
+
 def has_visible_messages_q():
     return Exists(
         Message.objects.filter(conversation=OuterRef("pk")).exclude(body="", image="")

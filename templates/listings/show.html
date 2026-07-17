@@ -1,6 +1,18 @@
 {% extends "base.html" %}
 {% load static poisker_tags %}
-{% block title %}{{ post.title }} — {{ site_name }}{% endblock %}
+{% block title %}{{ seo_title }}{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_title %}{{ post.title }} — {{ site_name }}{% endblock %}
+{% block og_description %}{{ seo_description }}{% endblock %}
+{% block og_url %}{{ canonical_url }}{% endblock %}
+{% block og_image %}{{ og_image_url }}{% endblock %}
+{% block twitter_card %}summary_large_image{% endblock %}
+{% block twitter_title %}{{ post.title }}{% endblock %}
+{% block twitter_description %}{{ seo_description }}{% endblock %}
+{% block structured_data %}
+<script type="application/ld+json">{{ json_ld_json|safe }}</script>
+<script type="application/ld+json">{{ breadcrumb_ld_json|safe }}</script>
+{% endblock %}
 {% block content %}
 <article class="page-card post-detail"
          data-post-detail
@@ -31,10 +43,11 @@
           {% for img in gallery_images %}
             <div class="post-gallery-slide" data-gallery-slide aria-hidden="{% if forloop.first %}false{% else %}true{% endif %}">
               <button type="button" class="post-gallery-open" data-gallery-open aria-label="Увеличить фото {{ forloop.counter }} из {{ gallery_images|length }}">
-                <img src="{{ img }}" alt="{% post_image_alt post.title forloop.counter gallery_images|length %}" loading="{% if forloop.first %}eager{% else %}lazy{% endif %}" width="800" height="600">
-                <span class="post-gallery-zoom-hint" aria-hidden="true">
-                  <i data-lucide="zoom-in" class="icon icon-sm"></i>
-                </span>
+                {% if forloop.first %}
+                  {% responsive_img img alt=post.title img_class="" sizes="(max-width: 768px) 100vw, 800px" width=800 height=600 loading="eager" prefer="full" %}
+                {% else %}
+                  {% responsive_img img alt=post.title img_class="" sizes="(max-width: 768px) 100vw, 800px" width=800 height=600 deferred=True prefer="full" %}
+                {% endif %}
               </button>
             </div>
           {% endfor %}
@@ -46,16 +59,13 @@
           <button type="button" class="post-gallery-nav post-gallery-next" data-gallery-next aria-label="Следующее фото">
             <i data-lucide="chevron-right" class="icon" aria-hidden="true"></i>
           </button>
-          <span class="post-gallery-counter" data-gallery-counter>1 / {{ gallery_images|length }}</span>
+          <div class="post-gallery-dots" data-gallery-dots aria-hidden="true">
+            {% for img in gallery_images %}
+              <span class="post-gallery-dot{% if forloop.first %} is-active{% endif %}" data-gallery-dot></span>
+            {% endfor %}
+          </div>
         {% endif %}
       </div>
-      {% if gallery_images|length > 1 %}
-        <div class="post-gallery-dots" data-gallery-dots role="tablist" aria-label="Выбор фото">
-          {% for img in gallery_images %}
-            <button type="button" role="tab" aria-label="Фото {{ forloop.counter }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" class="post-gallery-dot{% if forloop.first %} is-active{% endif %}"></button>
-          {% endfor %}
-        </div>
-      {% endif %}
     </div>
 
     <div class="post-lightbox" id="post-lightbox" hidden role="dialog" aria-modal="true" aria-label="Просмотр фото">
@@ -97,12 +107,14 @@
     </span>
   {% endif %}
   {% if post.price is not None %}
-    <p class="post-price">{{ post.price|format_price }} ₽</p>
+    <p class="post-price">{{ post.price|post_price_display }}</p>
   {% else %}
-    <p class="post-price post-price-muted">Цена не указана</p>
+    <p class="post-price post-price-muted">{{ post.price|post_price_display }}</p>
   {% endif %}
   <h1>{{ post.title }}</h1>
   <p class="post-meta">
+    <span>{{ condition_labels|get_item:post.condition }}</span>
+    <span class="meta-dot">·</span>
     {% if post.seller_name %}
       <i data-lucide="user" class="icon icon-xs" aria-hidden="true"></i>
       <a href="{% url 'reviews:seller_profile' post.user_id %}" class="post-seller-link">{{ post.seller_name }}</a>

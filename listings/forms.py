@@ -3,6 +3,7 @@ from django import forms
 from listings.constants import (
     CATEGORY_LABELS,
     CITIES,
+    CONDITION_CHOICES,
     POST_BODY_MAX_LEN,
     POST_BODY_MIN_LEN,
     POST_TITLE_MAX_LEN,
@@ -39,11 +40,18 @@ class PostForm(HoneypotFormMixin, forms.Form):
             "invalid_choice": "Выберите город из подсказок",
         },
     )
+    condition = forms.ChoiceField(
+        label="Состояние",
+        choices=CONDITION_CHOICES,
+        initial="used",
+        widget=forms.RadioSelect(),
+    )
     price = forms.IntegerField(
         label="Цена, ₽",
         required=False,
         min_value=0,
-        widget=forms.NumberInput(attrs={"class": "input", "placeholder": "Не указана"}),
+        help_text="Оставьте пустым — цена будет «По договорённости».",
+        widget=forms.NumberInput(attrs={"class": "input", "placeholder": "По договорённости"}),
     )
     images = forms.FileField(
         label="Фото",
@@ -83,11 +91,19 @@ class DraftPostForm(HoneypotFormMixin, forms.Form):
         choices=[("", "")] + list(CITIES.items()),
         widget=forms.HiddenInput(attrs={"id": "city"}),
     )
+    condition = forms.ChoiceField(
+        label="Состояние",
+        required=False,
+        choices=CONDITION_CHOICES,
+        initial="used",
+        widget=forms.RadioSelect(),
+    )
     price = forms.IntegerField(
         label="Цена, ₽",
         required=False,
         min_value=0,
-        widget=forms.NumberInput(attrs={"class": "input", "placeholder": "Не указана"}),
+        help_text="Оставьте пустым — цена будет «По договорённости».",
+        widget=forms.NumberInput(attrs={"class": "input", "placeholder": "По договорённости"}),
     )
     images = forms.FileField(
         label="Фото",

@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import F
@@ -13,6 +15,7 @@ from listings.forms import DraftPostForm, EditDraftPostForm, EditPostForm, PostF
 from listings.models import Post
 from listings.services.posts import (
     ValidationError,
+    can_edit_rejected_post,
     create_post,
     delete_post,
     republish_post,
@@ -32,11 +35,20 @@ def _user_post_or_404(user, post_id):
     return post
 
 
+def _upload_images(files):
+    """Upload up to 5 images; parallelize when more than one file."""
+    items = [f for f in files if f][:5]
+    if not items:
+        return []
+    if len(items) == 1:
+        return [upload_image(items[0])]
+    workers = min(len(items), 3)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        return list(pool.map(upload_image, items))
+
+
 def _collect_images(request):
-    image_keys = []
-    for f in request.FILES.getlist("images")[:5]:
-        if f:
-            image_keys.append(upload_image(f))
+    image_keys = _upload_images(request.FILES.getlist("images"))
     cover_index = int(request.POST.get("cover_index") or 0)
     if image_keys:
         cover_index = max(0, min(cover_index, len(image_keys) - 1))
@@ -55,7 +67,7 @@ def _resolve_edit_images(request, post):
         return None
 
     kept = [url for i, url in enumerate(existing) if i not in remove_idx]
-    new_keys = [upload_image(f) for f in new_files]
+    new_keys = _upload_images(new_files)
     images = (kept + new_keys)[:5]
 
     if new_keys:
@@ -126,13 +138,13 @@ def my_posts(request):
 @require_http_methods(["GET", "POST"])
 def edit(request, post_id):
     post = _user_post_or_404(request.user, post_id)
-    if post.status == "hidden":
+    if post.status == "hidden" and not can_edit_rejected_post(post):
         messages.info(
             request,
             "Снятое объявление нельзя редактировать. Сначала опубликуйте его снова.",
         )
         return redirect(f"{reverse('accounts:profile')}?tab=hidden")
-    if post.status not in ("draft", "pending", "published"):
+    if post.status not in ("draft", "pending", "published", "hidden"):
         raise Http404
 
     as_draft = request.POST.get("action") == "draft"
@@ -149,12 +161,14 @@ def edit(request, post_id):
         "body": post.body,
         "category": post.category,
         "city": post.city,
+        "condition": post.condition,
         "price": post.price,
     }
     form = form_class(request.POST or None, request.FILES or None, initial=initial)
     errors = []
     if request.method == "POST" and form.is_valid():
         try:
+            was_rejected = can_edit_rejected_post(post)
             resolved = _resolve_edit_images(request, post)
             payload = {**form.cleaned_data}
             image_keys = None
@@ -167,10 +181,16 @@ def edit(request, post_id):
                 messages.success(request, "Черновик сохранён.")
                 return redirect(f"{reverse('accounts:profile')}?tab=drafts")
             if post.status == "pending":
-                messages.success(
-                    request,
-                    "Изменения сохранены. Объявление ждёт модерации.",
-                )
+                if was_rejected:
+                    messages.success(
+                        request,
+                        "Изменения сохранены. Объявление снова отправлено на модерацию.",
+                    )
+                else:
+                    messages.success(
+                        request,
+                        "Изменения сохранены. Объявление ждёт модерации.",
+                    )
             elif post.pending_revision:
                 messages.success(
                     request,
@@ -195,6 +215,7 @@ def edit(request, post_id):
             "cities": CITIES,
             "is_draft": post.status == "draft",
             "awaits_moderation": post.status == "pending" or bool(post.pending_revision),
+            "is_rejected": can_edit_rejected_post(post),
             "existing_image_count": len(post.images or []),
         },
     )
@@ -278,7 +299,7 @@ def show(request, post_id):
     is_staff = bool(getattr(request.user, "is_staff", False) and request.user.is_authenticated)
     if post.status != "published" and not is_owner and not is_staff:
         raise Http404
-    increment_views(post)
+    increment_views(request, post)
     return render(request, "listings/show.html", build_show_context(request, post))
 
 

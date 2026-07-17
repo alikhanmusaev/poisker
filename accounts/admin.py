@@ -14,14 +14,26 @@ class UserAdmin(BaseUserAdmin):
         "rating_avg",
         "rating_count",
         "is_blocked",
+        "email_verified",
         "is_staff",
         "created_at",
     )
-    list_filter = ("is_blocked", "is_staff", "is_superuser", "is_active")
+    list_filter = ("is_blocked", "email_verified", "is_staff", "is_superuser", "is_active")
     search_fields = ("email", "display_name", "phone")
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Профиль", {"fields": ("display_name", "phone", "phone_digits", "phone_verified")}),
+        ("Профиль", {"fields": ("display_name", "phone", "phone_digits", "phone_verified", "email_verified")}),
+        (
+            "Согласия",
+            {
+                "fields": (
+                    "terms_accepted_at",
+                    "pdn_consent_at",
+                    "pdn_consent_version",
+                    "consent_ip",
+                )
+            },
+        ),
         ("Рейтинг", {"fields": ("rating_avg", "rating_count")}),
         ("Статус", {"fields": ("is_blocked", "is_active", "is_staff", "is_superuser")}),
         ("Права", {"fields": ("groups", "user_permissions")}),
@@ -43,4 +55,8 @@ class UserAdmin(BaseUserAdmin):
         "phone_digits",
         "rating_avg",
         "rating_count",
+        "terms_accepted_at",
+        "pdn_consent_at",
+        "pdn_consent_version",
+        "consent_ip",
     )

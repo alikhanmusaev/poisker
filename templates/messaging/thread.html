@@ -23,7 +23,7 @@
       {% post_cover_image post as cover_image %}
       <a href="{% post_public_url post %}" class="message-post-context-media" aria-label="{{ post.title }}">
         {% if cover_image %}
-          <img src="{{ cover_image }}" alt="" class="message-post-context-img" loading="lazy" width="64" height="64">
+          <img src="{{ cover_image|image_sm }}" alt="" class="message-post-context-img" loading="lazy" width="64" height="64">
         {% else %}
           <div class="message-post-context-img message-post-context-img-placeholder" aria-hidden="true">
             <i data-lucide="image" class="icon" aria-hidden="true"></i>
@@ -48,6 +48,46 @@
             <a href="{% url 'reviews:seller_profile' other_user.id %}" class="message-participant-link">{{ other_user.display_name }}</a>
           {% endif %}
         </p>
+        {% if thread_messages %}
+          <div class="message-deal-confirm">
+            {% if both_deal_confirmed %}
+              <p class="message-deal-status is-success">
+                <i data-lucide="check-circle-2" class="icon icon-xs" aria-hidden="true"></i>
+                Сделка подтверждена обеими сторонами
+              </p>
+            {% elif can_review_seller and review_via_timeout %}
+              <p class="message-deal-status is-success">
+                <i data-lucide="check-circle-2" class="icon icon-xs" aria-hidden="true"></i>
+                Отзыв доступен: продавец не подтвердил сделку в срок
+              </p>
+            {% elif deal_confirmed_by_me %}
+              <p class="message-deal-status is-pending">
+                <i data-lucide="clock" class="icon icon-xs" aria-hidden="true"></i>
+                Вы подтвердили сделку. Ждём подтверждения
+                {% if user.id == conversation.buyer_id %}продавца{% else %}покупателя{% endif %}.
+                {% if user.id == conversation.buyer_id and review_unlock_at %}
+                  Если ответа не будет, отзыв откроется {{ review_unlock_at|date:"d.m H:i" }}.
+                {% endif %}
+              </p>
+            {% else %}
+              {% if deal_confirmed_by_other %}
+                <p class="message-deal-hint">
+                  {% if user.id == conversation.buyer_id %}Продавец{% else %}Покупатель{% endif %}
+                  уже подтвердил сделку.
+                </p>
+              {% endif %}
+              {% if can_confirm_deal %}
+                <form method="post" action="{% url 'messaging:confirm_deal' conversation.id %}" class="message-deal-form">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-secondary btn-sm">
+                    <i data-lucide="handshake" class="icon icon-xs" aria-hidden="true"></i>
+                    Подтвердить успешную сделку
+                  </button>
+                </form>
+              {% endif %}
+            {% endif %}
+          </div>
+        {% endif %}
         {% if can_review_seller %}
           <p class="message-review-cta">
             <a href="{% url 'reviews:review_seller' other_user.id %}" class="btn btn-secondary btn-sm">
@@ -69,9 +109,9 @@
             {% if message.body or message.image %}
               <div class="message-bubble{% if message.sender_id == user.id %} is-mine{% else %} is-theirs{% endif %}{% if message.image and not message.body %} is-media-only{% endif %}">
                 {% if message.image %}
-                  <a href="{{ message.image }}" class="message-bubble-image-link" target="_blank" rel="noopener">
-                    <img src="{{ message.image }}" alt="Фото в сообщении" class="message-bubble-image" loading="lazy" width="240" height="180">
-                  </a>
+                  <button type="button" class="message-bubble-image-link" data-message-image-open data-image-url="{{ message.image }}" aria-label="Открыть фото">
+                    <img src="{{ message.image|image_sm }}" alt="Фото в сообщении" class="message-bubble-image" loading="lazy" width="240" height="180">
+                  </button>
                 {% endif %}
                 {% if message.body %}
                   <p class="message-bubble-text">{{ message.body|linebreaksbr }}</p>
@@ -133,7 +173,40 @@
     </form>
   </section>
 </div>
+
+<div class="post-lightbox" id="post-lightbox" hidden role="dialog" aria-modal="true" aria-label="Просмотр фото">
+  <div class="post-lightbox-backdrop" data-lightbox-backdrop></div>
+  <div class="post-lightbox-panel">
+    <div class="post-lightbox-toolbar">
+      <div class="post-lightbox-zoom-controls">
+        <button type="button" class="post-lightbox-tool" data-lightbox-zoom-out aria-label="Уменьшить">
+          <i data-lucide="zoom-out" class="icon" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="post-lightbox-tool post-lightbox-zoom-label" data-lightbox-zoom-reset data-lightbox-zoom-label aria-label="Сбросить масштаб">100%</button>
+        <button type="button" class="post-lightbox-tool" data-lightbox-zoom-in aria-label="Увеличить">
+          <i data-lucide="zoom-in" class="icon" aria-hidden="true"></i>
+        </button>
+      </div>
+      <span class="post-lightbox-counter" data-lightbox-counter></span>
+      <button type="button" class="post-lightbox-tool post-lightbox-close" data-lightbox-close aria-label="Закрыть">
+        <i data-lucide="x" class="icon" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="post-lightbox-stage" data-lightbox-stage>
+      <div class="post-lightbox-pan" data-lightbox-pan>
+        <img src="" alt="" data-lightbox-img draggable="false">
+      </div>
+      <button type="button" class="post-lightbox-nav post-lightbox-prev" data-lightbox-prev aria-label="Предыдущее фото">
+        <i data-lucide="chevron-left" class="icon" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="post-lightbox-nav post-lightbox-next" data-lightbox-next aria-label="Следующее фото">
+        <i data-lucide="chevron-right" class="icon" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 {% block scripts %}
+<script src="{% static 'js/post-gallery.js' %}?v={{ static_version }}"></script>
 <script src="{% static 'js/messages.js' %}?v={{ static_version }}"></script>
 {% endblock %}

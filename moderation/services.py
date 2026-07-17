@@ -1,3 +1,6 @@
+from datetime import timedelta
+
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 
@@ -23,6 +26,25 @@ def _clean_reason(reason: str | None, *, required: bool = True) -> str:
 
 def moderation_counts() -> dict:
     start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    User = get_user_model()
+    user_field_names = {f.name for f in User._meta.get_fields()}
+    verified_field = None
+    if "email_verified" in user_field_names:
+        verified_field = "email_verified"
+    elif "phone_verified" in user_field_names:
+        verified_field = "phone_verified"
+
+    users_total = User.objects.count()
+    users_today = User.objects.filter(created_at__gte=start).count()
+    users_7d = User.objects.filter(created_at__gte=timezone.now() - timedelta(days=7)).count()
+    if verified_field:
+        users_verified_today = User.objects.filter(
+            created_at__gte=start,
+            **{verified_field: True},
+        ).count()
+    else:
+        users_verified_today = 0
+    users_blocked = User.objects.filter(is_blocked=True).count() if "is_blocked" in user_field_names else 0
     return {
         "pending": Post.objects.filter(status="pending").count(),
         "revisions": Post.objects.filter(status="published").exclude(pending_revision=None).count(),
@@ -32,6 +54,11 @@ def moderation_counts() -> dict:
             status="published",
             published_at__gte=start,
         ).count(),
+        "users_total": users_total,
+        "users_today": users_today,
+        "users_7d": users_7d,
+        "users_verified_today": users_verified_today,
+        "users_blocked": users_blocked,
     }
 
 
@@ -86,6 +113,8 @@ def approve_post(post: Post, user) -> Post:
             post.category = str(revision["category"])
         if revision.get("city"):
             post.city = str(revision["city"])
+        if revision.get("condition") in {"used", "new"}:
+            post.condition = str(revision["condition"])
         if "price" in revision:
             price = revision.get("price")
             post.price = None if price in ("", None) else price

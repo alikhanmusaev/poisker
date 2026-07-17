@@ -101,14 +101,30 @@ def _listing_context(request, *, fixed_city=None, fixed_category=None):
 
     if category and city:
         seo_title = f"{category_name} — {city_name} | {settings.SITE_NAME}"
+        seo_description = (
+            f"{category_name} в городе {city_name}: свежие объявления на «{settings.SITE_NAME}». "
+            f"Бесплатная доска объявлений по Чеченской Республике."
+        )
     elif category:
         seo_title = f"{category_name} | {settings.SITE_NAME}"
+        seo_description = (
+            f"Объявления в категории «{category_name}» на «{settings.SITE_NAME}». "
+            f"Поиск по Чеченской Республике."
+        )
     elif city:
         seo_title = f"Объявления {city_name} | {settings.SITE_NAME}"
+        seo_description = (
+            f"Бесплатные объявления в городе {city_name} на «{settings.SITE_NAME}». "
+            f"Недвижимость, авто, услуги и товары."
+        )
     elif search_text:
         seo_title = f"Поиск: {search_text} | {settings.SITE_NAME}"
+        seo_description = settings.SITE_DESCRIPTION
     else:
         seo_title = f"{settings.SITE_NAME} — {settings.SITE_TAGLINE}"
+        seo_description = settings.SITE_DESCRIPTION
+
+    canonical_url = f"https://{settings.APP_DOMAIN}{request.path}"
 
     ctx = {
         "query": raw_query,
@@ -125,7 +141,8 @@ def _listing_context(request, *, fixed_city=None, fixed_category=None):
         "price_min": price_min,
         "price_max": price_max,
         "seo_title": seo_title,
-        "seo_description": settings.SITE_DESCRIPTION,
+        "seo_description": seo_description,
+        "canonical_url": canonical_url,
         "listing_path": request.path,
         "fixed_city": fixed_city,
         "fixed_category": fixed_category,
@@ -203,7 +220,7 @@ def post_public(request, city_slug, category_slug, slug, post_id):
         return redirect(post_public_url(post), permanent=True)
     from listings.services.show_context import build_show_context, increment_views
 
-    increment_views(post)
+    increment_views(request, post)
     return render(request, "listings/show.html", build_show_context(request, post))
 
 
@@ -257,6 +274,10 @@ def terms(request):
     return render(request, "terms.html")
 
 
+def pdn_consent(request):
+    return render(request, "pdn_consent.html")
+
+
 def guidelines(request):
     return render(request, "guidelines.html")
 
@@ -278,25 +299,33 @@ def robots_txt(request):
 
 
 def sitemap_xml(request):
-    posts = (
+    posts = list(
         Post.objects.filter(status="published", expires_at__gte=timezone.now())
         .order_by("-updated_at")[:5000]
     )
     base = f"https://{settings.APP_DOMAIN}"
-    urls = [f"{base}/"]
+    entries = [(f"{base}/", None)]
     for slug in CATEGORIES:
-        urls.append(f"{base}/{slug}/")
+        entries.append((f"{base}/{slug}/", None))
     for slug in CITIES:
-        urls.append(f"{base}/{slug}/")
+        entries.append((f"{base}/{slug}/", None))
+    for city_slug in CITIES:
+        for category_slug in CATEGORIES:
+            entries.append((f"{base}/{city_slug}/{category_slug}/", None))
+    for path in ("/privacy", "/terms", "/consent", "/guidelines"):
+        entries.append((f"{base}{path}", None))
     for post in posts:
-        urls.append(f"{base}{post_public_url(post)}")
+        lastmod = post.updated_at.date().isoformat() if post.updated_at else None
+        entries.append((f"{base}{post_public_url(post)}", lastmod))
     body = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     ]
-    for loc in urls:
+    for loc, lastmod in entries:
         body.append("  <url>")
         body.append(f"    <loc>{loc}</loc>")
+        if lastmod:
+            body.append(f"    <lastmod>{lastmod}</lastmod>")
         body.append("  </url>")
     body.append("</urlset>")
     return HttpResponse("\n".join(body), content_type="application/xml")
@@ -310,3 +339,40 @@ def slug_router(request, slug):
     if slug in CITIES:
         return city_listing(request, slug)
     raise Http404
+
+
+def csrf_failure(request, reason=""):
+    """Duplicate POST after login() rotates CSRF — send user to profile instead of 403."""
+    if request.user.is_authenticated:
+        return redirect("accounts:profile")
+    return render(
+        request,
+        "errors/csrf.html",
+        {"reason": reason},
+        status=403,
+    )
+
+
+def _no_cache_headers(response):
+    response["Cache-Control"] = "no-cache"
+    return response
+
+
+def offline(request):
+    return render(request, "offline.html", {"robots_noindex": True})
+
+
+def web_manifest(request):
+    response = render(request, "manifest.webmanifest")
+    response["Content-Type"] = "application/manifest+json; charset=utf-8"
+    return _no_cache_headers(response)
+
+
+def service_worker(request):
+    response = render(
+        request,
+        "sw.js",
+        {"static_version": getattr(settings, "STATIC_VERSION", "1")},
+    )
+    response["Content-Type"] = "application/javascript; charset=utf-8"
+    return _no_cache_headers(response)

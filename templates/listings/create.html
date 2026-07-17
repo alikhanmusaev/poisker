@@ -21,17 +21,7 @@
     {{ cities|json_script:"listing-cities" }}
     <form method="post" enctype="multipart/form-data" class="listing-form" id="create-post-form" novalidate>
       {% csrf_token %}
-      {% for field in form %}
-        {% if field.name == 'city' %}
-          {% include "listings/partials/city_autocomplete.html" with field=field suggestions_id='city-suggestions' %}
-        {% elif field.name != 'images' %}
-          <div class="field{% if field.errors %} field-has-error{% endif %}">
-            <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}<p class="field-error">{{ field.errors.0 }}</p>{% endif %}
-          </div>
-        {% endif %}
-      {% endfor %}
+      {% include "listings/partials/form_fields.html" with suggestions_id='city-suggestions' %}
       <div class="field">
         <span class="field-label">Фото</span>
         {% include "listings/partials/image_picker.html" %}

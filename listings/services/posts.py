@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from core.phone import normalize_phone
-from listings.constants import CATEGORIES, CITIES, POST_BODY_MAX_LEN, POST_BODY_MIN_LEN, POST_TITLE_MAX_LEN, POST_TITLE_MIN_LEN
+from listings.constants import CATEGORIES, CITIES, CONDITION_LABELS, POST_BODY_MAX_LEN, POST_BODY_MIN_LEN, POST_TITLE_MAX_LEN, POST_TITLE_MIN_LEN
 from listings.models import Post
 
 
@@ -70,6 +70,25 @@ def _draft_category_city(category: str, city: str):
     return category, city
 
 
+def _normalize_price(price):
+    if price in (None, ""):
+        return None
+    try:
+        value = int(price)
+    except (TypeError, ValueError):
+        return None
+    return None if value < 0 else value
+
+
+def _normalize_condition(value) -> str:
+    return value if value in CONDITION_LABELS else "used"
+
+
+def can_edit_rejected_post(post: Post) -> bool:
+    """Rejected pre-publication listings may be edited and resubmitted."""
+    return post.status == "hidden" and not post.ever_published
+
+
 @transaction.atomic
 def create_post(user, data: dict, *, image_keys: list | None = None, as_draft: bool = False) -> Post:
     if user.is_blocked:
@@ -85,9 +104,8 @@ def create_post(user, data: dict, *, image_keys: list | None = None, as_draft: b
         category, city = _validate_category_city(data.get("category"), data.get("city"))
         status = "pending"
 
-    price = data.get("price")
-    if price is not None and price < 0:
-        price = None
+    price = _normalize_price(data.get("price"))
+    condition = _normalize_condition(data.get("condition"))
 
     contact_phone = _seller_phone(user, required=not as_draft)
 
@@ -100,6 +118,7 @@ def create_post(user, data: dict, *, image_keys: list | None = None, as_draft: b
         body=body,
         category=category,
         city=city,
+        condition=condition,
         price=price,
         contact_phone=contact_phone,
         status=status,
@@ -120,7 +139,7 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
         raise ValidationError("Нет доступа.")
     if post.status == "deleted":
         raise ValidationError("Объявление удалено.")
-    if post.status == "hidden":
+    if post.status == "hidden" and not can_edit_rejected_post(post):
         raise ValidationError("Снятое объявление нельзя редактировать. Опубликуйте его снова.")
     if post.status == "expired":
         raise ValidationError("Истёкшее объявление нельзя редактировать. Отправьте его на модерацию снова.")
@@ -131,14 +150,14 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
         title = _draft_title(data.get("title"))
         body = (data.get("body") or "").strip()[:POST_BODY_MAX_LEN]
         category, city = _draft_category_city(data.get("category") or "", data.get("city") or "")
-        price = data.get("price")
-        if price is not None and price < 0:
-            price = None
+        price = _normalize_price(data.get("price"))
+        condition = _normalize_condition(data.get("condition"))
         contact_phone = _seller_phone(user, required=False)
         post.title = title
         post.body = body
         post.category = category
         post.city = city
+        post.condition = condition
         post.price = price
         post.contact_phone = contact_phone
         post.status = "draft"
@@ -156,9 +175,8 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
 
     title, body = _validate_text(data.get("title"), data.get("body"))
     category, city = _validate_category_city(data.get("category"), data.get("city"))
-    price = data.get("price")
-    if price is not None and price < 0:
-        price = None
+    price = _normalize_price(data.get("price"))
+    condition = _normalize_condition(data.get("condition"))
 
     contact_phone = _seller_phone(user)
     old_price = post.price
@@ -169,6 +187,7 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
         category != post.category
         or city != post.city
         or price != post.price
+        or condition != post.condition
     )
 
     post.contact_phone = contact_phone
@@ -180,6 +199,7 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
             "body": body,
             "category": category,
             "city": city,
+            "condition": condition,
             "price": price,
         }
     else:
@@ -187,6 +207,7 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
         post.body = body
         post.category = category
         post.city = city
+        post.condition = condition
         post.price = price
         post.pending_revision = None
         if sensitive_changed or meta_changed:
@@ -198,8 +219,20 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
         post.body = body
         post.category = category
         post.city = city
+        post.condition = condition
         post.price = price
         post.pending_revision = None
+        post.slug = make_seo_slug(title, city)
+    elif can_edit_rejected_post(post):
+        post.status = "pending"
+        post.title = title
+        post.body = body
+        post.category = category
+        post.city = city
+        post.condition = condition
+        post.price = price
+        post.pending_revision = None
+        post.moderation_note = ""
         post.slug = make_seo_slug(title, city)
 
     if image_keys is not None:

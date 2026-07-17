@@ -8,7 +8,7 @@
   <title>{% block title %}{{ page_title }} — Модерация{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'fonts/inter/inter.css' %}">
   <link rel="stylesheet" href="{% static 'css/admin.css' %}?v={{ static_version }}">
-  <script src="{% static 'vendor/lucide.min.js' %}" defer></script>
+  <script src="{% static 'vendor/lucide-subset.min.js' %}?v={{ static_version }}" defer></script>
 </head>
 <body class="admin-shell">
   <button type="button" class="admin-mobile-toggle" id="admin-menu-toggle" aria-label="Меню" aria-expanded="false" aria-controls="admin-sidebar">

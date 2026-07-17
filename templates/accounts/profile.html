@@ -33,7 +33,44 @@
         </button>
       </form>
     </div>
-  </div>
+    </div>
+
+  {% if seller_stats %}
+    <section class="seller-stats" aria-labelledby="seller-stats-heading">
+      <h2 id="seller-stats-heading" class="seller-stats-title">Статистика</h2>
+      <div class="seller-stats-grid">
+        <div class="seller-stats-item">
+          <span class="seller-stats-value">{{ seller_stats.views_total }}</span>
+          <span class="seller-stats-label">просмотров</span>
+        </div>
+        <div class="seller-stats-item">
+          <span class="seller-stats-value">{{ seller_stats.contacts_total }}</span>
+          <span class="seller-stats-label">телефонов</span>
+        </div>
+        <div class="seller-stats-item">
+          <span class="seller-stats-value">{{ seller_stats.conversations_total }}</span>
+          <span class="seller-stats-label">чатов</span>
+        </div>
+        <div class="seller-stats-item">
+          <span class="seller-stats-value">{{ seller_stats.bookmarks_total }}</span>
+          <span class="seller-stats-label">в закладках</span>
+        </div>
+      </div>
+      <p class="seller-stats-meta">
+        {% if seller_stats.contact_rate is not None %}
+          Конверсия в телефон: {{ seller_stats.contact_rate }}%
+        {% else %}
+          Конверсия появится после первых просмотров
+        {% endif %}
+        {% if seller_stats.deals_confirmed %}
+          · Сделок подтверждено: {{ seller_stats.deals_confirmed }}
+        {% endif %}
+        {% if seller_stats.expiring_soon %}
+          · Скоро истечёт: {{ seller_stats.expiring_soon }}
+        {% endif %}
+      </p>
+    </section>
+  {% endif %}
 
   {% include "accounts/partials/my_posts_section.html" %}
 </div>
