@@ -4,14 +4,13 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -32,7 +31,10 @@ import ru.poisker.app.ui.components.CategoryPicker
 import ru.poisker.app.ui.components.CityPicker
 import ru.poisker.app.ui.components.ConditionPicker
 import ru.poisker.app.ui.components.ErrorBanner
+import ru.poisker.app.ui.components.FullScreenLoading
 import ru.poisker.app.ui.components.ImagePreviewRow
+import ru.poisker.app.ui.components.LoadingButton
+import ru.poisker.app.ui.components.LoadingOverlay
 import ru.poisker.app.ui.theme.PoiskerSpacing
 import java.io.File
 
@@ -91,68 +93,73 @@ fun CreateListingScreen(
         if (coverIndex >= imageFiles.size) coverIndex = 0
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(PoiskerSpacing.lg),
-        verticalArrangement = Arrangement.spacedBy(PoiskerSpacing.md),
-    ) {
-        Text("Новое объявление")
-        OutlinedTextField(title, { title = it }, label = { Text("Заголовок") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(
-            body,
-            { body = it },
-            label = { Text("Описание") },
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 4,
-        )
-        CategoryPicker(state.categories, category, onSelected = { category = it })
-        CityPicker(
-            cities = state.cities,
-            selected = city,
-            query = cityQuery,
-            onQueryChange = {
-                cityQuery = it
-                viewModel.searchCities(it)
-            },
-            onSelected = { city = it },
-        )
-        Text("Состояние")
-        ConditionPicker(condition) { condition = it }
-        OutlinedTextField(price, { price = it }, label = { Text("Цена, ₽") }, modifier = Modifier.fillMaxWidth())
-        OutlinedButton(onClick = { picker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
-            Text("Добавить фото (${imageFiles.size}/5)")
-        }
-        ImagePreviewRow(imageFiles, coverIndex, onSelectCover = { coverIndex = it })
-        Text(
-            "После отправки объявление попадёт на модерацию. Обычно это занимает немного времени.",
-            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-        )
-        state.error?.let { ErrorBanner(it) }
-        if (state.isLoading) {
-            CircularProgressIndicator()
-        } else {
-            Button(
-                onClick = {
-                    viewModel.create(
-                        title = title,
-                        body = body,
-                        category = category,
-                        city = city,
-                        condition = condition,
-                        price = price.toIntOrNull(),
-                        files = imageFiles.toList(),
-                        coverIndex = coverIndex,
-                        onSuccess = onCreated,
-                        onAuthRequired = onLoginRequired,
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = state.catalogLoaded && imageFiles.isNotEmpty() && title.isNotBlank() && body.isNotBlank(),
+    when {
+        state.isCatalogLoading && !state.catalogLoaded -> FullScreenLoading(message = "Загрузка…")
+        else -> Box(Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(PoiskerSpacing.lg),
+                verticalArrangement = Arrangement.spacedBy(PoiskerSpacing.md),
             ) {
-                Text("Отправить на модерацию")
+                Text("Новое объявление")
+                OutlinedTextField(title, { title = it }, label = { Text("Заголовок") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    body,
+                    { body = it },
+                    label = { Text("Описание") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 4,
+                )
+                CategoryPicker(state.categories, category, onSelected = { category = it })
+                CityPicker(
+                    cities = state.cities,
+                    selected = city,
+                    query = cityQuery,
+                    onQueryChange = {
+                        cityQuery = it
+                        viewModel.searchCities(it)
+                    },
+                    onSelected = { city = it },
+                )
+                Text("Состояние")
+                ConditionPicker(condition) { condition = it }
+                OutlinedTextField(price, { price = it }, label = { Text("Цена, ₽") }, modifier = Modifier.fillMaxWidth())
+                OutlinedButton(
+                    onClick = { picker.launch("image/*") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isLoading,
+                ) {
+                    Text("Добавить фото (${imageFiles.size}/5)")
+                }
+                ImagePreviewRow(imageFiles, coverIndex, onSelectCover = { coverIndex = it })
+                Text(
+                    "После отправки объявление попадёт на модерацию. Обычно это занимает немного времени.",
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                )
+                state.error?.let { ErrorBanner(it) }
+                LoadingButton(
+                    text = "Отправить на модерацию",
+                    onClick = {
+                        viewModel.create(
+                            title = title,
+                            body = body,
+                            category = category,
+                            city = city,
+                            condition = condition,
+                            price = price.toIntOrNull(),
+                            files = imageFiles.toList(),
+                            coverIndex = coverIndex,
+                            onSuccess = onCreated,
+                            onAuthRequired = onLoginRequired,
+                        )
+                    },
+                    loading = state.isLoading,
+                    enabled = state.catalogLoaded && imageFiles.isNotEmpty() && title.isNotBlank() && body.isNotBlank(),
+                )
             }
+            LoadingOverlay(visible = state.isLoading, message = "Отправка…")
         }
     }
 }

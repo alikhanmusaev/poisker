@@ -52,6 +52,7 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import ru.poisker.app.data.remote.dto.ListingDto
 import ru.poisker.app.ui.components.ErrorBanner
+import ru.poisker.app.ui.components.FullScreenLoading
 import ru.poisker.app.ui.icons.LucideIcon
 import ru.poisker.app.ui.icons.LucideIcons
 import ru.poisker.app.ui.theme.PoiskerColors
@@ -98,9 +99,8 @@ fun DetailsScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(color = PoiskerColors.Primary)
+                FullScreenLoading()
             }
             state.error != null && state.listing == null -> ErrorBanner(
                 state.error!!,
@@ -233,11 +233,22 @@ fun DetailsScreen(
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
+                                    enabled = !state.isContactLoading,
                                     shape = RoundedCornerShape(PoiskerRadius.md),
                                 ) {
-                                    LucideIcon(LucideIcons.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(state.phone ?: "Показать телефон")
+                                    if (state.isContactLoading) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            color = PoiskerColors.Primary,
+                                            strokeWidth = 2.dp,
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Загрузка…")
+                                    } else {
+                                        LucideIcon(LucideIcons.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(state.phone ?: "Показать телефон")
+                                    }
                                 }
 
                                 state.phone?.let { phone ->
@@ -270,20 +281,29 @@ fun DetailsScreen(
                                             }
                                         },
                                         modifier = Modifier.weight(1f),
+                                        enabled = !state.isBookmarkLoading,
                                         shape = RoundedCornerShape(PoiskerRadius.md),
                                     ) {
-                                        LucideIcon(
-                                            if (listing.isBookmarked) {
-                                                LucideIcons.BookmarkCheck
-                                            } else {
-                                                LucideIcons.Bookmark
-                                            },
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
-                                            tint = PoiskerColors.Primary,
-                                        )
-                                        Spacer(Modifier.width(6.dp))
-                                        Text(if (listing.isBookmarked) "В закладках" else "В закладки")
+                                        if (state.isBookmarkLoading) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(18.dp),
+                                                color = PoiskerColors.Primary,
+                                                strokeWidth = 2.dp,
+                                            )
+                                        } else {
+                                            LucideIcon(
+                                                if (listing.isBookmarked) {
+                                                    LucideIcons.BookmarkCheck
+                                                } else {
+                                                    LucideIcons.Bookmark
+                                                },
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                                tint = PoiskerColors.Primary,
+                                            )
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(if (listing.isBookmarked) "В закладках" else "В закладки")
+                                        }
                                     }
                                     OutlinedButton(
                                         onClick = {

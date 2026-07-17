@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -20,14 +19,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.poisker.app.data.remote.dto.ListingDto
 import ru.poisker.app.ui.components.EmptyState
 import ru.poisker.app.ui.components.ErrorBanner
+import ru.poisker.app.ui.components.FullScreenLoading
 import ru.poisker.app.ui.components.ListingCard
+import ru.poisker.app.ui.components.LoadingOverlay
 import ru.poisker.app.ui.components.PoiskerHeader
 import ru.poisker.app.ui.theme.PoiskerColors
 import ru.poisker.app.ui.theme.PoiskerSpacing
@@ -67,88 +67,92 @@ fun ProfileScreen(
         }
         state.isLoading && state.listings.isEmpty() -> Column(modifier.fillMaxSize()) {
             PoiskerHeader()
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = PoiskerColors.Primary)
-            }
+            FullScreenLoading()
         }
-        else -> LazyColumn(
-            modifier = modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = PoiskerSpacing.lg),
-            verticalArrangement = Arrangement.spacedBy(PoiskerSpacing.md),
-        ) {
-            item(key = "header") { PoiskerHeader() }
-            item(key = "profile") {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(PoiskerSpacing.lg),
-                    verticalArrangement = Arrangement.spacedBy(PoiskerSpacing.sm),
-                ) {
-                    Text(
-                        state.displayName.ifBlank { "Профиль" },
-                        style = MaterialTheme.typography.headlineSmall,
-                    )
-                    Text(state.email, color = PoiskerColors.Muted)
-                    if (!state.emailVerified) {
-                        Text(
-                            "Подтвердите email для публикации объявлений",
-                            color = PoiskerColors.WarningText,
-                        )
-                    }
-                    OutlinedButton(
-                        onClick = { viewModel.logout(onLoggedOut) },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Выйти")
-                    }
-                }
-            }
-            item(key = "tabs") {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = PoiskerSpacing.lg),
-                    horizontalArrangement = Arrangement.spacedBy(PoiskerSpacing.sm),
-                ) {
-                    items(TABS.size) { index ->
-                        val (key, label) = TABS[index]
-                        FilterChip(
-                            selected = state.tab == key,
-                            onClick = { viewModel.selectTab(key) },
-                            label = { Text(label) },
-                        )
-                    }
-                }
-            }
-            state.error?.let {
-                item { ErrorBanner(it, Modifier.padding(horizontal = PoiskerSpacing.lg)) }
-            }
-            if (state.listings.isEmpty()) {
-                item {
-                    EmptyState(
-                        title = "Нет объявлений",
-                        hint = "В этой вкладке пока пусто",
-                    )
-                }
-            } else {
-                items(state.listings, key = { it.id }) { listing ->
+        else -> Box(modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = PoiskerSpacing.lg),
+                verticalArrangement = Arrangement.spacedBy(PoiskerSpacing.md),
+            ) {
+                item(key = "header") { PoiskerHeader() }
+                item(key = "profile") {
                     Column(
-                        modifier = Modifier.padding(horizontal = PoiskerSpacing.lg),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(PoiskerSpacing.lg),
                         verticalArrangement = Arrangement.spacedBy(PoiskerSpacing.sm),
                     ) {
-                        ListingCard(
-                            listing = listing,
-                            onClick = { onListingClick(listing.id) },
-                            showStatus = true,
+                        Text(
+                            state.displayName.ifBlank { "Профиль" },
+                            style = MaterialTheme.typography.headlineSmall,
                         )
-                        ListingOwnerActions(
-                            listing = listing,
-                            onEdit = { onEditListing(listing.id) },
-                            onSubmit = { viewModel.submit(listing.id) },
-                            onRepublish = { viewModel.republish(listing.id) },
-                            onDelete = { viewModel.delete(listing.id) },
+                        Text(state.email, color = PoiskerColors.Muted)
+                        if (!state.emailVerified) {
+                            Text(
+                                "Подтвердите email для публикации объявлений",
+                                color = PoiskerColors.WarningText,
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { viewModel.logout(onLoggedOut) },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !state.isActionLoading,
+                        ) {
+                            Text("Выйти")
+                        }
+                    }
+                }
+                item(key = "tabs") {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = PoiskerSpacing.lg),
+                        horizontalArrangement = Arrangement.spacedBy(PoiskerSpacing.sm),
+                    ) {
+                        items(TABS.size) { index ->
+                            val (key, label) = TABS[index]
+                            FilterChip(
+                                selected = state.tab == key,
+                                onClick = { viewModel.selectTab(key) },
+                                enabled = !state.isActionLoading,
+                                label = { Text(label) },
+                            )
+                        }
+                    }
+                }
+                state.error?.let {
+                    item { ErrorBanner(it, Modifier.padding(horizontal = PoiskerSpacing.lg)) }
+                }
+                if (state.listings.isEmpty()) {
+                    item {
+                        EmptyState(
+                            title = "Нет объявлений",
+                            hint = "В этой вкладке пока пусто",
                         )
+                    }
+                } else {
+                    items(state.listings, key = { it.id }) { listing ->
+                        Column(
+                            modifier = Modifier.padding(horizontal = PoiskerSpacing.lg),
+                            verticalArrangement = Arrangement.spacedBy(PoiskerSpacing.sm),
+                        ) {
+                            ListingCard(
+                                listing = listing,
+                                onClick = { onListingClick(listing.id) },
+                                showStatus = true,
+                            )
+                            ListingOwnerActions(
+                                listing = listing,
+                                enabled = !state.isActionLoading,
+                                onEdit = { onEditListing(listing.id) },
+                                onSubmit = { viewModel.submit(listing.id) },
+                                onRepublish = { viewModel.republish(listing.id) },
+                                onDelete = { viewModel.delete(listing.id) },
+                            )
+                        }
                     }
                 }
             }
+            LoadingOverlay(visible = state.isActionLoading, message = "Обновление…")
         }
     }
 }
@@ -156,6 +160,7 @@ fun ProfileScreen(
 @Composable
 private fun ListingOwnerActions(
     listing: ListingDto,
+    enabled: Boolean,
     onEdit: () -> Unit,
     onSubmit: () -> Unit,
     onRepublish: () -> Unit,
@@ -163,12 +168,12 @@ private fun ListingOwnerActions(
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(PoiskerSpacing.sm)) {
         when (listing.status) {
-            "draft" -> Button(onClick = onSubmit) { Text("На модерацию") }
-            "hidden", "expired" -> Button(onClick = onRepublish) { Text("Опубликовать снова") }
+            "draft" -> Button(onClick = onSubmit, enabled = enabled) { Text("На модерацию") }
+            "hidden", "expired" -> Button(onClick = onRepublish, enabled = enabled) { Text("Опубликовать снова") }
         }
-        OutlinedButton(onClick = onEdit) { Text("Изменить") }
+        OutlinedButton(onClick = onEdit, enabled = enabled) { Text("Изменить") }
         if (listing.status != "deleted") {
-            OutlinedButton(onClick = onDelete) { Text("Снять") }
+            OutlinedButton(onClick = onDelete, enabled = enabled) { Text("Снять") }
         }
     }
 }

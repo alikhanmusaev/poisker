@@ -17,6 +17,8 @@ import javax.inject.Inject
 data class DetailsUiState(
     val listing: ru.poisker.app.data.remote.dto.ListingDto? = null,
     val isLoading: Boolean = true,
+    val isContactLoading: Boolean = false,
+    val isBookmarkLoading: Boolean = false,
     val error: String? = null,
     val phone: String? = null,
 )
@@ -51,27 +53,32 @@ class DetailsViewModel @Inject constructor(
 
     fun toggleBookmark() {
         val listing = _state.value.listing ?: return
+        if (_state.value.isBookmarkLoading) return
         viewModelScope.launch {
+            _state.value = _state.value.copy(isBookmarkLoading = true, error = null)
             try {
                 if (listing.isBookmarked) bookmarkRepository.remove(listing.id)
                 else bookmarkRepository.add(listing.id)
                 _state.value = _state.value.copy(
                     listing = listing.copy(isBookmarked = !listing.isBookmarked),
+                    isBookmarkLoading = false,
                 )
             } catch (e: ApiException) {
-                _state.value = _state.value.copy(error = e.message)
+                _state.value = _state.value.copy(error = e.message, isBookmarkLoading = false)
             }
         }
     }
 
     fun revealPhone() {
         val id = _state.value.listing?.id ?: return
+        if (_state.value.isContactLoading) return
         viewModelScope.launch {
+            _state.value = _state.value.copy(isContactLoading = true, error = null)
             try {
                 val response = listingRepository.contact(id)
-                _state.value = _state.value.copy(phone = response.phone)
+                _state.value = _state.value.copy(phone = response.phone, isContactLoading = false)
             } catch (e: ApiException) {
-                _state.value = _state.value.copy(error = e.message)
+                _state.value = _state.value.copy(error = e.message, isContactLoading = false)
             }
         }
     }

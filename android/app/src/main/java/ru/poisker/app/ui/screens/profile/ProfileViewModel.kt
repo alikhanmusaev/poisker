@@ -22,7 +22,8 @@ data class ProfileUiState(
     val tab: String = "active",
     val allListings: List<ListingDto> = emptyList(),
     val listings: List<ListingDto> = emptyList(),
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
+    val isActionLoading: Boolean = false,
     val error: String? = null,
 )
 
@@ -56,6 +57,7 @@ class ProfileViewModel @Inject constructor(
                         emailVerified = user.emailVerified,
                         allListings = response.results,
                         isLoading = false,
+                        isActionLoading = false,
                     )
                 }
                 applyTab(_state.value.tab)
@@ -64,6 +66,7 @@ class ProfileViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         isLoading = false,
+                        isActionLoading = false,
                         error = e.message,
                         isAuthenticated = !authFailed,
                     )
@@ -104,11 +107,12 @@ class ProfileViewModel @Inject constructor(
 
     private fun runAction(block: suspend () -> Unit) {
         viewModelScope.launch {
+            _state.update { it.copy(isActionLoading = true, error = null) }
             try {
                 block()
                 load()
             } catch (e: ApiException) {
-                _state.update { it.copy(error = e.message) }
+                _state.update { it.copy(error = e.message, isActionLoading = false) }
             }
         }
     }

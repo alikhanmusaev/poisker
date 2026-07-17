@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,6 +34,7 @@ import coil.compose.AsyncImage
 import ru.poisker.app.data.remote.dto.ConversationDto
 import ru.poisker.app.ui.components.EmptyState
 import ru.poisker.app.ui.components.ErrorBanner
+import ru.poisker.app.ui.components.FullScreenLoading
 import ru.poisker.app.ui.components.PoiskerHeader
 import ru.poisker.app.ui.icons.LucideIcon
 import ru.poisker.app.ui.icons.LucideIcons
@@ -71,9 +71,7 @@ fun MessagesScreen(
     if (state.isLoading && state.conversations.isEmpty()) {
         Column(Modifier.fillMaxSize()) {
             PoiskerHeader()
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = PoiskerColors.Primary)
-            }
+            FullScreenLoading()
         }
         return
     }

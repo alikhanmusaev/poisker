@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -39,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.poisker.app.ui.components.EmptyState
 import ru.poisker.app.ui.components.ErrorBanner
 import ru.poisker.app.ui.components.HomeSearchBar
+import ru.poisker.app.ui.components.InlineLoading
 import ru.poisker.app.ui.components.ListingCard
 import ru.poisker.app.ui.components.PoiskerHeader
 import ru.poisker.app.ui.icons.LucideIcon
@@ -202,14 +202,7 @@ fun HomeScreen(
             when {
                 state.isLoading && state.listings.isEmpty() -> {
                     item(key = "loading") {
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(PoiskerSpacing.xl),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularProgressIndicator(color = PoiskerColors.Primary)
-                        }
+                        InlineLoading(size = 40)
                     }
                 }
                 state.listings.isEmpty() -> {
@@ -238,14 +231,7 @@ fun HomeScreen(
                     }
                     if (state.isLoadingMore) {
                         item(key = "loading-more") {
-                            Box(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator(color = PoiskerColors.Primary)
-                            }
+                            InlineLoading()
                         }
                     }
                 }

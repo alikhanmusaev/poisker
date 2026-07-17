@@ -1,7 +1,6 @@
 package ru.poisker.app.ui.screens.bookmarks
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -17,16 +15,15 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.poisker.app.ui.components.EmptyState
 import ru.poisker.app.ui.components.ErrorBanner
+import ru.poisker.app.ui.components.FullScreenLoading
 import ru.poisker.app.ui.components.ListingCard
 import ru.poisker.app.ui.components.PoiskerHeader
-import ru.poisker.app.ui.theme.PoiskerColors
 import ru.poisker.app.ui.theme.PoiskerSpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,9 +52,9 @@ fun BookmarksScreen(
                 )
             }
             state.isLoading && state.listings.isEmpty() -> {
-                PoiskerHeader()
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = PoiskerColors.Primary)
+                Column(Modifier.fillMaxSize()) {
+                    PoiskerHeader()
+                    FullScreenLoading()
                 }
             }
             else -> PullToRefreshBox(

@@ -9,9 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -29,6 +27,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.poisker.app.ui.components.ErrorBanner
+import ru.poisker.app.ui.components.LoadingButton
 import ru.poisker.app.ui.theme.PoiskerColors
 import ru.poisker.app.ui.theme.PoiskerSpacing
 
@@ -261,17 +260,12 @@ private fun AuthForm(
         fields()
         error?.let { ErrorBanner(it) }
         info?.let { Text(it, color = PoiskerColors.SuccessText) }
-        if (isLoading) {
-            CircularProgressIndicator()
-        } else {
-            Button(
-                onClick = onPrimary,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = primaryEnabled,
-            ) {
-                Text(primaryLabel)
-            }
-        }
+        LoadingButton(
+            text = primaryLabel,
+            onClick = onPrimary,
+            loading = isLoading,
+            enabled = primaryEnabled,
+        )
         footer()
     }
 }

@@ -19,7 +19,8 @@ data class EditListingUiState(
     val listing: ListingDto? = null,
     val categories: List<CategoryDto> = emptyList(),
     val cities: List<CityDto> = emptyList(),
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
+    val isSaving: Boolean = false,
     val error: String? = null,
 )
 
@@ -67,7 +68,7 @@ class EditListingViewModel @Inject constructor(
         onSaved: () -> Unit,
     ) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isSaving = true, error = null) }
             try {
                 listingRepository.updateListing(
                     id = id,
@@ -78,10 +79,10 @@ class EditListingViewModel @Inject constructor(
                     condition = condition,
                     price = price,
                 )
-                _state.update { it.copy(isLoading = false) }
+                _state.update { it.copy(isSaving = false) }
                 onSaved()
             } catch (e: ApiException) {
-                _state.update { it.copy(isLoading = false, error = e.message) }
+                _state.update { it.copy(isSaving = false, error = e.message) }
             }
         }
     }

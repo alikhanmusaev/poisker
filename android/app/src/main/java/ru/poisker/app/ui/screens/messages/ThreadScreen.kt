@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -33,6 +34,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.poisker.app.data.remote.dto.ChatMessageDto
 import ru.poisker.app.ui.components.ErrorBanner
+import ru.poisker.app.ui.components.FullScreenLoading
 import ru.poisker.app.ui.icons.LucideIcon
 import ru.poisker.app.ui.icons.LucideIcons
 import ru.poisker.app.ui.theme.PoiskerColors
@@ -106,7 +108,15 @@ fun ThreadScreen(
                         onClick = viewModel::send,
                         enabled = state.draft.isNotBlank() && !state.isSending,
                     ) {
-                        LucideIcon(LucideIcons.Send, contentDescription = "Отправить", tint = PoiskerColors.Primary)
+                        if (state.isSending) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = PoiskerColors.Primary,
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            LucideIcon(LucideIcons.Send, contentDescription = "Отправить", tint = PoiskerColors.Primary)
+                        }
                     }
                 }
             }
@@ -114,10 +124,11 @@ fun ThreadScreen(
     ) { padding ->
         when {
             state.isLoading -> Box(
-                Modifier.fillMaxSize().padding(padding),
-                contentAlignment = Alignment.Center,
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
             ) {
-                CircularProgressIndicator(color = PoiskerColors.Primary)
+                FullScreenLoading()
             }
             state.error != null && state.conversation == null -> ErrorBanner(
                 state.error!!,

@@ -21,6 +21,7 @@ data class CreateListingUiState(
     val categories: List<CategoryDto> = emptyList(),
     val cities: List<CityDto> = emptyList(),
     val catalogLoaded: Boolean = false,
+    val isCatalogLoading: Boolean = true,
     val isLoading: Boolean = false,
     val error: String? = null,
 )
@@ -38,6 +39,7 @@ class CreateListingViewModel @Inject constructor(
 
     fun loadCatalog() {
         viewModelScope.launch {
+            _state.update { it.copy(isCatalogLoading = true, error = null) }
             try {
                 val categories = catalogRepository.categories()
                 val cities = catalogRepository.cities()
@@ -46,6 +48,7 @@ class CreateListingViewModel @Inject constructor(
                         categories = categories,
                         cities = cities,
                         catalogLoaded = categories.isNotEmpty() && cities.isNotEmpty(),
+                        isCatalogLoading = false,
                         error = if (categories.isEmpty() || cities.isEmpty()) {
                             "Не удалось загрузить категории и города"
                         } else {
@@ -54,7 +57,9 @@ class CreateListingViewModel @Inject constructor(
                     )
                 }
             } catch (e: ApiException) {
-                _state.update { it.copy(catalogLoaded = false, error = e.message) }
+                _state.update {
+                    it.copy(catalogLoaded = false, isCatalogLoading = false, error = e.message)
+                }
             }
         }
     }
