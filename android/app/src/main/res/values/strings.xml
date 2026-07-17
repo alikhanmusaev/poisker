@@ -2,4 +2,29 @@
 <resources>
     <string name="app_name">Поискер</string>
     <string name="app_tagline">Доска объявлений по Чеченской Республике</string>
+
+    <string name="offline_title">Нет интернета</string>
+    <string name="offline_message">Проверьте подключение и нажмите «Повторить».</string>
+    <string name="offline_banner">Нет подключения к интернету</string>
+    <string name="still_offline">Подключение всё ещё отсутствует</string>
+
+    <string name="error_network_title">Не удалось загрузить</string>
+    <string name="error_network_message">Проблема с сетью. Попробуйте ещё раз.</string>
+    <string name="error_http_title">Ошибка сервера (%1$d)</string>
+    <string name="error_http_message">Страница временно недоступна.</string>
+    <string name="error_ssl_title">Ошибка безопасности</string>
+    <string name="error_ssl_message">Не удалось проверить сертификат. Загрузка отменена.</string>
+    <string name="error_unknown_title">Ошибка загрузки</string>
+    <string name="error_unknown_message">Что-то пошло не так. Попробуйте ещё раз.</string>
+
+    <string name="action_retry">Повторить</string>
+    <string name="action_open_browser">Открыть в браузере</string>
+
+    <string name="link_unsupported">Не удалось открыть ссылку</string>
+    <string name="app_not_installed">Приложение не установлено</string>
+
+    <string name="download_started">Загрузка началась</string>
+    <string name="download_description">Файл из Поискер</string>
+    <string name="download_failed">Не удалось начать загрузку</string>
+    <string name="download_blocked">Загрузка с этого адреса запрещена</string>
 </resources>

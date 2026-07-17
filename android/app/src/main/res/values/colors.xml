@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- From static/css/style.css -->
     <color name="poisker_primary">#B91C1C</color>
+    <color name="poisker_primary_hover">#DC2626</color>
+    <color name="poisker_primary_soft">#FEF2F2</color>
     <color name="poisker_background">#F8FAFC</color>
+    <color name="poisker_surface">#FFFFFF</color>
+    <color name="poisker_text">#0F172A</color>
+    <color name="poisker_muted">#64748B</color>
+    <color name="poisker_border">#E2E8F0</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
+    <color name="ic_launcher_background">#B91C1C</color>
 </resources>

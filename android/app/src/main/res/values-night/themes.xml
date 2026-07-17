@@ -1,7 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Site has no dark theme — keep light chrome to avoid forcing inverted WebView. -->
 <resources>
-    <style name="Theme.Poisker" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.Poisker" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:statusBarColor">@color/poisker_primary</item>
         <item name="android:navigationBarColor">@color/poisker_background</item>
         <item name="android:windowBackground">@color/poisker_background</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

@@ -1,7 +1,14 @@
 package ru.poisker.app
 
 import android.app.Application
-import dagger.hilt.android.HiltAndroidApp
+import android.webkit.CookieManager
+import android.webkit.WebView
 
-@HiltAndroidApp
-class PoiskerApplication : Application()
+class PoiskerApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        CookieManager.getInstance().setAcceptCookie(true)
+        // Warm WebView provider early to reduce first-paint jank.
+        runCatching { WebView(this).destroy() }
+    }
+}

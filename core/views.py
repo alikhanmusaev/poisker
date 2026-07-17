@@ -298,6 +298,34 @@ def robots_txt(request):
     return HttpResponse("\n".join(lines), content_type="text/plain")
 
 
+def assetlinks_json(request):
+    """Digital Asset Links for Android App Links (ru.poisker.app)."""
+    import json
+
+    # Debug keystore SHA-256 (androiddebugkey). Replace/add Play App Signing cert before production verify.
+    fingerprints = [
+        "2A:0E:76:5E:94:69:3E:9E:13:BC:52:F0:57:FA:0D:92:1D:8B:6B:DD:04:0A:47:4F:1D:D8:9F:9A:54:7C:B7:FB",
+    ]
+    release_fp = (getattr(settings, "ANDROID_RELEASE_SHA256", "") or "").strip()
+    if release_fp and release_fp not in fingerprints:
+        fingerprints.append(release_fp)
+
+    payload = [
+        {
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+                "namespace": "android_app",
+                "package_name": "ru.poisker.app",
+                "sha256_cert_fingerprints": fingerprints,
+            },
+        }
+    ]
+    return HttpResponse(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        content_type="application/json",
+    )
+
+
 def sitemap_xml(request):
     posts = list(
         Post.objects.filter(status="published", expires_at__gte=timezone.now())

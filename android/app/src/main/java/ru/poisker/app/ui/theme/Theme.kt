@@ -10,6 +10,19 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
+/** Colors from static/css/style.css :root tokens. */
+object PoiskerColors {
+    val Primary = Color(0xFFB91C1C) // --primary-700 / --color-primary
+    val PrimaryHover = Color(0xFFDC2626) // --primary-600
+    val PrimarySoft = Color(0xFFFEF2F2) // --primary-50
+    val Background = Color(0xFFF8FAFC) // --slate-50 / --color-bg
+    val Surface = Color(0xFFFFFFFF) // --color-surface
+    val Text = Color(0xFF0F172A) // --slate-900
+    val Muted = Color(0xFF64748B) // --slate-500
+    val Border = Color(0xFFE2E8F0) // --slate-200
+    val Danger = Color(0xFFEF4444) // --red-500
+}
+
 private val LightColors = lightColorScheme(
     primary = PoiskerColors.Primary,
     onPrimary = Color.White,
@@ -23,56 +36,27 @@ private val LightColors = lightColorScheme(
 )
 
 private val PoiskerTypography = Typography(
-    headlineSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Bold,
-        fontSize = 26.sp,
-        lineHeight = 32.sp,
-        letterSpacing = (-0.5).sp,
-    ),
     titleLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
-        letterSpacing = (-0.3).sp,
-    ),
-    titleMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 16.sp,
-    ),
-    titleSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 15.sp,
-        lineHeight = 20.sp,
     ),
     bodyLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
     ),
     bodyMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontSize = 14.sp,
-        lineHeight = 21.sp,
-    ),
-    bodySmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontSize = 13.sp,
-        lineHeight = 18.sp,
+        lineHeight = 20.sp,
         color = PoiskerColors.Muted,
-    ),
-    labelSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
     ),
 )
 
 @Composable
 fun PoiskerTheme(content: @Composable () -> Unit) {
+    // Site has no dark theme — keep light shell only.
     MaterialTheme(
         colorScheme = LightColors,
         typography = PoiskerTypography,
