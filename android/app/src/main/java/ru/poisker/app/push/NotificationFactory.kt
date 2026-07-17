@@ -3,9 +3,12 @@ package ru.poisker.app.push
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.createBitmap
 import ru.poisker.app.MainActivity
 import ru.poisker.app.R
 import ru.poisker.app.util.UrlRules
@@ -30,7 +33,7 @@ object NotificationFactory {
         )
         val title = payload.title.ifBlank { context.getString(R.string.app_name) }
         val body = payload.body.ifBlank { context.getString(R.string.push_default_body) }
-        val notification = NotificationCompat.Builder(context, payload.channelId())
+        val builder = NotificationCompat.Builder(context, payload.channelId())
             .setSmallIcon(R.drawable.ic_stat_poisker)
             .setColor(ContextCompat.getColor(context, R.color.poisker_primary))
             .setContentTitle(title)
@@ -45,13 +48,26 @@ object NotificationFactory {
                     NotificationCompat.PRIORITY_DEFAULT
                 },
             )
-            .build()
+        largeAppIcon(context)?.let { builder.setLargeIcon(it) }
 
         try {
-            NotificationManagerCompat.from(context).notify(requestCode, notification)
+            NotificationManagerCompat.from(context).notify(requestCode, builder.build())
         } catch (_: SecurityException) {
             // POST_NOTIFICATIONS denied — ignore.
         }
+    }
+
+    private fun largeAppIcon(context: Context): Bitmap? {
+        // Full-color brand mark in the notification body (smallIcon stays monochrome vector).
+        val drawable = ContextCompat.getDrawable(context, R.drawable.ic_notification_large)
+            ?: ContextCompat.getDrawable(context, R.mipmap.ic_launcher)
+            ?: return null
+        val size = (64 * context.resources.displayMetrics.density).toInt().coerceAtLeast(128)
+        val bitmap = createBitmap(size, size)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, size, size)
+        drawable.draw(canvas)
+        return bitmap
     }
 }
 
