@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Poisker" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@color/poisker_primary</item>
+        <item name="android:navigationBarColor">@color/poisker_background</item>
+        <item name="android:windowBackground">@color/poisker_background</item>
+    </style>
+</resources>

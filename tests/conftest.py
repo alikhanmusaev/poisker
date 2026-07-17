@@ -23,6 +23,8 @@ def _locmem_cache(settings):
             "LOCATION": "poisker-tests",
         }
     }
+    if "testserver" not in settings.ALLOWED_HOSTS:
+        settings.ALLOWED_HOSTS = [*settings.ALLOWED_HOSTS, "testserver"]
 
 
 @pytest.fixture

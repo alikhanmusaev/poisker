@@ -63,6 +63,11 @@ INSTALLED_APPS = [
     "moderation",
     "reviews",
     "core",
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
+    "drf_spectacular",
+    "api",
 ]
 
 MIDDLEWARE = [
@@ -254,3 +259,33 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT")
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_BROWSER_XSS_FILTER = True
+
+# --- REST API (Android) ---
+from datetime import timedelta
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "api.pagination.PoiskerPageNumberPagination",
+    "PAGE_SIZE": 20,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "api.exceptions.poisker_exception_handler",
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=14),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Poisker API",
+    "DESCRIPTION": "JSON API for Poisker mobile clients",
+    "VERSION": "1.0.0",
+}
