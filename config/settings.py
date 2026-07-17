@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     "moderation",
     "reviews",
     "core",
+    "notifications",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -289,3 +290,8 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "JSON API for Poisker mobile clients",
     "VERSION": "1.0.0",
 }
+
+# --- Firebase Cloud Messaging (server) ---
+FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "").strip()
+FIREBASE_CREDENTIALS_FILE = os.getenv("FIREBASE_CREDENTIALS_FILE", "").strip()
+FCM_ENABLED = env_bool("FCM_ENABLED", "true")

@@ -27,4 +27,9 @@
     <string name="download_description">Файл из Поискер</string>
     <string name="download_failed">Не удалось начать загрузку</string>
     <string name="download_blocked">Загрузка с этого адреса запрещена</string>
+
+    <string name="channel_messages">Сообщения</string>
+    <string name="channel_listings">Объявления</string>
+    <string name="channel_system">Системные</string>
+    <string name="push_default_body">Новое уведомление</string>
 </resources>

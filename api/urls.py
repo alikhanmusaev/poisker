@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from api.views.auth import (
@@ -63,4 +63,5 @@ urlpatterns = [
     path("listings/<uuid:post_id>/republish/", ListingRepublishView.as_view(), name="listing-republish"),
     path("listings/<uuid:post_id>/contact/", ListingContactView.as_view(), name="listing-contact"),
     path("listings/<uuid:post_id>/bookmark/", ListingBookmarkView.as_view(), name="listing-bookmark"),
+    path("push/", include("notifications.urls")),
 ]

@@ -54,6 +54,10 @@
 - [ ] Указать модерацию объявлений на стороне сервиса
 - [ ] Возрастной рейтинг по анкете Play (UGC)
 
+- [ ] `POST_NOTIFICATIONS` объявлен; runtime-запрос не на каждом запуске
+- [ ] Нет Firebase Analytics / Advertising ID
+- [ ] Small notification icon — monochrome (`ic_stat_poisker`)
+
 ## Перед отправкой
 
 - [ ] Проверить логин Django в WebView
@@ -63,3 +67,6 @@
 - [ ] Back возвращает по истории WebView
 - [ ] Offline экран и Retry
 - [ ] Поворот экрана не сбрасывает форму/сессию
+- [ ] Push: foreground / background / killed → открытие URL
+- [ ] Logout деактивирует device (DELETE current)
+- [ ] На сервере задан `FIREBASE_CREDENTIALS_FILE` (не в git)

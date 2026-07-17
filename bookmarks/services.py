@@ -181,6 +181,19 @@ def _notify_user(user_id, *, kind, title, body, post=None, payload=None) -> int:
         payload=payload or {},
     )
     _maybe_email_user(user_id, subject=title, body=body)
+    try:
+        from notifications.services import push_for_bookmark_notification
+
+        push_for_bookmark_notification(
+            user_id=user_id,
+            kind=kind,
+            title=title,
+            body=body,
+            post=post,
+            payload=payload or {},
+        )
+    except Exception:
+        pass
     return 1
 
 

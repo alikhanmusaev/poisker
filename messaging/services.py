@@ -86,6 +86,20 @@ def send_message(conversation: Conversation, sender, body: str = "", *, image: s
     conversation.unhide_all()
     Conversation.objects.filter(pk=conversation.pk).update(updated_at=now)
     conversation.updated_at = now
+
+    recipient = conversation.seller if sender.id == conversation.buyer_id else conversation.buyer
+    if recipient and recipient.id != sender.id:
+        try:
+            from notifications.services import push_for_new_message
+
+            push_for_new_message(
+                recipient=recipient,
+                conversation=conversation,
+                sender=sender,
+                message=message,
+            )
+        except Exception:
+            pass
     return message
 
 

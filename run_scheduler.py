@@ -32,6 +32,13 @@ def expire_job():
     expire_old_posts()
 
 
+@scheduler.scheduled_job("interval", hours=6, id="listing_expiring_push")
+def listing_expiring_push_job():
+    from notifications.services import notify_listing_expiring
+
+    notify_listing_expiring(days=3)
+
+
 @scheduler.scheduled_job("interval", hours=1, id="deal_review_jobs")
 def deal_review_job():
     process_deal_review_jobs()

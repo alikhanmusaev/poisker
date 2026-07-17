@@ -11,6 +11,9 @@ import ru.poisker.app.web.WebViewStateHolder
 @Composable
 fun PoiskerApp(
     initialUrl: String? = null,
+    pendingNavigationUrl: String? = null,
+    onNavigationConsumed: () -> Unit = {},
+    onSessionLikelyReady: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -20,6 +23,9 @@ fun PoiskerApp(
 
     WebViewScreen(
         startUrl = startUrl,
+        pendingNavigationUrl = pendingNavigationUrl,
+        onNavigationConsumed = onNavigationConsumed,
+        onSessionLikelyReady = onSessionLikelyReady,
         stateHolder = stateHolder,
         networkMonitor = networkMonitor,
         modifier = modifier.fillMaxSize(),

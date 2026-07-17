@@ -19,3 +19,19 @@ db.sqlite3
 .DS_Store
 Thumbs.db
 .aider*
+
+# Android / Firebase secrets
+android/keystore.properties
+android/*.jks
+android/*.keystore
+**/*.jks
+**/*.keystore
+**/serviceAccount*.json
+**/firebase-adminsdk*.json
+**/google-services (1).json
+.firebaserc.local
+android/.kotlin/
+android/.gradle/
+android/local.properties
+android/app/build/
+android/build/

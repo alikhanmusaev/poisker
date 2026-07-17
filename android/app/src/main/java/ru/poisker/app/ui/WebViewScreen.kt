@@ -62,6 +62,9 @@ import ru.poisker.app.web.WebViewUiState
 @Composable
 fun WebViewScreen(
     startUrl: String = BuildConfig.START_URL,
+    pendingNavigationUrl: String? = null,
+    onNavigationConsumed: () -> Unit = {},
+    onSessionLikelyReady: () -> Unit = {},
     stateHolder: WebViewStateHolder,
     networkMonitor: NetworkMonitor,
     modifier: Modifier = Modifier,
@@ -152,6 +155,20 @@ fun WebViewScreen(
                     snackbarHostState.showSnackbar(context.getString(R.string.offline_banner))
                 }
             }
+        }
+    }
+
+    LaunchedEffect(pendingNavigationUrl, webViewRef) {
+        val target = pendingNavigationUrl?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
+        val webView = webViewRef ?: return@LaunchedEffect
+        uiState = uiState.copy(pageError = null, isOfflineBeforeLoad = false, isLoading = true)
+        webView.loadUrl(target)
+        onNavigationConsumed()
+    }
+
+    LaunchedEffect(uiState.currentUrl, uiState.isLoading) {
+        if (!uiState.isLoading && uiState.currentUrl.isNotBlank() && uiState.pageError == null) {
+            onSessionLikelyReady()
         }
     }
 
