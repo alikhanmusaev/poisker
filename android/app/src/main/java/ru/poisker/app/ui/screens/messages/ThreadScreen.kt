@@ -38,6 +38,7 @@ import ru.poisker.app.ui.components.FullScreenLoading
 import ru.poisker.app.ui.icons.LucideIcon
 import ru.poisker.app.ui.icons.LucideIcons
 import ru.poisker.app.ui.theme.PoiskerColors
+import ru.poisker.app.ui.theme.PoiskerIconSizes
 import ru.poisker.app.ui.theme.PoiskerSpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -110,7 +111,7 @@ fun ThreadScreen(
                     ) {
                         if (state.isSending) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
+                                modifier = Modifier.size(PoiskerIconSizes.System),
                                 color = PoiskerColors.Primary,
                                 strokeWidth = 2.dp,
                             )

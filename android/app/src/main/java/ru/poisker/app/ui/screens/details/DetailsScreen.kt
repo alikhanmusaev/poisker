@@ -56,6 +56,7 @@ import ru.poisker.app.ui.components.FullScreenLoading
 import ru.poisker.app.ui.icons.LucideIcon
 import ru.poisker.app.ui.icons.LucideIcons
 import ru.poisker.app.ui.theme.PoiskerColors
+import ru.poisker.app.ui.theme.PoiskerIconSizes
 import ru.poisker.app.ui.theme.PoiskerRadius
 import ru.poisker.app.ui.theme.PoiskerSpacing
 
@@ -195,7 +196,7 @@ fun DetailsScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = RoundedCornerShape(PoiskerRadius.md),
                                     ) {
-                                        LucideIcon(LucideIcons.Pencil, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        LucideIcon(LucideIcons.Pencil, contentDescription = null, modifier = Modifier.size(PoiskerIconSizes.Inline))
                                         Spacer(Modifier.width(8.dp))
                                         Text("Редактировать")
                                     }
@@ -217,7 +218,7 @@ fun DetailsScreen(
                                         LucideIcon(
                                             LucideIcons.MessagesSquare,
                                             contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
+                                            modifier = Modifier.size(PoiskerIconSizes.Inline),
                                             tint = PoiskerColors.Surface,
                                         )
                                         Spacer(Modifier.width(8.dp))
@@ -238,14 +239,14 @@ fun DetailsScreen(
                                 ) {
                                     if (state.isContactLoading) {
                                         CircularProgressIndicator(
-                                            modifier = Modifier.size(18.dp),
+                                            modifier = Modifier.size(PoiskerIconSizes.Inline),
                                             color = PoiskerColors.Primary,
                                             strokeWidth = 2.dp,
                                         )
                                         Spacer(Modifier.width(8.dp))
                                         Text("Загрузка…")
                                     } else {
-                                        LucideIcon(LucideIcons.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        LucideIcon(LucideIcons.Phone, contentDescription = null, modifier = Modifier.size(PoiskerIconSizes.Inline))
                                         Spacer(Modifier.width(8.dp))
                                         Text(state.phone ?: "Показать телефон")
                                     }
@@ -286,7 +287,7 @@ fun DetailsScreen(
                                     ) {
                                         if (state.isBookmarkLoading) {
                                             CircularProgressIndicator(
-                                                modifier = Modifier.size(18.dp),
+                                                modifier = Modifier.size(PoiskerIconSizes.Inline),
                                                 color = PoiskerColors.Primary,
                                                 strokeWidth = 2.dp,
                                             )
@@ -298,7 +299,7 @@ fun DetailsScreen(
                                                     LucideIcons.Bookmark
                                                 },
                                                 contentDescription = null,
-                                                modifier = Modifier.size(18.dp),
+                                                modifier = Modifier.size(PoiskerIconSizes.Inline),
                                                 tint = PoiskerColors.Primary,
                                             )
                                             Spacer(Modifier.width(6.dp))
@@ -324,7 +325,7 @@ fun DetailsScreen(
                                         LucideIcon(
                                             LucideIcons.Share2,
                                             contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
+                                            modifier = Modifier.size(PoiskerIconSizes.Inline),
                                         )
                                         Spacer(Modifier.width(6.dp))
                                         Text("Поделиться")

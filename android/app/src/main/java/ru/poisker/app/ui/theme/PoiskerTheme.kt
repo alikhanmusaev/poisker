@@ -28,6 +28,25 @@ object PoiskerSpacing {
     val xl = 24.dp
 }
 
+/**
+ * Material / Google icon sizing.
+ * System icon: 24dp. IconButton touch target: 48dp → 12dp padding around the icon.
+ * Navigation active indicator: 64×32dp with a centered 24dp icon.
+ * Standard FAB: 56dp with 24dp icon → 16dp padding.
+ * Button / chip leading icons: 18dp (Material3 defaults).
+ */
+object PoiskerIconSizes {
+    val System = 24.dp
+    val Dense = 20.dp
+    val Inline = 18.dp
+    val TouchTarget = 48.dp
+    val IconButtonPadding = 12.dp
+    val NavIndicatorWidth = 64.dp
+    val NavIndicatorHeight = 32.dp
+    val Fab = 56.dp
+    val FabPadding = 16.dp
+}
+
 object PoiskerRadius {
     val sm = 8.dp
     val md = 12.dp

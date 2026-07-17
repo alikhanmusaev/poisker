@@ -8,8 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
 import ru.poisker.app.R
+import ru.poisker.app.ui.theme.PoiskerIconSizes
 
 object LucideIcons {
     @DrawableRes val Search = R.drawable.ic_lucide_search
@@ -111,8 +111,8 @@ fun LucideIcon(
     Icon(
         painter = painterResource(res),
         contentDescription = contentDescription,
-        // Default 24dp; caller can override with Modifier.size(...) after.
-        modifier = Modifier.size(24.dp).then(modifier),
+        // Material system icon: 24dp. Callers override with Modifier.size(...).
+        modifier = Modifier.size(PoiskerIconSizes.System).then(modifier),
         tint = tint,
     )
 }

@@ -44,6 +44,7 @@ import ru.poisker.app.ui.components.PoiskerHeader
 import ru.poisker.app.ui.icons.LucideIcon
 import ru.poisker.app.ui.icons.LucideIcons
 import ru.poisker.app.ui.theme.PoiskerColors
+import ru.poisker.app.ui.theme.PoiskerIconSizes
 import ru.poisker.app.ui.theme.PoiskerSpacing
 
 private val SORT_OPTIONS = listOf(
@@ -123,7 +124,7 @@ fun HomeScreen(
                             LucideIcon(
                                 LucideIcons.LayoutGrid,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(PoiskerIconSizes.Inline),
                             )
                         },
                     )
@@ -136,7 +137,7 @@ fun HomeScreen(
                                 LucideIcon(
                                     LucideIcons.category(category.icon),
                                     contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
+                                    modifier = Modifier.size(PoiskerIconSizes.Inline),
                                 )
                             },
                         )

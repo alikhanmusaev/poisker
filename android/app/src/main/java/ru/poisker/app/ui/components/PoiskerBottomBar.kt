@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,9 +32,10 @@ import ru.poisker.app.ui.icons.LucideIcon
 import ru.poisker.app.ui.icons.LucideIcons
 import ru.poisker.app.ui.navigation.Routes
 import ru.poisker.app.ui.theme.PoiskerColors
+import ru.poisker.app.ui.theme.PoiskerIconSizes
 
-private val NavBarContentHeight = 56.dp
-private val FabSize = 44.dp
+/** Compact bar height; M3 default is 80dp, we keep 64dp with Material icon paddings. */
+private val NavBarContentHeight = 64.dp
 
 @Composable
 fun PoiskerBottomBar(
@@ -43,8 +45,7 @@ fun PoiskerBottomBar(
     onNavigate: (String) -> Unit,
 ) {
     if (isLoggedIn) {
-        // FAB is a sibling of Surface so it can peek slightly above without
-        // thickening the white bar (offset does not expand Surface layout).
+        // FAB is a sibling of Surface so it does not inflate the white bar height.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -63,7 +64,7 @@ fun PoiskerBottomBar(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(NavBarContentHeight)
-                            .padding(horizontal = 6.dp),
+                            .padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         BottomNavSlot(
@@ -86,7 +87,7 @@ fun PoiskerBottomBar(
                         ) {
                             Text(
                                 "Подать",
-                                fontSize = 10.sp,
+                                fontSize = 12.sp,
                                 fontWeight = if (currentRoute == Routes.CREATE) {
                                     FontWeight.SemiBold
                                 } else {
@@ -98,7 +99,7 @@ fun PoiskerBottomBar(
                                     PoiskerColors.Muted
                                 },
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(bottom = 6.dp),
+                                modifier = Modifier.padding(bottom = 8.dp),
                             )
                         }
                         BottomNavSlot(
@@ -119,13 +120,13 @@ fun PoiskerBottomBar(
                     }
                 }
             }
-            // Sits mostly inside the 56dp bar; only ~6dp peeks above.
+            // Standard FAB 56dp with 24dp icon → 16dp padding; flush with bar top.
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(bottom = 12.dp)
-                    .size(FabSize)
+                    .padding(bottom = (NavBarContentHeight - PoiskerIconSizes.Fab) / 2)
+                    .size(PoiskerIconSizes.Fab)
                     .shadow(3.dp, CircleShape)
                     .background(PoiskerColors.Primary, CircleShape)
                     .clickable { onNavigate(Routes.CREATE) },
@@ -187,17 +188,24 @@ private fun BottomNavSlot(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = modifier.clickable(onClick = onClick),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = modifier
+            .minimumInteractiveComponentSize()
+            .clickable(onClick = onClick),
     ) {
         Box(contentAlignment = Alignment.TopEnd) {
+            // M3 NavigationBar active indicator: 64×32 around a 24dp icon.
             Box(
                 modifier = Modifier
+                    .size(
+                        width = PoiskerIconSizes.NavIndicatorWidth,
+                        height = PoiskerIconSizes.NavIndicatorHeight,
+                    )
                     .background(
                         if (selected) PoiskerColors.PrimarySoft else PoiskerColors.Surface,
-                        RoundedCornerShape(8.dp),
-                    )
-                    .padding(6.dp),
+                        RoundedCornerShape(16.dp),
+                    ),
+                contentAlignment = Alignment.Center,
             ) {
                 LucideIcon(
                     icon,
@@ -208,7 +216,7 @@ private fun BottomNavSlot(
             if (badge > 0) {
                 Box(
                     modifier = Modifier
-                        .offset(x = 6.dp, y = (-4).dp)
+                        .offset(x = 4.dp, y = (-2).dp)
                         .background(PoiskerColors.Primary, CircleShape)
                         .padding(horizontal = 5.dp, vertical = 1.dp),
                 ) {
@@ -223,7 +231,7 @@ private fun BottomNavSlot(
         }
         Text(
             label,
-            fontSize = 10.sp,
+            fontSize = 12.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             color = if (selected) PoiskerColors.Primary else PoiskerColors.Muted,
             textAlign = TextAlign.Center,

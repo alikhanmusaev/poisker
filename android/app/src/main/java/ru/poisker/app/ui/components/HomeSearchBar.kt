@@ -53,6 +53,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import ru.poisker.app.data.remote.dto.CityDto
 import ru.poisker.app.ui.theme.PoiskerColors
+import ru.poisker.app.ui.theme.PoiskerIconSizes
 import ru.poisker.app.ui.theme.PoiskerRadius
 import ru.poisker.app.ui.theme.PoiskerSpacing
 
@@ -102,7 +103,6 @@ fun HomeSearchBar(
                 LucideIcon(
                     LucideIcons.Search,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp),
                     tint = PoiskerColors.Muted,
                 )
                 BasicTextField(
@@ -156,7 +156,7 @@ fun HomeSearchBar(
                 LucideIcon(
                     LucideIcons.MapPin,
                     contentDescription = null,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(PoiskerIconSizes.Dense),
                     tint = if (selectedCity != null) PoiskerColors.PrimaryDark else PoiskerColors.Muted,
                 )
                 Text(
@@ -172,7 +172,7 @@ fun HomeSearchBar(
                 LucideIcon(
                     LucideIcons.ChevronDown,
                     contentDescription = null,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(PoiskerIconSizes.Dense),
                     tint = PoiskerColors.Muted,
                 )
             }
@@ -260,7 +260,7 @@ fun HomeSearchBar(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
+                                    modifier = Modifier.size(PoiskerIconSizes.Dense),
                                     color = PoiskerColors.Primary,
                                     strokeWidth = 2.dp,
                                 )
