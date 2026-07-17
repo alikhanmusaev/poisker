@@ -193,7 +193,13 @@ def _notify_user(user_id, *, kind, title, body, post=None, payload=None) -> int:
             payload=payload or {},
         )
     except Exception:
-        pass
+        import logging
+
+        logging.getLogger(__name__).exception(
+            "push_for_bookmark_notification failed user_id=%s kind=%s",
+            user_id,
+            kind,
+        )
     return 1
 
 

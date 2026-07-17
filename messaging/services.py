@@ -99,7 +99,12 @@ def send_message(conversation: Conversation, sender, body: str = "", *, image: s
                 message=message,
             )
         except Exception:
-            pass
+            import logging
+
+            logging.getLogger(__name__).exception(
+                "push_for_new_message failed conversation_id=%s",
+                conversation.pk,
+            )
     return message
 
 

@@ -53,9 +53,24 @@ Env (see `.env.example`):
 
 ```
 FIREBASE_PROJECT_ID=poisker-84437
-FIREBASE_CREDENTIALS_FILE=/secure/path/firebase-adminsdk.json
+FIREBASE_CREDENTIALS_FILE=/run/secrets/firebase-adminsdk.json
 FCM_ENABLED=true
 ```
+
+Host file (outside repo):
+
+```
+/opt/poisker-secrets/firebase-adminsdk.json
+```
+
+Must be readable by container user `appuser` (uid/gid 999), e.g.:
+
+```bash
+chown 999:999 /opt/poisker-secrets/firebase-adminsdk.json
+chmod 440 /opt/poisker-secrets/firebase-adminsdk.json
+```
+
+If the file is `600 root:root`, gunicorn workers cannot send FCM (Permission denied), while `docker exec` as root may still succeed and hide the bug.
 
 Optional ADC: `FCM_USE_ADC=true` or `GOOGLE_APPLICATION_CREDENTIALS`.
 
