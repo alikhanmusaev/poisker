@@ -32,4 +32,12 @@
     <string name="channel_listings">Объявления</string>
     <string name="channel_system">Системные</string>
     <string name="push_default_body">Новое уведомление</string>
+
+    <string name="notifications_dialog_title">Включить уведомления?</string>
+    <string name="notifications_dialog_message">Так вы узнаете о новых сообщениях и статусах объявлений.</string>
+    <string name="notifications_dialog_enable">Включить</string>
+    <string name="notifications_dialog_later">Позже</string>
+    <string name="notifications_denied_title">Уведомления выключены</string>
+    <string name="notifications_denied_message">Разрешите уведомления в настройках Android, иначе push не придут.</string>
+    <string name="notifications_open_settings">Открыть настройки</string>
 </resources>
