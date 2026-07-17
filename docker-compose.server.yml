@@ -2,6 +2,13 @@ services:
   web:
     ports: !override
       - "127.0.0.1:8001:8000"
+    volumes:
+      - ./staticfiles:/app/staticfiles
+      - /opt/poisker-secrets/firebase-adminsdk.json:/run/secrets/firebase-adminsdk.json:ro
+
+  scheduler:
+    volumes:
+      - /opt/poisker-secrets/firebase-adminsdk.json:/run/secrets/firebase-adminsdk.json:ro
 
   nginx:
     profiles:
