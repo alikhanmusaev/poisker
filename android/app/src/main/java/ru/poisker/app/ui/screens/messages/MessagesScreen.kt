@@ -35,6 +35,7 @@ import coil.compose.AsyncImage
 import ru.poisker.app.data.remote.dto.ConversationDto
 import ru.poisker.app.ui.components.EmptyState
 import ru.poisker.app.ui.components.ErrorBanner
+import ru.poisker.app.ui.components.PoiskerHeader
 import ru.poisker.app.ui.icons.LucideIcon
 import ru.poisker.app.ui.icons.LucideIcons
 import ru.poisker.app.ui.theme.PoiskerColors
@@ -54,55 +55,63 @@ fun MessagesScreen(
         else viewModel.refresh()
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            "Сообщения",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(
-                horizontal = PoiskerSpacing.lg,
-                vertical = PoiskerSpacing.md,
-            ),
-        )
-        when {
-            !state.isAuthenticated -> EmptyState(
+    if (!state.isAuthenticated) {
+        Column(Modifier.fillMaxSize()) {
+            PoiskerHeader()
+            EmptyState(
                 title = "Войдите в аккаунт",
                 hint = "Переписки доступны после входа",
                 actionLabel = "Войти",
                 onAction = onLoginRequired,
             )
-            state.isLoading && state.conversations.isEmpty() -> Box(
-                Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
+        }
+        return
+    }
+
+    if (state.isLoading && state.conversations.isEmpty()) {
+        Column(Modifier.fillMaxSize()) {
+            PoiskerHeader()
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = PoiskerColors.Primary)
             }
-            else -> PullToRefreshBox(
-                isRefreshing = state.isRefreshing,
-                onRefresh = viewModel::refresh,
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                if (state.conversations.isEmpty()) {
+        }
+        return
+    }
+
+    PullToRefreshBox(
+        isRefreshing = state.isRefreshing,
+        onRefresh = viewModel::refresh,
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        LazyColumn(contentPadding = PaddingValues(bottom = PoiskerSpacing.sm)) {
+            item(key = "header") { PoiskerHeader() }
+            item(key = "title") {
+                Text(
+                    "Сообщения",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(
+                        horizontal = PoiskerSpacing.lg,
+                        vertical = PoiskerSpacing.md,
+                    ),
+                )
+            }
+            state.error?.let {
+                item { ErrorBanner(it, Modifier.padding(horizontal = PoiskerSpacing.lg)) }
+            }
+            if (state.conversations.isEmpty()) {
+                item {
                     EmptyState(
                         title = "Пока нет переписок",
                         hint = "Напишите продавцу из карточки объявления",
                     )
-                } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(vertical = PoiskerSpacing.sm),
-                    ) {
-                        state.error?.let {
-                            item {
-                                ErrorBanner(it, Modifier.padding(horizontal = PoiskerSpacing.lg))
-                            }
-                        }
-                        items(state.conversations, key = { it.id }) { conversation ->
-                            ConversationRow(
-                                conversation = conversation,
-                                onClick = { onConversationClick(conversation.id) },
-                            )
-                        }
-                    }
+                }
+            } else {
+                items(state.conversations, key = { it.id }) { conversation ->
+                    ConversationRow(
+                        conversation = conversation,
+                        onClick = { onConversationClick(conversation.id) },
+                    )
                 }
             }
         }
@@ -147,7 +156,10 @@ private fun ConversationRow(
                 LucideIcon(LucideIcons.Image, contentDescription = null, tint = PoiskerColors.Muted)
             }
         }
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
             Text(
                 conversation.post.title,
                 style = MaterialTheme.typography.titleSmall,

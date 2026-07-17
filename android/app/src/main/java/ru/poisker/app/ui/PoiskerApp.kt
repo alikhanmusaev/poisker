@@ -14,7 +14,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import ru.poisker.app.ui.components.PoiskerBottomBar
-import ru.poisker.app.ui.components.PoiskerHeader
 import ru.poisker.app.ui.navigation.Routes
 import ru.poisker.app.ui.screens.auth.LoginScreen
 import ru.poisker.app.ui.screens.auth.PasswordResetScreen
@@ -40,13 +39,6 @@ private val MAIN_ROUTES = setOf(
     Routes.REGISTER,
 )
 
-private val HEADER_ROUTES = setOf(
-    Routes.HOME,
-    Routes.BOOKMARKS,
-    Routes.MESSAGES,
-    Routes.PROFILE,
-)
-
 @Composable
 fun PoiskerApp(shellViewModel: AppShellViewModel = hiltViewModel()) {
     val navController = rememberNavController()
@@ -55,14 +47,8 @@ fun PoiskerApp(shellViewModel: AppShellViewModel = hiltViewModel()) {
     val isLoggedIn by shellViewModel.isLoggedIn.collectAsStateWithLifecycle(initialValue = false)
     val unreadMessages by shellViewModel.unreadMessages.collectAsStateWithLifecycle(initialValue = 0)
     val showBottomBar = currentRoute in MAIN_ROUTES
-    val showHeader = currentRoute in HEADER_ROUTES
 
     Scaffold(
-        topBar = {
-            if (showHeader) {
-                PoiskerHeader()
-            }
-        },
         bottomBar = {
             if (showBottomBar) {
                 PoiskerBottomBar(

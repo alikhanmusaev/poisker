@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,6 +40,7 @@ import ru.poisker.app.ui.components.EmptyState
 import ru.poisker.app.ui.components.ErrorBanner
 import ru.poisker.app.ui.components.HomeSearchBar
 import ru.poisker.app.ui.components.ListingCard
+import ru.poisker.app.ui.components.PoiskerHeader
 import ru.poisker.app.ui.icons.LucideIcon
 import ru.poisker.app.ui.icons.LucideIcons
 import ru.poisker.app.ui.theme.PoiskerColors
@@ -78,127 +79,150 @@ fun HomeScreen(
         onRefresh = viewModel::refresh,
         modifier = modifier.fillMaxSize(),
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = PoiskerSpacing.lg, vertical = PoiskerSpacing.md),
-            ) {
-                HomeSearchBar(
-                    search = state.search,
-                    onSearchChange = viewModel::onSearchChange,
-                    selectedCity = state.selectedCity,
-                    selectedCityLabel = state.selectedCityLabel,
-                    cityPanelQuery = state.cityPanelQuery,
-                    citySuggestions = state.citySuggestions,
-                    isCitySearching = state.isCitySearching,
-                    onCityPanelQueryChange = viewModel::onCityPanelQueryChange,
-                    onCitySelect = viewModel::selectCity,
-                    onCityClear = viewModel::clearCity,
-                )
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = PoiskerSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+        ) {
+            item(key = "header") {
+                PoiskerHeader()
             }
-
-            Row(
-                modifier = Modifier
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = PoiskerSpacing.lg),
-                horizontalArrangement = Arrangement.spacedBy(PoiskerSpacing.sm),
-            ) {
-                FilterChip(
-                    selected = state.selectedCategory == null,
-                    onClick = { viewModel.selectCategory(null) },
-                    label = { Text("Все") },
-                    leadingIcon = {
-                        LucideIcon(
-                            LucideIcons.LayoutGrid,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
-                    },
-                )
-                state.categories.forEach { category ->
+            item(key = "search") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = PoiskerSpacing.lg, vertical = PoiskerSpacing.md),
+                ) {
+                    HomeSearchBar(
+                        search = state.search,
+                        onSearchChange = viewModel::onSearchChange,
+                        selectedCity = state.selectedCity,
+                        selectedCityLabel = state.selectedCityLabel,
+                        cityPanelQuery = state.cityPanelQuery,
+                        citySuggestions = state.citySuggestions,
+                        isCitySearching = state.isCitySearching,
+                        onCityPanelQueryChange = viewModel::onCityPanelQueryChange,
+                        onCitySelect = viewModel::selectCity,
+                        onCityClear = viewModel::clearCity,
+                    )
+                }
+            }
+            item(key = "categories") {
+                Row(
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = PoiskerSpacing.lg),
+                    horizontalArrangement = Arrangement.spacedBy(PoiskerSpacing.sm),
+                ) {
                     FilterChip(
-                        selected = state.selectedCategory == category.slug,
-                        onClick = { viewModel.selectCategory(category.slug) },
-                        label = { Text(category.label) },
+                        selected = state.selectedCategory == null,
+                        onClick = { viewModel.selectCategory(null) },
+                        label = { Text("Все") },
                         leadingIcon = {
                             LucideIcon(
-                                LucideIcons.category(category.icon),
+                                LucideIcons.LayoutGrid,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
                             )
                         },
                     )
+                    state.categories.forEach { category ->
+                        FilterChip(
+                            selected = state.selectedCategory == category.slug,
+                            onClick = { viewModel.selectCategory(category.slug) },
+                            label = { Text(category.label) },
+                            leadingIcon = {
+                                LucideIcon(
+                                    LucideIcons.category(category.icon),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            },
+                        )
+                    }
+                }
+            }
+            item(key = "toolbar") {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = PoiskerSpacing.lg, vertical = PoiskerSpacing.sm),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = if (state.search.isNotBlank()) {
+                                "Найдено: ${state.totalCount}"
+                            } else {
+                                "${state.totalCount} объявлений"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        ExposedDropdownMenuBox(
+                            expanded = sortMenuExpanded,
+                            onExpandedChange = { sortMenuExpanded = it },
+                        ) {
+                            TextButton(
+                                onClick = { sortMenuExpanded = true },
+                                modifier = Modifier.menuAnchor(),
+                            ) {
+                                Text(SORT_OPTIONS.first { it.first == state.ordering }.second)
+                            }
+                            ExposedDropdownMenu(
+                                expanded = sortMenuExpanded,
+                                onDismissRequest = { sortMenuExpanded = false },
+                            ) {
+                                SORT_OPTIONS.forEach { (value, label) ->
+                                    DropdownMenuItem(
+                                        text = { Text(label) },
+                                        onClick = {
+                                            viewModel.selectOrdering(value)
+                                            sortMenuExpanded = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (state.selectedCity != null || state.selectedCategory != null || state.search.isNotBlank()) {
+                        TextButton(
+                            onClick = viewModel::clearFilters,
+                            modifier = Modifier.padding(horizontal = PoiskerSpacing.lg),
+                        ) {
+                            Text("Сбросить фильтры", color = PoiskerColors.Primary)
+                        }
+                    }
+                    state.error?.let { ErrorBanner(it) }
                 }
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = PoiskerSpacing.lg, vertical = PoiskerSpacing.sm),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = if (state.search.isNotBlank()) {
-                        "Найдено: ${state.totalCount}"
-                    } else {
-                        "${state.totalCount} объявлений"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                )
-                ExposedDropdownMenuBox(
-                    expanded = sortMenuExpanded,
-                    onExpandedChange = { sortMenuExpanded = it },
-                ) {
-                    TextButton(onClick = { sortMenuExpanded = true }, modifier = Modifier.menuAnchor()) {
-                        Text(SORT_OPTIONS.first { it.first == state.ordering }.second)
-                    }
-                    ExposedDropdownMenu(
-                        expanded = sortMenuExpanded,
-                        onDismissRequest = { sortMenuExpanded = false },
-                    ) {
-                        SORT_OPTIONS.forEach { (value, label) ->
-                            DropdownMenuItem(
-                                text = { Text(label) },
-                                onClick = {
-                                    viewModel.selectOrdering(value)
-                                    sortMenuExpanded = false
-                                },
-                            )
+            when {
+                state.isLoading && state.listings.isEmpty() -> {
+                    item(key = "loading") {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(PoiskerSpacing.xl),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(color = PoiskerColors.Primary)
                         }
                     }
                 }
-            }
-
-            if (state.selectedCity != null || state.selectedCategory != null || state.search.isNotBlank()) {
-                TextButton(
-                    onClick = viewModel::clearFilters,
-                    modifier = Modifier.padding(horizontal = PoiskerSpacing.lg),
-                ) {
-                    Text("Сбросить фильтры", color = PoiskerColors.Primary)
+                state.listings.isEmpty() -> {
+                    item(key = "empty") {
+                        EmptyState(
+                            title = "Объявлений нет",
+                            hint = "Попробуйте изменить фильтры или поисковый запрос",
+                            actionLabel = "Сбросить",
+                            onAction = viewModel::clearFilters,
+                        )
+                    }
                 }
-            }
-
-            state.error?.let { ErrorBanner(it) }
-
-            when {
-                state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = PoiskerColors.Primary)
-                }
-                state.listings.isEmpty() -> EmptyState(
-                    title = "Объявлений нет",
-                    hint = "Попробуйте изменить фильтры или поисковый запрос",
-                    actionLabel = "Сбросить",
-                    onAction = viewModel::clearFilters,
-                )
-                else -> LazyColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(PoiskerSpacing.lg),
-                    verticalArrangement = Arrangement.spacedBy(PoiskerSpacing.md),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
+                else -> {
                     items(state.listings, key = { it.id }) { listing ->
                         ListingCard(
                             listing = listing,
@@ -206,10 +230,14 @@ fun HomeScreen(
                             onBookmarkClick = {
                                 viewModel.toggleBookmark(listing.id, onLoginRequired)
                             },
+                            modifier = Modifier.padding(
+                                horizontal = PoiskerSpacing.lg,
+                                vertical = PoiskerSpacing.sm,
+                            ),
                         )
                     }
                     if (state.isLoadingMore) {
-                        item {
+                        item(key = "loading-more") {
                             Box(
                                 Modifier
                                     .fillMaxWidth()

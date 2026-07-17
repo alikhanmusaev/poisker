@@ -33,12 +33,14 @@ import ru.poisker.app.ui.theme.PoiskerSpacing
 fun PoiskerHeader(
     modifier: Modifier = Modifier,
     showDivider: Boolean = true,
+    /** When true, pad under the status bar (use if parent does not already). */
+    padStatusBar: Boolean = false,
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
             .background(PoiskerColors.Surface)
-            .statusBarsPadding(),
+            .then(if (padStatusBar) Modifier.statusBarsPadding() else Modifier),
     ) {
         Row(
             modifier = Modifier
