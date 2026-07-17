@@ -123,6 +123,9 @@ fun HomeSearchBar(
                                     "iPhone, квартира, автомобиль…",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = PoiskerColors.Muted,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                             inner()
@@ -239,6 +242,9 @@ fun HomeSearchBar(
                                             "Начните вводить название…",
                                             style = MaterialTheme.typography.bodyLarge,
                                             color = PoiskerColors.Muted,
+                                            maxLines = 1,
+                                            softWrap = false,
+                                            overflow = TextOverflow.Ellipsis,
                                         )
                                     }
                                     inner()
