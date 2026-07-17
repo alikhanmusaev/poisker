@@ -15,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import ru.poisker.app.network.NetworkMonitor
 import ru.poisker.app.ui.theme.PoiskerColors
@@ -46,7 +45,7 @@ fun PoiskerApp(
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .windowInsetsTopHeight(WindowInsets.statusBars)
-                .background(Color.White),
+                .background(PoiskerColors.Primary),
         )
         Spacer(
             modifier = Modifier
