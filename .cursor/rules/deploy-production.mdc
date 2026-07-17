@@ -1,23 +1,25 @@
 ---
-description: После изменений — push в master и деплой на poisker.ru
+description: После изменений — push в main и деплой на poisker.ru
 alwaysApply: true
 ---
 
-# Деплой: GitHub master + production
+# Деплой: GitHub main + production
 
 После завершения любой задачи с изменениями в коде Poisker **обязательно**:
 
 1. Прогнать `pytest`
 2. Закоммитить изменения
-3. Влить в `master` и выполнить `git push origin master`
+3. Закоммитить в `main` и выполнить `git push origin main`
 4. Задеплоить на production-сервер
 
 ## Production
 
-- Сервер: `root@45.131.43.217`
+- Сервер: `root@161.104.51.103` (DNS `poisker.ru` → этот хост)
 - Путь: `/opt/poisker`
 - Домен: `https://poisker.ru`
-- Репозиторий: `https://github.com/alikhanmusaev/poisker.git` (ветка `master`)
+- Репозиторий: `https://github.com/alikhanmusaev/poisker.git` (ветка `main`)
+
+**Не путать:** `45.131.43.217` — другой VPS (etsuri/cicig), не poisker.
 
 ## Команды деплоя
 
@@ -28,10 +30,10 @@ rsync -az --delete \
   --exclude '.git' --exclude '*.db' --exclude '*.sqlite3' --exclude '.env' \
   --exclude 'staticfiles' --exclude 'media' --exclude 'backups' \
   --exclude '.agents' --exclude '.cursor' \
-  ./ root@45.131.43.217:/opt/poisker/
+  ./ root@161.104.51.103:/opt/poisker/
 
 # Пересборка и перезапуск
-ssh root@45.131.43.217 'cd /opt/poisker && \
+ssh root@161.104.51.103 'cd /opt/poisker && set -a && source .env && set +a && \
   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.server.yml build web scheduler && \
   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.server.yml up -d --force-recreate web scheduler'
 ```
@@ -41,7 +43,7 @@ ssh root@45.131.43.217 'cd /opt/poisker && \
 ## В конце ответа пользователю
 
 Кратко сообщить:
-- что запушено в `master` (коммит/хеш)
+- что запушено в `main` (коммит/хеш)
 - что задеплоено на production
 - если деплой не удался — почему и что сделать вручную
 
