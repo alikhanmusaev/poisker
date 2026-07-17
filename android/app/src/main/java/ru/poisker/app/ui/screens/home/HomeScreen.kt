@@ -1,8 +1,9 @@
 package ru.poisker.app.ui.screens.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -53,7 +54,7 @@ private val SORT_OPTIONS = listOf(
     "price_desc" to "Сначала дороже",
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     onListingClick: (String) -> Unit,
@@ -89,58 +90,63 @@ fun HomeScreen(
             item(key = "header") {
                 PoiskerHeader()
             }
-            item(key = "search") {
+            stickyHeader(key = "search-categories") {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = PoiskerSpacing.lg, vertical = PoiskerSpacing.md),
+                        .background(PoiskerColors.Background)
+                        .padding(bottom = PoiskerSpacing.sm),
                 ) {
-                    HomeSearchBar(
-                        search = state.search,
-                        onSearchChange = viewModel::onSearchChange,
-                        selectedCity = state.selectedCity,
-                        selectedCityLabel = state.selectedCityLabel,
-                        cityPanelQuery = state.cityPanelQuery,
-                        citySuggestions = state.citySuggestions,
-                        isCitySearching = state.isCitySearching,
-                        onCityPanelQueryChange = viewModel::onCityPanelQueryChange,
-                        onCitySelect = viewModel::selectCity,
-                        onCityClear = viewModel::clearCity,
-                    )
-                }
-            }
-            item(key = "categories") {
-                Row(
-                    modifier = Modifier
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = PoiskerSpacing.lg),
-                    horizontalArrangement = Arrangement.spacedBy(PoiskerSpacing.sm),
-                ) {
-                    FilterChip(
-                        selected = state.selectedCategory == null,
-                        onClick = { viewModel.selectCategory(null) },
-                        label = { Text("Все") },
-                        leadingIcon = {
-                            LucideIcon(
-                                LucideIcons.LayoutGrid,
-                                contentDescription = null,
-                                modifier = Modifier.size(PoiskerIconSizes.Inline),
-                            )
-                        },
-                    )
-                    state.categories.forEach { category ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = PoiskerSpacing.lg, vertical = PoiskerSpacing.md),
+                    ) {
+                        HomeSearchBar(
+                            search = state.search,
+                            onSearchChange = viewModel::onSearchChange,
+                            selectedCity = state.selectedCity,
+                            selectedCityLabel = state.selectedCityLabel,
+                            cityPanelQuery = state.cityPanelQuery,
+                            citySuggestions = state.citySuggestions,
+                            isCitySearching = state.isCitySearching,
+                            onCityPanelQueryChange = viewModel::onCityPanelQueryChange,
+                            onCitySelect = viewModel::selectCity,
+                            onCityClear = viewModel::clearCity,
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = PoiskerSpacing.lg),
+                        horizontalArrangement = Arrangement.spacedBy(PoiskerSpacing.sm),
+                    ) {
                         FilterChip(
-                            selected = state.selectedCategory == category.slug,
-                            onClick = { viewModel.selectCategory(category.slug) },
-                            label = { Text(category.label) },
+                            selected = state.selectedCategory == null,
+                            onClick = { viewModel.selectCategory(null) },
+                            label = { Text("Все") },
                             leadingIcon = {
                                 LucideIcon(
-                                    LucideIcons.category(category.icon),
+                                    LucideIcons.LayoutGrid,
                                     contentDescription = null,
                                     modifier = Modifier.size(PoiskerIconSizes.Inline),
                                 )
                             },
                         )
+                        state.categories.forEach { category ->
+                            FilterChip(
+                                selected = state.selectedCategory == category.slug,
+                                onClick = { viewModel.selectCategory(category.slug) },
+                                label = { Text(category.label) },
+                                leadingIcon = {
+                                    LucideIcon(
+                                        LucideIcons.category(category.icon),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(PoiskerIconSizes.Inline),
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
             }
