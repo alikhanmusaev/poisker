@@ -1,6 +1,8 @@
 package ru.poisker.app.data.remote
 
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.Interceptor
 import okhttp3.Response
 import ru.poisker.app.data.local.TokenStore
@@ -14,6 +16,8 @@ class AuthInterceptor @Inject constructor(
     private val tokenStore: TokenStore,
     @RefreshApi private val refreshApi: PoiskerApi,
 ) : Interceptor {
+    private val refreshMutex = Mutex()
+
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
         val access = tokenStore.accessToken.value
@@ -29,19 +33,35 @@ class AuthInterceptor @Inject constructor(
         }
 
         response.close()
-        val refresh = tokenStore.getRefreshToken() ?: return response
         return runBlocking {
-            try {
-                val tokens = refreshApi.refresh(RefreshRequestDto(refresh))
-                tokenStore.updateAccess(tokens.access, tokens.refresh)
-                chain.proceed(
-                    original.newBuilder()
-                        .header("Authorization", "Bearer ${tokens.access}")
-                        .build(),
-                )
-            } catch (_: Exception) {
-                tokenStore.clear()
-                response
+            refreshMutex.withLock {
+                val currentAccess = tokenStore.accessToken.value
+                if (!currentAccess.isNullOrBlank() && currentAccess != access) {
+                    return@runBlocking chain.proceed(
+                        original.newBuilder()
+                            .header("Authorization", "Bearer $currentAccess")
+                            .build(),
+                    )
+                }
+
+                val refresh = tokenStore.getRefreshToken()
+                if (refresh.isNullOrBlank()) {
+                    tokenStore.clear()
+                    return@runBlocking chain.proceed(original)
+                }
+
+                try {
+                    val tokens = refreshApi.refresh(RefreshRequestDto(refresh))
+                    tokenStore.updateAccess(tokens.access, tokens.refresh)
+                    chain.proceed(
+                        original.newBuilder()
+                            .header("Authorization", "Bearer ${tokens.access}")
+                            .build(),
+                    )
+                } catch (_: Exception) {
+                    tokenStore.clear()
+                    chain.proceed(original)
+                }
             }
         }
     }

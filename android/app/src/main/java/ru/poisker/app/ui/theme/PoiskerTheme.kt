@@ -5,12 +5,19 @@ import androidx.compose.ui.unit.dp
 
 object PoiskerColors {
     val Primary = Color(0xFFB91C1C)
+    val PrimaryDark = Color(0xFF991B1B)
     val PrimaryHover = Color(0xFFDC2626)
+    val PrimarySoft = Color(0xFFFEF2F2)
     val Background = Color(0xFFF8FAFC)
     val Surface = Color(0xFFFFFFFF)
     val Text = Color(0xFF0F172A)
     val Muted = Color(0xFF64748B)
     val Border = Color(0xFFE2E8F0)
+    val Danger = Color(0xFFEF4444)
+    val SuccessBg = Color(0xFFF0FDF4)
+    val SuccessText = Color(0xFF166534)
+    val WarningBg = Color(0xFFFFFBEB)
+    val WarningText = Color(0xFFB45309)
 }
 
 object PoiskerSpacing {

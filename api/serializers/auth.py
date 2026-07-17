@@ -127,3 +127,10 @@ class ProfileUpdateSerializer(serializers.Serializer):
 
         sync_user_post_phones(instance)
         return instance
+
+
+class EmailRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        return value.strip().lower()

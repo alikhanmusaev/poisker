@@ -7,7 +7,14 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from api.permissions import IsNotBlocked
-from api.serializers.auth import LoginSerializer, ProfileUpdateSerializer, RegisterSerializer, UserSerializer
+from accounts.services.email import send_password_reset_email, send_verification_email
+from api.serializers.auth import (
+    EmailRequestSerializer,
+    LoginSerializer,
+    ProfileUpdateSerializer,
+    RegisterSerializer,
+    UserSerializer,
+)
 from core.http import get_client_ip
 from core.ratelimit import hit_rate_limit
 
@@ -126,3 +133,78 @@ class ProfileView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response(UserSerializer(user).data)
+
+
+PASSWORD_RESET_MESSAGE = (
+    "Если аккаунт с таким email существует, мы отправили ссылку для сброса пароля."
+)
+RESEND_VERIFICATION_MESSAGE = (
+    "Если аккаунт с таким email ждёт подтверждения, мы отправили новое письмо."
+)
+
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        ip = get_client_ip(request) or "unknown"
+        limit = getattr(settings, "AUTH_RATE_LIMIT_PER_HOUR", 30)
+        if hit_rate_limit(
+            f"auth-password-reset:{ip}",
+            limit=limit,
+            window_seconds=3600,
+            fail_closed=True,
+        ):
+            return Response(
+                {"code": "rate_limited", "message": "Слишком много попыток. Попробуйте позже."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        serializer = EmailRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+        users = User.objects.filter(email__iexact=email, is_active=True)
+        for user in users:
+            if user.has_usable_password():
+                try:
+                    send_password_reset_email(request, user)
+                except Exception:
+                    pass
+
+        return Response({"message": PASSWORD_RESET_MESSAGE})
+
+
+class ResendVerificationView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        ip = get_client_ip(request) or "unknown"
+        limit = getattr(settings, "AUTH_RATE_LIMIT_PER_HOUR", 30)
+        if hit_rate_limit(
+            f"auth-verify-resend:{ip}",
+            limit=limit,
+            window_seconds=3600,
+            fail_closed=True,
+        ):
+            return Response(
+                {"code": "rate_limited", "message": "Слишком много попыток. Попробуйте позже."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        serializer = EmailRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+        user = User.objects.filter(email__iexact=email).first()
+        if user and not user.email_verified and not user.is_staff:
+            try:
+                send_verification_email(request, user)
+            except Exception:
+                return Response(
+                    {
+                        "code": "email_send_failed",
+                        "message": "Не удалось отправить письмо. Попробуйте позже.",
+                    },
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+
+        return Response({"message": RESEND_VERIFICATION_MESSAGE})

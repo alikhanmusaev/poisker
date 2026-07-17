@@ -18,12 +18,15 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "API_BASE_URL", "\"https://poisker.ru/api/v1/\"")
+        // Для локальной разработки: ./gradlew -PPOISKER_API_URL=http://10.0.2.2:8000/api/v1/ assembleDebug
+        val apiBaseUrl = (project.findProperty("POISKER_API_URL") as String?)
+            ?: "https://poisker.ru/api/v1/"
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
     }
 
     buildTypes {
         debug {
-            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000/api/v1/\"")
+            isDebuggable = true
         }
         release {
             isMinifyEnabled = false
@@ -65,7 +68,6 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.material.icons)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.security.crypto)

@@ -53,8 +53,8 @@ data class RegisterRequestDto(
     val email: String,
     val phone: String,
     val password: String,
-    @SerialName("accept_terms") val acceptTerms: Boolean = true,
-    @SerialName("accept_pdn") val acceptPdn: Boolean = true,
+    @SerialName("accept_terms") val acceptTerms: Boolean,
+    @SerialName("accept_pdn") val acceptPdn: Boolean,
 )
 
 @Serializable
@@ -71,6 +71,16 @@ data class RefreshResponseDto(
 @Serializable
 data class LogoutRequestDto(
     val refresh: String,
+)
+
+@Serializable
+data class EmailRequestDto(
+    val email: String,
+)
+
+@Serializable
+data class MessageResponseDto(
+    val message: String,
 )
 
 @Serializable
@@ -139,7 +149,7 @@ data class PaginatedListingsDto(
 data class BookmarkDto(
     val id: Long,
     @SerialName("created_at") val createdAt: String,
-    val post: ListingDto,
+    val listing: ListingDto,
 )
 
 @Serializable
@@ -158,4 +168,60 @@ data class ContactResponseDto(
 @Serializable
 data class BookmarkActionDto(
     val bookmarked: Boolean,
+)
+
+@Serializable
+data class ConversationPostDto(
+    val id: String,
+    val title: String,
+    val category: String,
+    @SerialName("category_label") val categoryLabel: String,
+    val city: String,
+    @SerialName("city_label") val cityLabel: String,
+    val price: Int? = null,
+    @SerialName("price_display") val priceDisplay: String,
+    @SerialName("cover_image") val coverImage: String? = null,
+    val status: String,
+)
+
+@Serializable
+data class ConversationDto(
+    val id: String,
+    val post: ConversationPostDto,
+    @SerialName("other_user") val otherUser: SellerDto,
+    @SerialName("updated_at") val updatedAt: String? = null,
+    @SerialName("last_message_body") val lastMessageBody: String? = null,
+    @SerialName("last_message_image") val lastMessageImage: String? = null,
+    @SerialName("last_message_at") val lastMessageAt: String? = null,
+    @SerialName("last_message_read_at") val lastMessageReadAt: String? = null,
+    @SerialName("last_message_sender_id") val lastMessageSenderId: Long? = null,
+    @SerialName("unread_count") val unreadCount: Int = 0,
+    val messages: List<ChatMessageDto> = emptyList(),
+)
+
+@Serializable
+data class ChatMessageDto(
+    val id: Long,
+    val sender: SellerDto,
+    val body: String = "",
+    @SerialName("image_url") val imageUrl: String? = null,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("read_at") val readAt: String? = null,
+    @SerialName("is_mine") val isMine: Boolean = false,
+)
+
+@Serializable
+data class ConversationsResponseDto(
+    val count: Int,
+    val results: List<ConversationDto>,
+)
+
+@Serializable
+data class UnreadCountDto(
+    val count: Int,
+)
+
+@Serializable
+data class SendMessageRequestDto(
+    val body: String = "",
 )

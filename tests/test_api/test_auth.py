@@ -74,3 +74,35 @@ def test_login_requires_verified_email(api_client, seller):
     )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data["code"] == "validation_error"
+    assert "non_field_errors" in response.data["fields"]
+
+
+@pytest.mark.django_db
+def test_password_reset_request(api_client, seller):
+    response = api_client.post(
+        "/api/v1/auth/password-reset/",
+        {"email": seller.email},
+        format="json",
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert "message" in response.data
+
+
+@pytest.mark.django_db
+def test_resend_verification(api_client):
+    payload = {
+        "display_name": "New",
+        "email": "new@example.com",
+        "phone": "+79001234568",
+        "password": TEST_PASSWORD,
+        "accept_terms": True,
+        "accept_pdn": True,
+    }
+    api_client.post("/api/v1/auth/register/", payload, format="json")
+    response = api_client.post(
+        "/api/v1/auth/resend-verification/",
+        {"email": "new@example.com"},
+        format="json",
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert "message" in response.data

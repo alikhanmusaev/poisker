@@ -1,51 +1,73 @@
 package ru.poisker.app.ui.screens.home
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ru.poisker.app.ui.components.EmptyState
 import ru.poisker.app.ui.components.ErrorBanner
+import ru.poisker.app.ui.components.HomeSearchBar
 import ru.poisker.app.ui.components.ListingCard
+import ru.poisker.app.ui.icons.LucideIcon
+import ru.poisker.app.ui.icons.LucideIcons
+import ru.poisker.app.ui.theme.PoiskerColors
 import ru.poisker.app.ui.theme.PoiskerSpacing
+
+private val SORT_OPTIONS = listOf(
+    "date_desc" to "Сначала новые",
+    "price_asc" to "Сначала дешевле",
+    "price_desc" to "Сначала дороже",
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onListingClick: (String) -> Unit,
+    onLoginRequired: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    var sortMenuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(listState) {
         snapshotFlow {
-            val layoutInfo = listState.layoutInfo
-            val last = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            last >= layoutInfo.totalItemsCount - 3
+            val info = listState.layoutInfo
+            val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0
+            last >= info.totalItemsCount - 4
         }.collect { nearEnd ->
             if (nearEnd) viewModel.loadMore()
         }
@@ -57,29 +79,134 @@ fun HomeScreen(
         modifier = modifier.fillMaxSize(),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            OutlinedTextField(
-                value = state.search,
-                onValueChange = viewModel::onSearchChange,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(PoiskerSpacing.md),
-                placeholder = { Text("Поиск объявлений") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true,
-            )
-            state.error?.let { ErrorBanner(it) }
-            if (state.isLoading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    .padding(horizontal = PoiskerSpacing.lg, vertical = PoiskerSpacing.md),
+            ) {
+                HomeSearchBar(
+                    search = state.search,
+                    onSearchChange = viewModel::onSearchChange,
+                    selectedCity = state.selectedCity,
+                    selectedCityLabel = state.selectedCityLabel,
+                    cityPanelQuery = state.cityPanelQuery,
+                    citySuggestions = state.citySuggestions,
+                    isCitySearching = state.isCitySearching,
+                    onCityPanelQueryChange = viewModel::onCityPanelQueryChange,
+                    onCitySelect = viewModel::selectCity,
+                    onCityClear = viewModel::clearCity,
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = PoiskerSpacing.lg),
+                horizontalArrangement = Arrangement.spacedBy(PoiskerSpacing.sm),
+            ) {
+                FilterChip(
+                    selected = state.selectedCategory == null,
+                    onClick = { viewModel.selectCategory(null) },
+                    label = { Text("Все") },
+                    leadingIcon = {
+                        LucideIcon(
+                            LucideIcons.LayoutGrid,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    },
+                )
+                state.categories.forEach { category ->
+                    FilterChip(
+                        selected = state.selectedCategory == category.slug,
+                        onClick = { viewModel.selectCategory(category.slug) },
+                        label = { Text(category.label) },
+                        leadingIcon = {
+                            LucideIcon(
+                                LucideIcons.category(category.icon),
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        },
+                    )
                 }
-            } else {
-                LazyColumn(
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = PoiskerSpacing.lg, vertical = PoiskerSpacing.sm),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = if (state.search.isNotBlank()) {
+                        "Найдено: ${state.totalCount}"
+                    } else {
+                        "${state.totalCount} объявлений"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                ExposedDropdownMenuBox(
+                    expanded = sortMenuExpanded,
+                    onExpandedChange = { sortMenuExpanded = it },
+                ) {
+                    TextButton(onClick = { sortMenuExpanded = true }, modifier = Modifier.menuAnchor()) {
+                        Text(SORT_OPTIONS.first { it.first == state.ordering }.second)
+                    }
+                    ExposedDropdownMenu(
+                        expanded = sortMenuExpanded,
+                        onDismissRequest = { sortMenuExpanded = false },
+                    ) {
+                        SORT_OPTIONS.forEach { (value, label) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    viewModel.selectOrdering(value)
+                                    sortMenuExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (state.selectedCity != null || state.selectedCategory != null || state.search.isNotBlank()) {
+                TextButton(
+                    onClick = viewModel::clearFilters,
+                    modifier = Modifier.padding(horizontal = PoiskerSpacing.lg),
+                ) {
+                    Text("Сбросить фильтры", color = PoiskerColors.Primary)
+                }
+            }
+
+            state.error?.let { ErrorBanner(it) }
+
+            when {
+                state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = PoiskerColors.Primary)
+                }
+                state.listings.isEmpty() -> EmptyState(
+                    title = "Объявлений нет",
+                    hint = "Попробуйте изменить фильтры или поисковый запрос",
+                    actionLabel = "Сбросить",
+                    onAction = viewModel::clearFilters,
+                )
+                else -> LazyColumn(
                     state = listState,
-                    contentPadding = PaddingValues(PoiskerSpacing.md),
+                    contentPadding = PaddingValues(PoiskerSpacing.lg),
                     verticalArrangement = Arrangement.spacedBy(PoiskerSpacing.md),
+                    modifier = Modifier.fillMaxSize(),
                 ) {
                     items(state.listings, key = { it.id }) { listing ->
-                        ListingCard(listing = listing, onClick = { onListingClick(listing.id) })
+                        ListingCard(
+                            listing = listing,
+                            onClick = { onListingClick(listing.id) },
+                            onBookmarkClick = {
+                                viewModel.toggleBookmark(listing.id, onLoginRequired)
+                            },
+                        )
                     }
                     if (state.isLoadingMore) {
                         item {
@@ -89,7 +216,7 @@ fun HomeScreen(
                                     .padding(16.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                CircularProgressIndicator()
+                                CircularProgressIndicator(color = PoiskerColors.Primary)
                             }
                         }
                     }

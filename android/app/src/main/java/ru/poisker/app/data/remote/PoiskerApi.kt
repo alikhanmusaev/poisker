@@ -13,18 +13,25 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 import ru.poisker.app.data.remote.dto.BookmarkActionDto
 import ru.poisker.app.data.remote.dto.CategoryDto
+import ru.poisker.app.data.remote.dto.ChatMessageDto
 import ru.poisker.app.data.remote.dto.CityDto
 import ru.poisker.app.data.remote.dto.ContactResponseDto
+import ru.poisker.app.data.remote.dto.ConversationDto
+import ru.poisker.app.data.remote.dto.ConversationsResponseDto
+import ru.poisker.app.data.remote.dto.EmailRequestDto
 import ru.poisker.app.data.remote.dto.ListingDto
 import ru.poisker.app.data.remote.dto.LoginRequestDto
 import ru.poisker.app.data.remote.dto.LoginResponseDto
 import ru.poisker.app.data.remote.dto.LogoutRequestDto
+import ru.poisker.app.data.remote.dto.MessageResponseDto
 import ru.poisker.app.data.remote.dto.PaginatedBookmarksDto
 import ru.poisker.app.data.remote.dto.PaginatedListingsDto
 import ru.poisker.app.data.remote.dto.RefreshRequestDto
 import ru.poisker.app.data.remote.dto.RefreshResponseDto
 import ru.poisker.app.data.remote.dto.RegisterRequestDto
 import ru.poisker.app.data.remote.dto.RegisterResponseDto
+import ru.poisker.app.data.remote.dto.SendMessageRequestDto
+import ru.poisker.app.data.remote.dto.UnreadCountDto
 import ru.poisker.app.data.remote.dto.UserDto
 
 interface PoiskerApi {
@@ -33,6 +40,12 @@ interface PoiskerApi {
 
     @POST("auth/login/")
     suspend fun login(@Body body: LoginRequestDto): LoginResponseDto
+
+    @POST("auth/password-reset/")
+    suspend fun requestPasswordReset(@Body body: EmailRequestDto): MessageResponseDto
+
+    @POST("auth/resend-verification/")
+    suspend fun resendVerification(@Body body: EmailRequestDto): MessageResponseDto
 
     @POST("auth/refresh/")
     suspend fun refresh(@Body body: RefreshRequestDto): RefreshResponseDto
@@ -77,6 +90,27 @@ interface PoiskerApi {
         @Part images: List<MultipartBody.Part>,
     ): ListingDto
 
+    @POST("listings/{id}/submit/")
+    suspend fun submitListing(@Path("id") id: String): ListingDto
+
+    @POST("listings/{id}/republish/")
+    suspend fun republishListing(@Path("id") id: String): ListingDto
+
+    @Multipart
+    @PATCH("listings/{id}/")
+    suspend fun updateListingMultipart(
+        @Path("id") id: String,
+        @Part("title") title: RequestBody?,
+        @Part("body") body: RequestBody?,
+        @Part("category") category: RequestBody?,
+        @Part("city") city: RequestBody?,
+        @Part("condition") condition: RequestBody?,
+        @Part("price") price: RequestBody?,
+        @Part("cover_index") coverIndex: RequestBody?,
+        @Part("as_draft") asDraft: RequestBody?,
+        @Part images: List<MultipartBody.Part>,
+    ): ListingDto
+
     @PATCH("listings/{id}/")
     suspend fun updateListing(
         @Path("id") id: String,
@@ -100,4 +134,28 @@ interface PoiskerApi {
 
     @POST("listings/{id}/contact/")
     suspend fun contact(@Path("id") id: String): ContactResponseDto
+
+    @GET("me/conversations/")
+    suspend fun conversations(): ConversationsResponseDto
+
+    @GET("me/conversations/unread-count/")
+    suspend fun unreadCount(): UnreadCountDto
+
+    @GET("conversations/{id}/")
+    suspend fun conversation(@Path("id") id: String): ConversationDto
+
+    @POST("conversations/{id}/messages/")
+    suspend fun sendMessage(
+        @Path("id") id: String,
+        @Body body: SendMessageRequestDto,
+    ): ChatMessageDto
+
+    @POST("listings/{id}/conversations/")
+    suspend fun startConversation(
+        @Path("id") id: String,
+        @Body body: SendMessageRequestDto = SendMessageRequestDto(),
+    ): ConversationDto
+
+    @DELETE("conversations/{id}/")
+    suspend fun deleteConversation(@Path("id") id: String)
 }

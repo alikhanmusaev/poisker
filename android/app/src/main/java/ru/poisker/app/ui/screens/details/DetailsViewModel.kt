@@ -3,6 +3,7 @@ package ru.poisker.app.ui.screens.details
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -29,13 +30,20 @@ class DetailsViewModel @Inject constructor(
     private val _state = MutableStateFlow(DetailsUiState())
     val state = _state.asStateFlow()
 
+    private var loadJob: Job? = null
+    private var requestedId: String? = null
+
     fun load(id: String) {
-        viewModelScope.launch {
+        requestedId = id
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _state.value = DetailsUiState(isLoading = true)
             try {
                 val listing = listingRepository.listing(id)
+                if (requestedId != id) return@launch
                 _state.value = DetailsUiState(listing = listing, isLoading = false)
             } catch (e: ApiException) {
+                if (requestedId != id) return@launch
                 _state.value = DetailsUiState(error = e.message, isLoading = false)
             }
         }
