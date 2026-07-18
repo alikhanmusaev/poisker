@@ -11,7 +11,6 @@ import '../../core/theme/lucide_resolve.dart';
 import '../../core/theme/poisker_icons.dart';
 import '../../core/theme/poisker_theme.dart';
 import '../../core/widgets/async_body.dart';
-import '../../core/widgets/brand_header.dart';
 import '../../core/widgets/listing_card.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -30,8 +29,6 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _city;
   String? _category;
   String _ordering = 'date_desc';
-  int? _minPrice;
-  int? _maxPrice;
   int _page = 1;
   int _count = 0;
   bool _loading = true;
@@ -88,8 +85,6 @@ class _HomeScreenState extends State<HomeScreen> {
             city: _city,
             category: _category,
             ordering: _ordering,
-            minPrice: _minPrice,
-            maxPrice: _maxPrice,
             page: 1,
           );
       if (!mounted) return;
@@ -119,8 +114,6 @@ class _HomeScreenState extends State<HomeScreen> {
             city: _city,
             category: _category,
             ordering: _ordering,
-            minPrice: _minPrice,
-            maxPrice: _maxPrice,
             page: next,
           );
       if (!mounted) return;
@@ -147,34 +140,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (selected == null) return;
     setState(() => _city = selected.isEmpty ? null : selected);
     _reload();
-  }
-
-  Future<void> _pickPrice() async {
-    final result = await showModalBottomSheet<({int? min, int? max})>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => _PriceFilterSheet(
-        minPrice: _minPrice,
-        maxPrice: _maxPrice,
-      ),
-    );
-    if (result == null) return;
-    setState(() {
-      _minPrice = result.min;
-      _maxPrice = result.max;
-    });
-    _reload();
-  }
-
-  bool get _hasPriceFilter => _minPrice != null || _maxPrice != null;
-
-  String get _priceFilterLabel {
-    if (_minPrice != null && _maxPrice != null) {
-      return '$_minPrice – $_maxPrice ₽';
-    }
-    if (_minPrice != null) return 'от $_minPrice ₽';
-    if (_maxPrice != null) return 'до $_maxPrice ₽';
-    return 'Цена';
   }
 
   String get _cityLabel {
@@ -213,33 +178,33 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final authed = context.watch<AuthController>().isAuthenticated;
+    final topPad = MediaQuery.paddingOf(context).top;
+
     return Scaffold(
       backgroundColor: PoiskerColors.background,
-      appBar: PoiskerBrandHeader(
-        actions: [
-          if (!authed)
-            TextButton(
-              onPressed: () => context.push('/login'),
-              child: Text(
-                'Войти',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w600,
-                  color: PoiskerColors.primary700,
-                ),
-              ),
-            ),
-        ],
-      ),
       body: RefreshIndicator(
         color: PoiskerColors.primary700,
         onRefresh: _reload,
+        edgeOffset: topPad + 8,
         child: CustomScrollView(
           controller: _scroll,
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            SliverToBoxAdapter(child: _buildSearchRow()),
-            SliverToBoxAdapter(child: _buildCategories()),
-            SliverToBoxAdapter(child: _buildFiltersRow()),
+            SliverToBoxAdapter(
+              child: _BrandStrip(
+                topPadding: topPad,
+                showLogin: !authed,
+                onLogin: () => context.push('/login'),
+              ),
+            ),
+            // Search + city + categories stick on scroll; brand scrolls away.
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _StickyFiltersDelegate(
+                search: _buildSearchRow(),
+                categories: _buildCategories(),
+              ),
+            ),
             SliverToBoxAdapter(child: _buildMetaRow()),
             if (_loading)
               const SliverFillRemaining(
@@ -293,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSearchRow() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       child: Row(
         children: [
           Expanded(
@@ -301,9 +266,9 @@ class _HomeScreenState extends State<HomeScreen> {
               controller: _search,
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _reload(),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'iPhone, квартира, автомобиль…',
-                prefixIcon: const Icon(PoiskerIcons.search, color: PoiskerColors.slate400),
+                prefixIcon: Icon(PoiskerIcons.search, color: PoiskerColors.slate400),
                 isDense: true,
               ),
             ),
@@ -365,7 +330,7 @@ class _HomeScreenState extends State<HomeScreen> {
       height: 52,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
         children: [
           _CategoryChip(
             label: 'Все',
@@ -387,55 +352,6 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFiltersRow() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          ActionChip(
-            avatar: Icon(
-              PoiskerIcons.bolt,
-              size: 16,
-              color: _hasPriceFilter
-                  ? PoiskerColors.primary700
-                  : PoiskerColors.slate500,
-            ),
-            label: Text(_priceFilterLabel),
-            backgroundColor: _hasPriceFilter
-                ? PoiskerColors.primary50
-                : PoiskerColors.surface,
-            side: BorderSide(
-              color: _hasPriceFilter
-                  ? PoiskerColors.primary600
-                  : PoiskerColors.border,
-            ),
-            onPressed: _pickPrice,
-          ),
-          if (_hasPriceFilter)
-            InputChip(
-              label: const Text('Сбросить цену'),
-              onDeleted: () {
-                setState(() {
-                  _minPrice = null;
-                  _maxPrice = null;
-                });
-                _reload();
-              },
-              onPressed: () {
-                setState(() {
-                  _minPrice = null;
-                  _maxPrice = null;
-                });
-                _reload();
-              },
-            ),
         ],
       ),
     );
@@ -502,6 +418,134 @@ class _HomeScreenState extends State<HomeScreen> {
       return 'объявления';
     }
     return 'объявлений';
+  }
+}
+
+class _BrandStrip extends StatelessWidget {
+  const _BrandStrip({
+    required this.topPadding,
+    required this.showLogin,
+    required this.onLogin,
+  });
+
+  final double topPadding;
+  final bool showLogin;
+  final VoidCallback onLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: PoiskerColors.surface,
+      padding: EdgeInsets.fromLTRB(16, topPadding + 8, 8, 8),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(PoiskerRadii.md),
+            child: Image.asset(
+              'assets/logo.png',
+              width: 40,
+              height: 40,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: PoiskerColors.primary700,
+                  borderRadius: BorderRadius.circular(PoiskerRadii.md),
+                ),
+                child: const Icon(PoiskerIcons.bolt, color: Colors.white),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Поискер',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                    color: PoiskerColors.slate900,
+                    height: 1.2,
+                  ),
+                ),
+                Text(
+                  'Доска объявлений по ЧР',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: PoiskerColors.muted,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (showLogin)
+            TextButton(
+              onPressed: onLogin,
+              child: Text(
+                'Войти',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  color: PoiskerColors.primary700,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StickyFiltersDelegate extends SliverPersistentHeaderDelegate {
+  _StickyFiltersDelegate({
+    required this.search,
+    required this.categories,
+  });
+
+  final Widget search;
+  final Widget categories;
+
+  // search row (~66) + categories (52)
+  static const double _height = 118;
+
+  @override
+  double get minExtent => _height;
+
+  @override
+  double get maxExtent => _height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Material(
+      color: PoiskerColors.surface,
+      elevation: overlapsContent || shrinkOffset > 0 ? 1 : 0,
+      shadowColor: Colors.black26,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          search,
+          categories,
+          const Divider(height: 1, color: PoiskerColors.border),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyFiltersDelegate oldDelegate) {
+    return search != oldDelegate.search ||
+        categories != oldDelegate.categories;
   }
 }
 
@@ -583,106 +627,6 @@ class _CityPickerSheetState extends State<_CityPickerSheet> {
           ],
         );
       },
-    );
-  }
-}
-
-class _PriceFilterSheet extends StatefulWidget {
-  const _PriceFilterSheet({this.minPrice, this.maxPrice});
-
-  final int? minPrice;
-  final int? maxPrice;
-
-  @override
-  State<_PriceFilterSheet> createState() => _PriceFilterSheetState();
-}
-
-class _PriceFilterSheetState extends State<_PriceFilterSheet> {
-  late final TextEditingController _min;
-  late final TextEditingController _max;
-
-  @override
-  void initState() {
-    super.initState();
-    _min = TextEditingController(
-      text: widget.minPrice?.toString() ?? '',
-    );
-    _max = TextEditingController(
-      text: widget.maxPrice?.toString() ?? '',
-    );
-  }
-
-  @override
-  void dispose() {
-    _min.dispose();
-    _max.dispose();
-    super.dispose();
-  }
-
-  int? _parse(String raw) {
-    final t = raw.trim();
-    if (t.isEmpty) return null;
-    return int.tryParse(t);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Цена',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _min,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'От',
-                    hintText: '0',
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _max,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'До',
-                    hintText: '∞',
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(
-                context,
-                (min: _parse(_min.text), max: _parse(_max.text)),
-              );
-            },
-            child: const Text('Применить'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, (min: null, max: null)),
-            child: const Text('Сбросить'),
-          ),
-        ],
-      ),
     );
   }
 }
