@@ -218,7 +218,7 @@ S3_BUCKET = os.getenv("S3_BUCKET", "board-images")
 S3_PUBLIC_URL = os.getenv("S3_PUBLIC_URL", "http://localhost:9000/board-images")
 
 SITE_NAME = os.getenv("SITE_NAME", "Поискер")
-SITE_TAGLINE = os.getenv("SITE_TAGLINE", "Доска объявлений России")
+SITE_TAGLINE = os.getenv("SITE_TAGLINE", "Доска объявлений")
 SITE_DESCRIPTION = os.getenv(
     "SITE_DESCRIPTION",
     "Бесплатная доска объявлений по всей России: купить и продать недвижимость, авто, услуги и товары.",
