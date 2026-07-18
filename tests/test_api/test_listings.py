@@ -125,3 +125,33 @@ def test_bookmarks(auth_client, buyer, published_post):
 
     add2 = auth_client.post(f"/api/v1/listings/{published_post.id}/bookmark/")
     assert add2.status_code == status.HTTP_201_CREATED
+
+
+@pytest.mark.django_db
+def test_report_listing(api_client, buyer, seller, published_post):
+    seller.email_verified = True
+    seller.set_password(TEST_PASSWORD)
+    seller.save(update_fields=["email_verified", "password"])
+
+    url = f"/api/v1/listings/{published_post.id}/report/"
+
+    seller_client = APIClient()
+    seller_client.credentials(
+        HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(seller).access_token}"
+    )
+    own = seller_client.post(url, {"reason": "spam"}, format="json")
+    assert own.status_code == status.HTTP_400_BAD_REQUEST
+
+    buyer_client = APIClient()
+    buyer_client.credentials(
+        HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(buyer).access_token}"
+    )
+    ok = buyer_client.post(
+        url,
+        {"reason": "spam", "comment": "Похоже на мошенничество"},
+        format="json",
+    )
+    assert ok.status_code == status.HTTP_201_CREATED
+
+    again = buyer_client.post(url, {"reason": "fraud"}, format="json")
+    assert again.status_code == status.HTTP_400_BAD_REQUEST

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1055213565369",
+    "project_id": "poisker-84437",
+    "storage_bucket": "poisker-84437.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1055213565369:android:8335551a7cdbacb7abb268",
+        "android_client_info": {
+          "package_name": "ru.poisker.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCP8eLVxHNII7OC5n1xPIsSZ37MRf4IrBI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

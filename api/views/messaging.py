@@ -15,6 +15,7 @@ from core.ratelimit import hit_rate_limit
 from listings.models import Post
 from messaging.services import (
     MessagingError,
+    confirm_deal_completed,
     ensure_can_message_post,
     get_conversation_for_user,
     get_or_create_conversation,
@@ -142,3 +143,19 @@ class ListingConversationStartView(APIView):
         mark_conversation_read(conversation, request.user)
         detail = ConversationDetailSerializer(conversation, context={"request": request})
         return Response(detail.data, status=status.HTTP_201_CREATED)
+
+
+class ConversationConfirmDealView(APIView):
+    permission_classes = [IsAuthenticated, IsNotBlocked]
+
+    def post(self, request, conversation_id):
+        try:
+            conversation = get_conversation_for_user(request.user, conversation_id)
+            conversation = confirm_deal_completed(conversation, request.user)
+        except MessagingError as exc:
+            return Response({"message": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        mark_conversation_read(conversation, request.user)
+        return Response(
+            ConversationDetailSerializer(conversation, context={"request": request}).data
+        )

@@ -53,7 +53,19 @@ listings/        — объявления, CRUD, поиск, S3
 core/            — главная, SEO-URL, health
 templates/       — шаблоны
 static/          — CSS, JS, изображения
+mobile/          — Flutter-клиент (REST API + FCM), package `ru.poisker.app`
+android/         — legacy Kotlin WebView-оболочка (тот же package)
 ```
+
+## Мобильное приложение (Flutter)
+
+Активный клиент: [`mobile/`](mobile/) — Flutter + `/api/v1/` + FCM.
+
+```bash
+cd mobile && flutter pub get && flutter run
+```
+
+Подробности: [`mobile/README.md`](mobile/README.md). Legacy WebView: [`android/README.md`](android/README.md).
 
 ## Полезные команды
 

@@ -17,11 +17,13 @@ from api.views.listings import (
     ListingDetailView,
     ListingListCreateView,
     ListingRepublishView,
+    ListingReportView,
     ListingSubmitView,
     MyListingListView,
 )
 from api.views.locations import CityListView
 from api.views.messaging import (
+    ConversationConfirmDealView,
     ConversationDetailView,
     ConversationListView,
     ConversationMessageCreateView,
@@ -63,5 +65,11 @@ urlpatterns = [
     path("listings/<uuid:post_id>/republish/", ListingRepublishView.as_view(), name="listing-republish"),
     path("listings/<uuid:post_id>/contact/", ListingContactView.as_view(), name="listing-contact"),
     path("listings/<uuid:post_id>/bookmark/", ListingBookmarkView.as_view(), name="listing-bookmark"),
+    path("listings/<uuid:post_id>/report/", ListingReportView.as_view(), name="listing-report"),
+    path(
+        "conversations/<uuid:conversation_id>/confirm-deal/",
+        ConversationConfirmDealView.as_view(),
+        name="conversation-confirm-deal",
+    ),
     path("push/", include("notifications.urls")),
 ]

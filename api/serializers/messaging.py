@@ -98,9 +98,29 @@ class ConversationListSerializer(serializers.ModelSerializer):
 
 class ConversationDetailSerializer(ConversationListSerializer):
     messages = serializers.SerializerMethodField()
+    deal_confirmed_by_me = serializers.SerializerMethodField()
+    deal_confirmed_by_other = serializers.SerializerMethodField()
+    both_deal_confirmed = serializers.SerializerMethodField()
+    can_confirm_deal = serializers.SerializerMethodField()
+    can_review_seller = serializers.SerializerMethodField()
+    has_existing_review = serializers.SerializerMethodField()
+    review_unlock_at = serializers.SerializerMethodField()
+    review_via_timeout = serializers.SerializerMethodField()
+    other_user_id = serializers.SerializerMethodField()
 
     class Meta(ConversationListSerializer.Meta):
-        fields = ConversationListSerializer.Meta.fields + ("messages",)
+        fields = ConversationListSerializer.Meta.fields + (
+            "messages",
+            "deal_confirmed_by_me",
+            "deal_confirmed_by_other",
+            "both_deal_confirmed",
+            "can_confirm_deal",
+            "can_review_seller",
+            "has_existing_review",
+            "review_unlock_at",
+            "review_via_timeout",
+            "other_user_id",
+        )
 
     def get_messages(self, obj):
         qs = (
@@ -109,6 +129,62 @@ class ConversationDetailSerializer(ConversationListSerializer):
             .order_by("created_at")
         )
         return MessageSerializer(qs, many=True, context=self.context).data
+
+    def _other(self, obj):
+        user = self.context["request"].user
+        return obj.other_participant(user)
+
+    def get_other_user_id(self, obj):
+        other = self._other(obj)
+        return other.id if other else None
+
+    def get_deal_confirmed_by_me(self, obj):
+        return obj.deal_confirmed_by(self.context["request"].user)
+
+    def get_deal_confirmed_by_other(self, obj):
+        other = self._other(obj)
+        return obj.deal_confirmed_by(other) if other else False
+
+    def get_both_deal_confirmed(self, obj):
+        return obj.both_deal_confirmed
+
+    def get_can_confirm_deal(self, obj):
+        user = self.context["request"].user
+        has_messages = obj.messages.exclude(body="", image="").exists()
+        return has_messages and not obj.deal_confirmed_by(user)
+
+    def get_can_review_seller(self, obj):
+        user = self.context["request"].user
+        if user.id != obj.buyer_id:
+            return False
+        from reviews.services import can_review_seller
+
+        return can_review_seller(user, self._other(obj))
+
+    def get_has_existing_review(self, obj):
+        user = self.context["request"].user
+        if user.id != obj.buyer_id:
+            return False
+        from reviews.services import get_review
+
+        return get_review(user, self._other(obj)) is not None
+
+    def get_review_unlock_at(self, obj):
+        user = self.context["request"].user
+        if user.id != obj.buyer_id:
+            return None
+        from reviews.services import conversation_review_unlock_at
+
+        unlock = conversation_review_unlock_at(obj)
+        return unlock.isoformat() if unlock else None
+
+    def get_review_via_timeout(self, obj):
+        user = self.context["request"].user
+        if user.id != obj.buyer_id:
+            return False
+        from reviews.services import conversation_review_via_timeout
+
+        return conversation_review_via_timeout(obj)
 
 
 class SendMessageSerializer(serializers.Serializer):

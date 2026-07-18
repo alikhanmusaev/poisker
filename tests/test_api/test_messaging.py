@@ -68,3 +68,38 @@ def test_empty_conversations_not_in_inbox(auth_client, buyer, seller, published_
     response = auth_client.get(reverse("api:conversations"))
     assert response.status_code == 200
     assert response.data["count"] == 0
+
+
+@pytest.mark.django_db
+def test_confirm_deal_via_api(api_client, buyer, seller, published_post):
+    buyer_refresh = RefreshToken.for_user(buyer)
+    seller_refresh = RefreshToken.for_user(seller)
+    seller.email_verified = True
+    seller.save(update_fields=["email_verified"])
+
+    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {buyer_refresh.access_token}")
+    start = api_client.post(
+        reverse("api:listing-conversation-start", kwargs={"post_id": published_post.pk}),
+        {"body": "Купить можно?"},
+        format="json",
+    )
+    assert start.status_code == 201
+    conversation_id = start.data["id"]
+    assert start.data["can_confirm_deal"] is True
+    assert start.data["deal_confirmed_by_me"] is False
+
+    confirm_url = reverse(
+        "api:conversation-confirm-deal",
+        kwargs={"conversation_id": conversation_id},
+    )
+    buyer_confirm = api_client.post(confirm_url)
+    assert buyer_confirm.status_code == 200
+    assert buyer_confirm.data["deal_confirmed_by_me"] is True
+    assert buyer_confirm.data["both_deal_confirmed"] is False
+
+    seller_client = APIClient()
+    seller_client.credentials(HTTP_AUTHORIZATION=f"Bearer {seller_refresh.access_token}")
+    seller_confirm = seller_client.post(confirm_url)
+    assert seller_confirm.status_code == 200
+    assert seller_confirm.data["both_deal_confirmed"] is True
+    assert seller_confirm.data["can_confirm_deal"] is False

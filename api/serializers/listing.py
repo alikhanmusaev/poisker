@@ -4,7 +4,7 @@ from accounts.models import User
 from api.serializers.auth import PublicSellerSerializer
 from api.utils import absolute_url, absolute_urls
 from core.templatetags.poisker_tags import format_price
-from listings.constants import CATEGORY_LABELS, CITIES, CONDITION_LABELS, POST_STATUS_LABELS
+from listings.constants import CATEGORY_LABELS, CITIES, CONDITION_LABELS, POST_STATUS_LABELS, REPORT_REASONS
 from listings.models import Post
 from listings.services.seo_urls import post_public_url
 from listings.utils.post_display import ordered_images
@@ -120,3 +120,8 @@ class ListingWriteSerializer(serializers.Serializer):
         data = dict(self.validated_data)
         data.pop("as_draft", None)
         return data
+
+
+class ListingReportSerializer(serializers.Serializer):
+    reason = serializers.ChoiceField(choices=list(REPORT_REASONS.keys()))
+    comment = serializers.CharField(required=False, allow_blank=True, max_length=500)

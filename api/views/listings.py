@@ -12,7 +12,12 @@ from api.exceptions import ServiceValidationError
 from api.images import resolve_image_updates, upload_files
 from api.pagination import PoiskerPageNumberPagination
 from api.permissions import IsNotBlocked, IsOwnerOrReadOnly
-from api.serializers.listing import ListingDetailSerializer, ListingListSerializer, ListingWriteSerializer
+from api.serializers.listing import (
+    ListingDetailSerializer,
+    ListingListSerializer,
+    ListingReportSerializer,
+    ListingWriteSerializer,
+)
 from api.utils import parse_int_param, service_error
 from bookmarks.services import bookmarked_post_ids_for, is_post_bookmarked
 from listings.constants import ALLOWED_SORTS, DEFAULT_SEARCH_SORT, DEFAULT_SORT
@@ -333,3 +338,43 @@ class ListingContactView(APIView):
 
             record_phone_reveal(reviewer=request.user, post=post)
         return Response({"phone": phone})
+
+
+class ListingReportView(APIView):
+    permission_classes = [IsAuthenticated, IsNotBlocked]
+
+    def post(self, request, post_id):
+        from core.http import get_client_ip
+        from listings.models import Report
+        from listings.services.ranking import maybe_auto_hide
+
+        post = get_object_or_404(Post, pk=post_id)
+        if post.user_id == request.user.id:
+            return Response(
+                {"message": "Нельзя пожаловаться на своё объявление"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = ListingReportSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        ip = get_client_ip(request)
+        if Report.objects.filter(post=post, reporter=request.user).exists() or (
+            ip and Report.objects.filter(post=post, reporter_ip=ip).exists()
+        ):
+            return Response(
+                {"message": "Вы уже отправляли жалобу на это объявление."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        Report.objects.create(
+            post=post,
+            reason=serializer.validated_data["reason"],
+            comment=serializer.validated_data.get("comment") or "",
+            reporter_ip=ip,
+            reporter=request.user,
+        )
+        post.reports_count += 1
+        post.save(update_fields=["reports_count"])
+        maybe_auto_hide(post)
+        return Response({"message": "Жалоба отправлена"}, status=status.HTTP_201_CREATED)

@@ -1,5 +1,7 @@
 # Poisker Android (WebView shell)
 
+> **Статус:** legacy. Активный клиент — Flutter в [`../mobile/`](../mobile/) (тот же `ru.poisker.app`).
+
 Нативное приложение-оболочка для мобильного сайта [https://poisker.ru/](https://poisker.ru/).
 
 - **Package / applicationId:** `ru.poisker.app`
