@@ -188,12 +188,15 @@
         li.textContent = 'Введите минимум 2 символа';
         listEl.appendChild(li);
         listEl.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
         return;
       }
       let items;
       if (useRemote) {
         items = await fetchRemote(query);
-        if (items === null) return; // aborted
+        if (items === null) return; // aborted — a newer request is in flight
+        // Ignore stale responses if the input changed while fetching.
+        if (String(input.value || '').trim() !== query) return;
       } else {
         items = matchCitiesLocal(query, citiesMap);
       }

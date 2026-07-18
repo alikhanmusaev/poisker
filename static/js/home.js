@@ -245,6 +245,16 @@
       },
     });
 
+    const popularBlock = document.getElementById('home-popular-cities');
+    const syncPopularVisibility = () => {
+      if (!popularBlock) return;
+      const q = String(input.value || '').trim();
+      popularBlock.hidden = q.length >= 2;
+    };
+    input.addEventListener('input', syncPopularVisibility);
+    input.addEventListener('focus', syncPopularVisibility);
+    syncPopularVisibility();
+
     toggle.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();

@@ -456,8 +456,8 @@ body:not(.page-home) .site-main {
 }
 
 .search-bar--split:focus-within {
-  border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+  border-color: var(--slate-300);
+  box-shadow: var(--shadow-sm);
 }
 
 .search-bar-query {
@@ -5335,8 +5335,27 @@ body.page-notifications .site-main {
 }
 
 .city-autocomplete .is-loading {
-  border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+  /* keep quiet — avoid painting the whole search bar pink */
+  opacity: 0.92;
+}
+
+.search-bar--split:focus-within {
+  border-color: var(--slate-300);
+  box-shadow: var(--shadow-sm);
+}
+
+.search-bar-city-btn.is-active {
+  color: var(--slate-800);
+  background: transparent;
+}
+
+.search-bar-city-btn.is-active .search-bar-city-pin {
+  color: var(--color-primary);
+}
+
+.search-bar-city-btn[aria-expanded="true"] {
+  background: var(--slate-50);
+  color: var(--slate-800);
 }
 
 /* Keep geo dropdown above sticky toolbar / categories */
