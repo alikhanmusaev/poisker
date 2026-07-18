@@ -31,3 +31,6 @@ Thumbs.db
 # Large geo dumps (import locally / on server)
 locations/data/*.csv
 locations/data/*.json
+
+# Precompressed static (generated on deploy)
+static/**/*.gz
