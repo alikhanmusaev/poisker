@@ -2,7 +2,6 @@ from django import forms
 
 from listings.constants import (
     CATEGORY_LABELS,
-    CITIES,
     CONDITION_CHOICES,
     POST_BODY_MAX_LEN,
     POST_BODY_MIN_LEN,

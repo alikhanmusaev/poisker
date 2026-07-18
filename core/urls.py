@@ -10,11 +10,6 @@ urlpatterns = [
     path("ready", views.ready, name="ready"),
     path("robots.txt", views.robots_txt, name="robots"),
     path("sitemap.xml", views.sitemap_xml, name="sitemap"),
-    path(
-        ".well-known/assetlinks.json",
-        views.assetlinks_json,
-        name="assetlinks",
-    ),
     path("offline", views.offline, name="offline"),
     path("manifest.webmanifest", views.web_manifest, name="web_manifest"),
     path("sw.js", views.service_worker, name="service_worker"),

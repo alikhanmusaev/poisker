@@ -55,9 +55,9 @@ def test_base_links_manifest():
 def test_service_worker_precache_matches_versioned_assets():
     client = Client()
     sw = client.get("/sw.js").content.decode()
-    assert "core.js?v=" in sw
-    assert "brand/logo.png?v=" in sw
-    assert "htmx.min.js?v=" in sw
+    assert "staticAsset('/static/js/core.js')" in sw
+    assert "staticAsset('/static/brand/logo.png')" in sw
+    assert "staticAsset('/static/vendor/htmx.min.js')" in sw
     # Controlled updates: skipWaiting only via postMessage, not on install
     assert "event.data?.type === 'SKIP_WAITING'" in sw
     assert ".then(() => self.skipWaiting())" not in sw

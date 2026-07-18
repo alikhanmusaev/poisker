@@ -3,12 +3,10 @@ from datetime import timedelta
 import pytest
 from django.core.management import call_command
 from django.utils import timezone
-from rest_framework import status
-from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import User
 from listings.models import Post
+from listings.services.posts import ValidationError as PostValidationError
+from listings.services.posts import create_post
 from listings.services.search import search_posts
 from locations.models import Region, Settlement
 
@@ -37,7 +35,7 @@ def chechnya(db):
 @pytest.mark.django_db
 def test_location_search_requires_two_characters(client):
     response = client.get("/api/locations/search/", {"q": "г"})
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == 200
     assert response.json()["results"] == []
 
 
@@ -45,7 +43,7 @@ def test_location_search_requires_two_characters(client):
 def test_location_search_returns_settlements(client, chechnya):
     _region, grozny = chechnya
     response = client.get("/api/locations/search/", {"q": "Гроз"})
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == 200
     ids = [row["id"] for row in response.json()["results"]]
     assert grozny.id in ids
     row = next(r for r in response.json()["results"] if r["id"] == grozny.id)
@@ -77,62 +75,38 @@ def test_search_filters_settlement_and_legacy_city(make_post, chechnya):
 
 
 @pytest.mark.django_db
-def test_create_api_rejects_invalid_settlement_id():
-    user = User.objects.create_user(
-        email="location-api@example.com",
-        password="password12345",
-        display_name="Location API",
-        phone="+79001112345",
-    )
-    client = APIClient()
-    client.credentials(
-        HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}"
-    )
-    response = client.post(
-        "/api/v1/listings/",
-        {
-            "title": "Продам телефон",
-            "body": "Отличное состояние, полный комплект, без царапин.",
-            "category": "elektronika",
-            "settlement": 999999,
-            "condition": "used",
-            "price": 15000,
-        },
-        format="json",
-    )
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert "settlement" in response.data["fields"]
+def test_create_post_rejects_invalid_settlement_id(seller):
+    with pytest.raises(PostValidationError):
+        create_post(
+            seller,
+            {
+                "title": "Продам телефон",
+                "body": "Отличное состояние, полный комплект, без царапин.",
+                "category": "elektronika",
+                "settlement_id": 999999,
+                "condition": "used",
+                "price": 15000,
+            },
+        )
 
 
 @pytest.mark.django_db
-def test_create_api_with_settlement(chechnya):
+def test_create_post_with_settlement(chechnya, seller):
     _region, grozny = chechnya
-    user = User.objects.create_user(
-        email="create-settlement@example.com",
-        password="password12345",
-        display_name="Creator",
-        phone="+79001112346",
-    )
-    client = APIClient()
-    client.credentials(
-        HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}"
-    )
-    response = client.post(
-        "/api/v1/listings/",
+    post = create_post(
+        seller,
         {
             "title": "Продам телефон",
             "body": "Отличное состояние, полный комплект, без царапин.",
             "category": "elektronika",
-            "settlement": grozny.id,
+            "settlement_id": grozny.id,
             "condition": "used",
             "price": 15000,
         },
-        format="json",
     )
-    assert response.status_code == status.HTTP_201_CREATED
-    post = Post.objects.get(pk=response.data["id"])
     assert post.settlement_id == grozny.id
     assert post.city == "grozny"
+    assert Post.objects.filter(pk=post.pk).exists()
 
 
 @pytest.mark.django_db
@@ -147,7 +121,6 @@ def test_region_and_settlement_urls(client, chechnya, make_post):
     )
     r = client.get(f"/{region.slug}/")
     assert r.status_code == 200
-    assert b"noindex" not in r.content or True
     s = client.get(f"/{region.slug}/{grozny.slug}/")
     assert s.status_code == 200
     legacy = client.get("/grozny/")
@@ -174,7 +147,6 @@ def test_feed_select_related_no_n_plus_one(client, chechnya, make_post, django_a
             city="grozny",
             expires_at=now + timedelta(days=1),
         )
-    # Warm caches / auth / geo lookups, then assert listing stays bounded.
     client.get(f"/{region.slug}/{grozny.slug}/")
     with django_assert_max_num_queries(40):
         response = client.get(f"/{region.slug}/{grozny.slug}/")

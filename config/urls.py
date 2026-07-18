@@ -7,7 +7,6 @@ from listings.media_views import serve_media
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/v1/", include("api.urls")),
     path("api/locations/", include("locations.urls")),
     path("moderation/", include("moderation.urls")),
     path("media/<path:key>", serve_media, name="media"),
@@ -21,11 +20,6 @@ urlpatterns = [
 
 if settings.DEBUG:
     from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-    from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
     urlpatterns += staticfiles_urlpatterns()
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += [
-        path("api/schema/", SpectacularAPIView.as_view(), name="api-schema"),
-        path("api/docs/", SpectacularSwaggerView.as_view(url_name="api-schema"), name="api-docs"),
-    ]

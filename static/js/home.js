@@ -219,7 +219,6 @@
     const label = document.getElementById('home-city-label');
     const regionPick = document.getElementById('home-region-pick');
     const russiaPick = document.getElementById('home-russia-pick');
-    const headerGeo = document.getElementById('header-geo-btn');
     if (!wrap || !toggle || !panel || !input || !hidden || !list || !window.initCityAutocomplete) {
       return;
     }
@@ -261,12 +260,6 @@
       setOpen(panel.hidden);
     });
 
-    headerGeo?.addEventListener('click', (event) => {
-      event.preventDefault();
-      setOpen(true);
-      panel.scrollIntoView?.({ block: 'nearest' });
-    });
-
     function goRussia() {
       hidden.value = '';
       if (settlementIdInput) settlementIdInput.value = '';
@@ -302,7 +295,7 @@
     });
 
     document.addEventListener('click', (event) => {
-      if (!panel.hidden && !wrap.contains(event.target) && event.target !== headerGeo) {
+      if (!panel.hidden && !wrap.contains(event.target)) {
         setOpen(false);
       }
     });

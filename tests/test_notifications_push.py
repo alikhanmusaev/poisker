@@ -1,9 +1,5 @@
 import pytest
 from django.contrib.auth import get_user_model
-from django.test import Client
-from django.urls import reverse
-from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from notifications.models import NotificationPreference, PushDevice
 from notifications.payloads import sanitize_push_url
@@ -45,50 +41,6 @@ def test_deactivate_device(seller):
     register_device(user=seller, token="tok", device_id="dev-x")
     assert deactivate_device(user=seller, device_id="dev-x")
     assert not PushDevice.objects.get(user=seller, device_id="dev-x").active
-
-
-@pytest.mark.django_db
-def test_push_devices_api_session(seller):
-    client = Client(enforce_csrf_checks=False)
-    client.force_login(seller)
-    url = reverse("api:notifications:device-register")
-    response = client.post(
-        url,
-        data={
-            "token": "fcm-test-token",
-            "platform": "android",
-            "device_id": "uuid-1",
-            "app_version": "1.0",
-            "app_build": 1,
-        },
-        content_type="application/json",
-    )
-    assert response.status_code == 201
-    assert PushDevice.objects.filter(user=seller, device_id="uuid-1", active=True).exists()
-
-    delete_url = reverse("api:notifications:device-current")
-    deleted = client.delete(f"{delete_url}?device_id=uuid-1")
-    assert deleted.status_code == 200
-    assert not PushDevice.objects.get(user=seller, device_id="uuid-1").active
-
-
-@pytest.mark.django_db
-def test_push_devices_api_jwt(seller):
-    api = APIClient()
-    token = RefreshToken.for_user(seller)
-    api.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    response = api.post(
-        reverse("api:notifications:device-register"),
-        {
-            "token": "jwt-fcm-token",
-            "platform": "android",
-            "device_id": "jwt-device",
-            "app_version": "1.0",
-            "app_build": 1,
-        },
-        format="json",
-    )
-    assert response.status_code == 201
 
 
 @pytest.mark.django_db

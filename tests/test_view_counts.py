@@ -33,8 +33,7 @@ def test_views_counted_once_per_session():
     post.refresh_from_db()
     assert post.views == 1
 
-    # Same session — no second count
-    request.session = client.session
+    # Same session object — no second count
     assert increment_views(request, post) is False
     post.refresh_from_db()
     assert post.views == 1

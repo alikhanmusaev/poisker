@@ -13,3 +13,16 @@ def get_client_ip(request) -> str | None:
         if real_ip:
             return real_ip
     return request.META.get("REMOTE_ADDR")
+
+
+def absolute_url(path: str) -> str:
+    if not path:
+        return ""
+    if path.startswith("http://") or path.startswith("https://"):
+        return path
+    domain = getattr(settings, "APP_DOMAIN", "poisker.ru")
+    return f"https://{domain}{path}"
+
+
+def absolute_urls(paths: list[str]) -> list[str]:
+    return [absolute_url(p) for p in paths if p]

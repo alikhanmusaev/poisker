@@ -5237,41 +5237,6 @@ body.page-notifications .site-main {
   pointer-events: none;
 }
 
-/* Geo picker (federal) */
-.header-geo {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: 12px;
-  max-width: 11rem;
-  min-height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  background: var(--color-surface);
-  color: var(--slate-700);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  box-shadow: var(--shadow-xs);
-}
-.header-geo:hover {
-  border-color: var(--slate-300);
-  color: var(--color-primary);
-}
-.header-geo .icon { flex-shrink: 0; color: var(--color-primary); }
-.header-geo span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-@media (max-width: 900px) {
-  .header-geo { display: none; }
-}
-
 .home-city-panel__actions,
 .home-city-panel__popular {
   margin-top: 10px;

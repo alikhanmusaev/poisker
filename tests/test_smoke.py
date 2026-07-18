@@ -94,6 +94,10 @@ def test_reject_stores_note_and_notifies(staff_user, make_post, settings):
 def test_rejected_unpublished_post_can_be_edited_and_resubmitted(seller, staff_user, make_post):
     post = make_post(status="pending", ever_published=False)
     reject_post(post, staff_user, reason="Исправьте описание")
+    from locations.models import Settlement
+
+    settlement = Settlement.objects.filter(slug=post.city, is_active=True).first()
+    assert settlement is not None
 
     client = Client()
     assert client.login(email=seller.email, password="password12345")
@@ -103,6 +107,7 @@ def test_rejected_unpublished_post_can_be_edited_and_resubmitted(seller, staff_u
             "title": "Обновлённый телефон",
             "body": "Подробное исправленное описание, достаточное для модерации.",
             "category": "elektronika",
+            "settlement_id": settlement.id,
             "city": post.city,
             "condition": "used",
             "price": "12000",
@@ -156,6 +161,9 @@ def test_typesense_filter_includes_expires():
 
 @pytest.mark.django_db
 def test_create_post_without_price_is_negotiable(seller, city_slug):
+    from locations.models import Settlement
+
+    settlement = Settlement.objects.get(slug=city_slug)
     client = Client()
     assert client.login(email=seller.email, password="password12345")
     response = client.post(
@@ -164,6 +172,7 @@ def test_create_post_without_price_is_negotiable(seller, city_slug):
             "title": "Товар без цены длинный",
             "body": "Описание достаточно длинное для публикации объявления без фиксированной цены.",
             "category": "elektronika",
+            "settlement_id": settlement.id,
             "city": city_slug,
             "condition": "used",
             "price": "",
@@ -180,6 +189,9 @@ def test_create_post_without_price_is_negotiable(seller, city_slug):
 
 @pytest.mark.django_db
 def test_create_post_with_new_condition(seller, city_slug):
+    from locations.models import Settlement
+
+    settlement = Settlement.objects.get(slug=city_slug)
     client = Client()
     assert client.login(email=seller.email, password="password12345")
     response = client.post(
@@ -188,6 +200,7 @@ def test_create_post_with_new_condition(seller, city_slug):
             "title": "Новый товар длинный заголовок",
             "body": "Описание нового товара достаточно длинное для отправки на модерацию.",
             "category": "elektronika",
+            "settlement_id": settlement.id,
             "city": city_slug,
             "condition": "new",
             "price": "15000",

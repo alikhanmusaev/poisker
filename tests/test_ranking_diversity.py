@@ -79,11 +79,12 @@ def test_resolve_boost_city_skips_when_filtered():
 
 
 @pytest.mark.django_db
-def test_home_redirects_to_preferred_city(client):
+def test_home_applies_preferred_city_without_redirect(client):
     client.cookies[PREFERRED_CITY_COOKIE] = "grozny"
     response = client.get("/")
-    assert response.status_code == 302
-    assert response.url.startswith("/grozny/")
+    assert response.status_code == 200
+    assert response.context["geo"].settlement is not None
+    assert response.context["geo"].settlement.slug == "grozny"
 
 
 @pytest.mark.django_db

@@ -62,10 +62,13 @@ def resolve_geo(
     if url_region is not None:
         return GeoSelection("region", region=url_region)
 
-    if (request.GET.get("geo") or "").strip() == "russia":
+    get = getattr(request, "GET", None)
+    cookies = getattr(request, "COOKIES", None) or {}
+
+    if get is not None and (get.get("geo") or "").strip() == "russia":
         return GeoSelection("russia")
 
-    sid = request.GET.get("settlement") or request.COOKIES.get(COOKIE_SETTLEMENT)
+    sid = (get.get("settlement") if get is not None else None) or cookies.get(COOKIE_SETTLEMENT)
     if sid and str(sid).isdigit():
         s = (
             Settlement.objects.filter(
@@ -77,13 +80,13 @@ def resolve_geo(
         if s:
             return GeoSelection("settlement", settlement=s, region=s.region)
 
-    rid = request.GET.get("region") or request.COOKIES.get(COOKIE_REGION)
+    rid = (get.get("region") if get is not None else None) or cookies.get(COOKIE_REGION)
     if rid and str(rid).isdigit():
         r = Region.objects.filter(pk=int(rid), is_active=True).first()
         if r:
             return GeoSelection("region", region=r)
 
-    if (request.COOKIES.get(COOKIE_SCOPE) or "").strip() == "russia":
+    if (cookies.get(COOKIE_SCOPE) or "").strip() == "russia":
         return GeoSelection("russia")
 
     user = getattr(request, "user", None)
@@ -98,7 +101,7 @@ def resolve_geo(
             if pref:
                 return GeoSelection("settlement", settlement=pref, region=pref.region)
 
-    legacy = (request.COOKIES.get(LEGACY_CITY_COOKIE) or "").strip()
+    legacy = (cookies.get(LEGACY_CITY_COOKIE) or "").strip()
     if legacy:
         s = (
             Settlement.objects.filter(

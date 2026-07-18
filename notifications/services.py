@@ -209,7 +209,7 @@ def push_for_bookmark_notification(
     post=None,
     payload: dict[str, Any] | None = None,
 ) -> None:
-    from api.utils import absolute_url
+    from core.http import absolute_url
     from listings.services.seo_urls import post_public_url
     from notifications.payloads import bookmark_kind_to_push_type
 
@@ -231,7 +231,7 @@ def push_for_bookmark_notification(
 
 
 def push_for_new_message(*, recipient, conversation, sender, message) -> None:
-    from api.utils import absolute_url
+    from core.http import absolute_url
 
     preview = (message.body or "").strip()
     if not preview and message.image:
@@ -257,7 +257,7 @@ def notify_listing_expiring(*, days: int = 3) -> int:
     from django.core.cache import cache
     from django.utils import timezone
 
-    from api.utils import absolute_url
+    from core.http import absolute_url
     from listings.models import Post
     from listings.services.seo_urls import post_public_url
     from notifications.payloads import TYPE_LISTING_EXPIRING
