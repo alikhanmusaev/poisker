@@ -35,6 +35,42 @@ def city_category_path(city, category=None):
 
 
 @register.simple_tag
+def settlement_path(settlement, category=None):
+    if settlement is None:
+        return "/"
+    base = f"/{settlement.region.slug}/{settlement.slug}/"
+    if category:
+        return f"{base}{category}/"
+    return base
+
+
+@register.simple_tag
+def region_path(region, category=None):
+    if region is None:
+        return "/"
+    if category:
+        return f"/{region.slug}/{category}/"
+    return f"/{region.slug}/"
+
+
+@register.simple_tag
+def geo_listing_path(geo, category=None):
+    """Build listing URL for current GeoSelection."""
+    if geo is None:
+        return f"/{category}/" if category else "/"
+    if getattr(geo, "scope", None) == "settlement" and geo.settlement is not None:
+        return settlement_path(geo.settlement, category)
+    if getattr(geo, "scope", None) == "region" and geo.region is not None:
+        return region_path(geo.region, category)
+    return f"/{category}/" if category else "/"
+
+
+@register.filter
+def post_location(post):
+    return getattr(post, "location_label", "") or ""
+
+
+@register.simple_tag
 def post_cover_image(post):
     from listings.utils.post_display import ordered_images
 

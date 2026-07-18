@@ -36,6 +36,10 @@ android/local.properties
 android/app/build/
 android/build/
 
+# Large geo dumps (import locally / on server)
+locations/data/*.csv
+locations/data/*.json
+
 # Flutter
 mobile/.dart_tool/
 mobile/.flutter-plugins-dependencies

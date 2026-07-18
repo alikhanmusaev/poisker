@@ -31,15 +31,15 @@ class PostForm(HoneypotFormMixin, forms.Form):
         choices=[("", "Выберите категорию")] + list(CATEGORY_LABELS.items()),
         widget=forms.Select(attrs={"class": "input select-input"}),
     )
-    city = forms.ChoiceField(
+    settlement_id = forms.IntegerField(
         label="Город / населённый пункт",
-        choices=[("", "")] + list(CITIES.items()),
-        widget=forms.HiddenInput(attrs={"id": "city"}),
+        min_value=1,
+        widget=forms.HiddenInput(attrs={"id": "settlement_id"}),
         error_messages={
             "required": "Выберите город из подсказок",
-            "invalid_choice": "Выберите город из подсказок",
         },
     )
+    city = forms.CharField(required=False, widget=forms.HiddenInput(attrs={"id": "city"}))
     condition = forms.ChoiceField(
         label="Состояние",
         choices=CONDITION_CHOICES,
@@ -85,12 +85,13 @@ class DraftPostForm(HoneypotFormMixin, forms.Form):
         choices=[("", "Выберите категорию")] + list(CATEGORY_LABELS.items()),
         widget=forms.Select(attrs={"class": "input select-input"}),
     )
-    city = forms.ChoiceField(
+    settlement_id = forms.IntegerField(
         label="Город / населённый пункт",
         required=False,
-        choices=[("", "")] + list(CITIES.items()),
-        widget=forms.HiddenInput(attrs={"id": "city"}),
+        min_value=1,
+        widget=forms.HiddenInput(attrs={"id": "settlement_id"}),
     )
+    city = forms.CharField(required=False, widget=forms.HiddenInput(attrs={"id": "city"}))
     condition = forms.ChoiceField(
         label="Состояние",
         required=False,

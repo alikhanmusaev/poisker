@@ -28,6 +28,14 @@ class Post(models.Model):
     body = models.TextField()
     category = models.CharField(max_length=50, db_index=True)
     city = models.CharField(max_length=50, db_index=True)
+    settlement = models.ForeignKey(
+        "locations.Settlement",
+        on_delete=models.PROTECT,
+        related_name="ads",
+        null=True,
+        blank=True,
+        verbose_name="Населённый пункт",
+    )
     condition = models.CharField(
         "Состояние",
         max_length=10,
@@ -84,6 +92,28 @@ class Post(models.Model):
     @property
     def seller_name(self):
         return self.user.display_name
+
+    @property
+    def location_label(self) -> str:
+        if self.settlement_id and self.settlement is not None:
+            return self.settlement.display_name
+        from listings.constants import CITIES
+
+        return CITIES.get(self.city, self.city or "")
+
+    @property
+    def settlement_public_path(self) -> str:
+        if self.settlement_id and self.settlement is not None:
+            return f"/{self.settlement.region.slug}/{self.settlement.slug}/"
+        if self.city:
+            return f"/{self.city}/"
+        return "/"
+
+    @property
+    def region_public_path(self) -> str:
+        if self.settlement_id and self.settlement is not None:
+            return f"/{self.settlement.region.slug}/"
+        return "/"
 
     @property
     def is_promoted(self):

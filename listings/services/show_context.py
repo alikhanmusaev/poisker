@@ -52,7 +52,21 @@ def build_show_context(request, post: Post) -> dict:
 
     from bookmarks.services import is_post_bookmarked
 
-    city_name = CITIES.get(post.city, post.city)
+    if post.settlement_id and post.settlement is not None:
+        city_name = post.settlement.name
+        region_name = post.settlement.region.name
+        location_label = post.settlement.display_name
+        settlement_url = f"/{post.settlement.region.slug}/{post.settlement.slug}/"
+        region_url = f"/{post.settlement.region.slug}/"
+        category_url = f"{settlement_url}{post.category}/"
+    else:
+        city_name = CITIES.get(post.city, post.city)
+        region_name = ""
+        location_label = city_name
+        settlement_url = f"/{post.city}/"
+        region_url = ""
+        category_url = f"/{post.city}/{post.category}/"
+
     category_name = CATEGORY_LABELS.get(post.category, post.category)
     body_plain = " ".join(strip_tags(post.body or "").split())
     snippet = body_plain[:160].rstrip()
@@ -62,7 +76,7 @@ def build_show_context(request, post: Post) -> dict:
         price_bit = f"{post.price} ₽ · "
     else:
         price_bit = ""
-    seo_description = f"{price_bit}{post.title} — {city_name}, {category_name}. {snippet}".strip()
+    seo_description = f"{price_bit}{post.title} — {location_label}, {category_name}. {snippet}".strip()
     if len(seo_description) > 300:
         seo_description = seo_description[:297].rstrip() + "…"
 
@@ -83,7 +97,7 @@ def build_show_context(request, post: Post) -> dict:
             "url": canonical_url,
             "availability": "https://schema.org/InStock",
             "priceCurrency": "RUB",
-            "areaServed": city_name,
+            "areaServed": location_label,
         },
     }
     if post.price is not None:
@@ -91,25 +105,46 @@ def build_show_context(request, post: Post) -> dict:
     if gallery:
         json_ld["image"] = gallery[:5]
 
+    crumb_items = [
+        {"@type": "ListItem", "position": 1, "name": "Главная", "item": f"https://{settings.APP_DOMAIN}/"},
+    ]
+    pos = 2
+    if region_url and region_name:
+        crumb_items.append(
+            {
+                "@type": "ListItem",
+                "position": pos,
+                "name": region_name,
+                "item": f"https://{settings.APP_DOMAIN}{region_url}",
+            }
+        )
+        pos += 1
+    crumb_items.append(
+        {
+            "@type": "ListItem",
+            "position": pos,
+            "name": city_name,
+            "item": f"https://{settings.APP_DOMAIN}{settlement_url}",
+        }
+    )
+    pos += 1
+    crumb_items.append(
+        {
+            "@type": "ListItem",
+            "position": pos,
+            "name": category_name,
+            "item": f"https://{settings.APP_DOMAIN}{category_url}",
+        }
+    )
+    pos += 1
+    crumb_items.append(
+        {"@type": "ListItem", "position": pos, "name": post.title, "item": canonical_url}
+    )
+
     breadcrumb_ld = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
-        "itemListElement": [
-            {"@type": "ListItem", "position": 1, "name": "Главная", "item": f"https://{settings.APP_DOMAIN}/"},
-            {
-                "@type": "ListItem",
-                "position": 2,
-                "name": city_name,
-                "item": f"https://{settings.APP_DOMAIN}/{post.city}/",
-            },
-            {
-                "@type": "ListItem",
-                "position": 3,
-                "name": category_name,
-                "item": f"https://{settings.APP_DOMAIN}/{post.city}/{post.category}/",
-            },
-            {"@type": "ListItem", "position": 4, "name": post.title, "item": canonical_url},
-        ],
+        "itemListElement": crumb_items,
     }
 
     return {
@@ -118,6 +153,10 @@ def build_show_context(request, post: Post) -> dict:
         "back_url": back_url,
         "category_labels": CATEGORY_LABELS,
         "cities": CITIES,
+        "location_label": location_label,
+        "settlement_url": settlement_url,
+        "region_url": region_url,
+        "region_name": region_name,
         "is_bookmarked": is_post_bookmarked(request.user, post),
         "seo_title": f"{post.title} — {settings.SITE_NAME}",
         "seo_description": seo_description,

@@ -32,7 +32,10 @@ _collection_ready = False
 
 
 def _live_posts_qs():
-    return Post.objects.filter(status="published", expires_at__gte=timezone.now())
+    return (
+        Post.objects.filter(status="published", expires_at__gte=timezone.now())
+        .select_related("user", "settlement", "settlement__region")
+    )
 
 
 def _collection_schema() -> dict:
@@ -312,9 +315,32 @@ def _apply_text_filter(qs, query: str, expanded_terms: list[str] | None):
     return qs.filter(clause)
 
 
-def _apply_filters(qs, city, category, price_min, price_max, with_photo, with_price):
-    if city:
+def _apply_filters(
+    qs,
+    city,
+    category,
+    price_min,
+    price_max,
+    with_photo,
+    with_price,
+    settlement_id=None,
+    region_id=None,
+):
+    if settlement_id:
+        settlement_slug = (
+            qs.model._meta.get_field("settlement")
+            .related_model.objects.filter(pk=settlement_id)
+            .values_list("slug", flat=True)
+            .first()
+        )
+        settlement_filter = Q(settlement_id=settlement_id)
+        if settlement_slug:
+            settlement_filter |= Q(city=settlement_slug)
+        qs = qs.filter(settlement_filter)
+    elif city:
         qs = qs.filter(city=city)
+    if region_id:
+        qs = qs.filter(settlement__region_id=region_id)
     if category:
         qs = qs.filter(category=category)
     if price_min is not None:
@@ -338,9 +364,12 @@ def _apply_sql_sort(qs, sort: str):
     return qs.order_by("-rank_score", "-created_at")
 
 
-def search_posts_fallback(query, city=None, category=None, price_min=None, price_max=None, with_photo=False, with_price=False, sort=DEFAULT_SORT, limit=20, offset=0, expanded_terms=None, boost_city=None):
+def search_posts_fallback(query, city=None, category=None, price_min=None, price_max=None, with_photo=False, with_price=False, sort=DEFAULT_SORT, limit=20, offset=0, expanded_terms=None, boost_city=None, settlement_id=None, region_id=None):
     sort = _resolve_sort(sort, query)
-    qs = _apply_filters(_live_posts_qs(), city, category, price_min, price_max, with_photo, with_price)
+    qs = _apply_filters(
+        _live_posts_qs(), city, category, price_min, price_max, with_photo, with_price,
+        settlement_id=settlement_id, region_id=region_id,
+    )
     qs = _apply_text_filter(qs, query, expanded_terms)
     total = qs.count()
 
@@ -409,8 +438,16 @@ def _results_from_typesense_order(hits, posts_map, *, diversify: bool = False):
     return results
 
 
-def search_posts(query, city=None, category=None, price_min=None, price_max=None, with_photo=False, with_price=False, sort=DEFAULT_SORT, limit=20, offset=0, expanded_terms=None, boost_city=None):
+def search_posts(query, city=None, category=None, price_min=None, price_max=None, with_photo=False, with_price=False, sort=DEFAULT_SORT, limit=20, offset=0, expanded_terms=None, boost_city=None, settlement_id=None, region_id=None):
     sort = _resolve_sort(sort, query)
+    # The current Typesense collection has legacy city facets only. Geography
+    # filters must include unmigrated city-slug rows, so apply them in SQL.
+    if settlement_id or region_id:
+        return search_posts_fallback(
+            query, city, category, price_min, price_max, with_photo, with_price,
+            sort, limit, offset, expanded_terms, boost_city=boost_city,
+            settlement_id=settlement_id, region_id=region_id,
+        )
     use_rerank = bool(query) and (
         uses_hybrid_ranking(sort) or sort in {"price_asc", "price_desc"}
     )

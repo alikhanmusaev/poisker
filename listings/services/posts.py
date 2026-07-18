@@ -3,11 +3,13 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from core.phone import normalize_phone
 from listings.constants import CATEGORIES, CITIES, CONDITION_LABELS, POST_BODY_MAX_LEN, POST_BODY_MIN_LEN, POST_TITLE_MAX_LEN, POST_TITLE_MIN_LEN
 from listings.models import Post
+from locations.models import Settlement
 
 
 class ValidationError(Exception):
@@ -24,12 +26,28 @@ def _validate_text(title: str, body: str):
     return title, body
 
 
-def _validate_category_city(category: str, city: str):
+def _resolve_settlement(settlement_id, city: str = "") -> Settlement:
+    try:
+        settlement_id = int(settlement_id)
+    except (TypeError, ValueError):
+        settlement_id = None
+    settlements = Settlement.objects.filter(is_active=True, region__is_active=True)
+    if settlement_id:
+        settlement = settlements.filter(pk=settlement_id).first()
+    elif city in CITIES:
+        settlement = settlements.filter(slug=city, region__code="12").first()
+    else:
+        settlement = None
+    if settlement is None:
+        raise ValidationError("Выберите населённый пункт из подсказок.")
+    return settlement
+
+
+def _validate_category_city(category: str, city: str, settlement_id):
     if category not in CATEGORIES:
         raise ValidationError("Выберите категорию.")
-    if city not in CITIES:
-        raise ValidationError("Выберите город.")
-    return category, city
+    settlement = _resolve_settlement(settlement_id, city)
+    return category, settlement.slug, settlement
 
 
 def _normalize_phone(phone: str) -> str:
@@ -62,12 +80,32 @@ def _draft_title(title: str) -> str:
     return title[:POST_TITLE_MAX_LEN]
 
 
-def _draft_category_city(category: str, city: str):
+def _default_draft_settlement() -> Settlement | None:
+    return (
+        Settlement.objects.filter(region__code="12", is_active=True)
+        .filter(Q(slug="grozny") | Q(name__iexact="Грозный"))
+        .select_related("region")
+        .order_by("-population", "name")
+        .first()
+        or Settlement.objects.filter(region__code="12", is_active=True)
+        .select_related("region")
+        .order_by("-population", "name")
+        .first()
+    )
+
+
+def _draft_category_city(category: str, city: str, settlement_id):
     if category not in CATEGORIES:
         category = "drugoe"
+    try:
+        settlement = _resolve_settlement(settlement_id, city)
+    except ValidationError:
+        settlement = _default_draft_settlement()
+    if settlement is not None:
+        return category, settlement.slug, settlement
     if city not in CITIES:
         city = next(iter(CITIES))
-    return category, city
+    return category, city, None
 
 
 def _normalize_price(price):
@@ -97,11 +135,15 @@ def create_post(user, data: dict, *, image_keys: list | None = None, as_draft: b
     if as_draft:
         title = _draft_title(data.get("title"))
         body = (data.get("body") or "").strip()[:POST_BODY_MAX_LEN]
-        category, city = _draft_category_city(data.get("category") or "", data.get("city") or "")
+        category, city, settlement = _draft_category_city(
+            data.get("category") or "", data.get("city") or "", data.get("settlement_id")
+        )
         status = "draft"
     else:
         title, body = _validate_text(data.get("title"), data.get("body"))
-        category, city = _validate_category_city(data.get("category"), data.get("city"))
+        category, city, settlement = _validate_category_city(
+            data.get("category"), data.get("city"), data.get("settlement_id")
+        )
         status = "pending"
 
     price = _normalize_price(data.get("price"))
@@ -118,6 +160,7 @@ def create_post(user, data: dict, *, image_keys: list | None = None, as_draft: b
         body=body,
         category=category,
         city=city,
+        settlement=settlement,
         condition=condition,
         price=price,
         contact_phone=contact_phone,
@@ -149,7 +192,9 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
             raise ValidationError("В черновик можно сохранить только черновик.")
         title = _draft_title(data.get("title"))
         body = (data.get("body") or "").strip()[:POST_BODY_MAX_LEN]
-        category, city = _draft_category_city(data.get("category") or "", data.get("city") or "")
+        category, city, settlement = _draft_category_city(
+            data.get("category") or "", data.get("city") or "", data.get("settlement_id")
+        )
         price = _normalize_price(data.get("price"))
         condition = _normalize_condition(data.get("condition"))
         contact_phone = _seller_phone(user, required=False)
@@ -157,6 +202,7 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
         post.body = body
         post.category = category
         post.city = city
+        post.settlement = settlement
         post.condition = condition
         post.price = price
         post.contact_phone = contact_phone
@@ -174,7 +220,9 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
         return post
 
     title, body = _validate_text(data.get("title"), data.get("body"))
-    category, city = _validate_category_city(data.get("category"), data.get("city"))
+    category, city, settlement = _validate_category_city(
+        data.get("category"), data.get("city"), data.get("settlement_id")
+    )
     price = _normalize_price(data.get("price"))
     condition = _normalize_condition(data.get("condition"))
 
@@ -186,6 +234,7 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
     meta_changed = (
         category != post.category
         or city != post.city
+        or settlement.id != post.settlement_id
         or price != post.price
         or condition != post.condition
     )
@@ -199,6 +248,7 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
             "body": body,
             "category": category,
             "city": city,
+            "settlement_id": settlement.id,
             "condition": condition,
             "price": price,
         }
@@ -207,6 +257,7 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
         post.body = body
         post.category = category
         post.city = city
+        post.settlement = settlement
         post.condition = condition
         post.price = price
         post.pending_revision = None
@@ -219,6 +270,7 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
         post.body = body
         post.category = category
         post.city = city
+        post.settlement = settlement
         post.condition = condition
         post.price = price
         post.pending_revision = None
@@ -229,6 +281,7 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
         post.body = body
         post.category = category
         post.city = city
+        post.settlement = settlement
         post.condition = condition
         post.price = price
         post.pending_revision = None
@@ -262,11 +315,14 @@ def submit_draft(post: Post, user) -> Post:
         raise ValidationError("Аккаунт заблокирован.")
 
     title, body = _validate_text(post.title, post.body)
-    category, city = _validate_category_city(post.category, post.city)
+    category, city, settlement = _validate_category_city(
+        post.category, post.city, post.settlement_id
+    )
     post.title = title
     post.body = body
     post.category = category
     post.city = city
+    post.settlement = settlement
     post.status = "pending"
     post.pending_revision = None
     post.updated_at = timezone.now()

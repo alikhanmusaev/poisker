@@ -7,6 +7,7 @@ from core.templatetags.poisker_tags import format_price
 from listings.constants import CATEGORY_LABELS, CITIES, CONDITION_LABELS, POST_STATUS_LABELS, REPORT_REASONS
 from listings.models import Post
 from listings.services.seo_urls import post_public_url
+from locations.models import Settlement
 from listings.utils.post_display import ordered_images
 
 
@@ -71,6 +72,7 @@ class ListingDetailSerializer(ListingListSerializer):
     is_owner = serializers.SerializerMethodField()
     moderation_note = serializers.CharField(read_only=True)
     pending_revision = serializers.JSONField(read_only=True)
+    settlement = serializers.SerializerMethodField()
 
     class Meta(ListingListSerializer.Meta):
         fields = ListingListSerializer.Meta.fields + (
@@ -87,6 +89,7 @@ class ListingDetailSerializer(ListingListSerializer):
             "pending_revision",
             "published_at",
             "ever_published",
+            "settlement",
         )
 
     def get_images(self, obj):
@@ -105,12 +108,32 @@ class ListingDetailSerializer(ListingListSerializer):
         user = self.context.get("request").user
         return user.is_authenticated and obj.user_id == user.id
 
+    def get_settlement(self, obj):
+        if obj.settlement_id is None:
+            return None
+        settlement = obj.settlement
+        return {
+            "id": settlement.id,
+            "slug": settlement.slug,
+            "name": settlement.name,
+            "region": {
+                "id": settlement.region_id,
+                "slug": settlement.region.slug,
+                "name": settlement.region.name,
+            },
+        }
+
 
 class ListingWriteSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200, required=False, allow_blank=True)
     body = serializers.CharField(required=False, allow_blank=True)
     category = serializers.CharField(max_length=50, required=False, allow_blank=True)
     city = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    settlement = serializers.PrimaryKeyRelatedField(
+        queryset=Settlement.objects.filter(is_active=True, region__is_active=True),
+        required=False,
+        allow_null=True,
+    )
     condition = serializers.ChoiceField(choices=("used", "new"), required=False)
     price = serializers.IntegerField(required=False, allow_null=True, min_value=0)
     cover_index = serializers.IntegerField(required=False, min_value=0, default=0)
@@ -119,6 +142,9 @@ class ListingWriteSerializer(serializers.Serializer):
     def to_service_data(self):
         data = dict(self.validated_data)
         data.pop("as_draft", None)
+        settlement = data.pop("settlement", None)
+        if settlement is not None:
+            data["settlement_id"] = settlement.id
         return data
 
 

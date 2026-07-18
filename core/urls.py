@@ -34,6 +34,11 @@ urlpatterns = [
     ),
     path("", views.index, name="index"),
     re_path(
+        r"^(?P<region_slug>[a-z0-9\-]+)/(?P<settlement_slug>[a-z0-9\-]+)/(?P<category_slug>[a-z0-9\-]+)/$",
+        views.region_settlement_category_listing,
+        name="region_settlement_category",
+    ),
+    re_path(
         r"^(?P<city_slug>[a-z0-9\-]+)/(?P<category_slug>[a-z0-9\-]+)/$",
         views.city_category_listing,
         name="city_category",

@@ -67,11 +67,14 @@ def _merge_listing_data(post: Post, validated_data: dict) -> dict:
         "body": post.body,
         "category": post.category,
         "city": post.city,
+        "settlement_id": post.settlement_id,
         "condition": post.condition,
         "price": post.price,
         "cover_index": post.cover_index or 0,
     }
     merged.update(validated_data)
+    if "city" in validated_data and "settlement_id" not in validated_data:
+        merged.pop("settlement_id", None)
     return merged
 
 
@@ -87,6 +90,10 @@ class ListingListCreateView(APIView):
         search = request.query_params.get("search", "").strip()
         parsed = parse_search_query(search)
         city = request.query_params.get("city") or parsed.get("city") or ""
+        settlement_id = parse_int_param(
+            request.query_params.get("settlement"), field="settlement"
+        )
+        region_id = parse_int_param(request.query_params.get("region"), field="region")
         category = request.query_params.get("category") or parsed.get("category") or ""
         ordering = request.query_params.get("ordering", "")
         if ordering not in ALLOWED_SORTS:
@@ -117,6 +124,8 @@ class ListingListCreateView(APIView):
             limit=page_size,
             offset=offset,
             expanded_terms=parsed.get("expanded_terms"),
+            settlement_id=settlement_id,
+            region_id=region_id,
         )
         posts = [item["post"] for item in results]
         serializer = ListingListSerializer(
@@ -194,7 +203,9 @@ class ListingDetailView(APIView):
         return [IsAuthenticated(), IsNotBlocked(), IsOwnerOrReadOnly()]
 
     def get_object(self, post_id):
-        return get_object_or_404(Post.objects.select_related("user"), pk=post_id)
+        return get_object_or_404(
+            Post.objects.select_related("user", "settlement__region"), pk=post_id
+        )
 
     def get(self, request, post_id):
         post = self.get_object(post_id)

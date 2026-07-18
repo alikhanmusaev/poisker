@@ -52,7 +52,11 @@
         <span class="post-card-condition">{{ condition_labels|get_item:post.condition }}</span>
         <span class="meta-dot">·</span>
         <i data-lucide="map-pin" class="icon icon-xs" aria-hidden="true"></i>
+        {% if post.settlement_id %}
+        <a class="post-card-location" href="{{ post.settlement_public_path }}">{{ post.location_label }}</a>
+        {% else %}
         <span>{{ cities|get_item:post.city }}</span>
+        {% endif %}
         <span class="meta-dot">·</span>
         <span>{{ category_labels|get_item:post.category }}</span>
       </p>

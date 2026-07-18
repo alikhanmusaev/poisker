@@ -2803,6 +2803,13 @@ body.lightbox-open {
 
 .suggest-item:hover { background: var(--slate-50); }
 
+.suggest-meta {
+  display: block;
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--slate-400);
+}
+
 .city-autocomplete {
   position: relative;
 }
@@ -5225,4 +5232,97 @@ body.page-notifications .site-main {
   position: absolute;
   opacity: 0;
   pointer-events: none;
+}
+
+.header-geo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: 0.75rem;
+  max-width: 10rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border, #e5e7eb) 90%, transparent);
+  background: color-mix(in srgb, var(--surface, #fff) 88%, #f3f4f6);
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.header-geo .icon { flex-shrink: 0; }
+.header-geo span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 640px) {
+  .header-geo { display: none; }
+}
+
+.home-city-panel__actions,
+.home-city-panel__popular {
+  margin-top: 0.75rem;
+}
+.home-city-panel__popular-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted, #6b7280);
+  margin-bottom: 0.4rem;
+}
+.home-city-panel__popular-list,
+.home-city-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.home-geo-chip {
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--border, #e5e7eb) 100%, transparent);
+  background: var(--surface, #fff);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.home-geo-chip:hover {
+  border-color: var(--accent, #b91c1c);
+  color: var(--accent, #b91c1c);
+}
+
+.post-location-block {
+  margin: 1.25rem 0 0;
+  padding: 0.9rem 0 0;
+  border-top: 1px solid color-mix(in srgb, var(--border, #e5e7eb) 100%, transparent);
+}
+.post-location-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.post-location-value {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+.post-location-value a,
+.post-card-location {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.city-autocomplete .is-loading {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--accent, #b91c1c) 12%, transparent),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: city-loading 1.1s linear infinite;
+}
+@keyframes city-loading {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
 }

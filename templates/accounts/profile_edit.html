@@ -49,3 +49,18 @@
   </div>
 </div>
 {% endblock %}
+{% block scripts %}
+  {% load static %}
+  <script src="{% static 'js/form-helpers.js' %}" defer></script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.initCityAutocomplete?.(
+        document.getElementById('preferred-settlement-input'),
+        document.getElementById('preferred_settlement'),
+        document.getElementById('preferred-settlement-suggestions'),
+        {},
+        { valueMode: 'id' },
+      );
+    });
+  </script>
+{% endblock %}

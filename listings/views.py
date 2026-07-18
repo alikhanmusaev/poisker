@@ -94,7 +94,16 @@ def _resolve_edit_images(request, post):
 def create(request):
     as_draft = request.POST.get("action") == "draft"
     form_class = DraftPostForm if as_draft else PostForm
-    form = form_class(request.POST or None, request.FILES or None)
+    preferred_settlement = getattr(request.user, "preferred_settlement", None)
+    initial = (
+        {
+            "settlement_id": preferred_settlement.id,
+            "city": preferred_settlement.slug,
+        }
+        if preferred_settlement is not None
+        else None
+    )
+    form = form_class(request.POST or None, request.FILES or None, initial=initial)
     errors = []
     if request.method == "POST" and form.is_valid():
         try:
@@ -122,9 +131,10 @@ def create(request):
         request,
         "listings/create.html",
         {
-            "form": form if request.method == "POST" else PostForm(),
+            "form": form if request.method == "POST" else PostForm(initial=initial),
             "errors": errors,
             "cities": CITIES,
+            "settlement_name": preferred_settlement.display_name if preferred_settlement else "",
         },
     )
 
@@ -137,7 +147,9 @@ def my_posts(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def edit(request, post_id):
-    post = _user_post_or_404(request.user, post_id)
+    post = get_object_or_404(Post.objects.select_related("settlement__region"), pk=post_id)
+    if post.user_id != request.user.id and not request.user.is_staff:
+        raise Http404
     if post.status == "hidden" and not can_edit_rejected_post(post):
         messages.info(
             request,
@@ -161,6 +173,7 @@ def edit(request, post_id):
         "body": post.body,
         "category": post.category,
         "city": post.city,
+        "settlement_id": post.settlement_id,
         "condition": post.condition,
         "price": post.price,
     }
@@ -213,6 +226,7 @@ def edit(request, post_id):
             "errors": errors,
             "category_labels": CATEGORY_LABELS,
             "cities": CITIES,
+            "settlement_name": post.settlement.display_name if post.settlement else "",
             "is_draft": post.status == "draft",
             "awaits_moderation": post.status == "pending" or bool(post.pending_revision),
             "is_rejected": can_edit_rejected_post(post),

@@ -12,6 +12,7 @@ from django.utils import timezone
 from accounts.models import User
 from listings.constants import CITIES
 from listings.models import Post
+from locations.models import Region, Settlement
 
 
 @pytest.fixture(autouse=True)
@@ -25,11 +26,32 @@ def _locmem_cache(settings):
     }
     if "testserver" not in settings.ALLOWED_HOSTS:
         settings.ALLOWED_HOSTS = [*settings.ALLOWED_HOSTS, "testserver"]
+    from django.core.cache import cache
+
+    cache.clear()
 
 
 @pytest.fixture
 def city_slug():
     return next(iter(CITIES.keys()))
+
+
+@pytest.fixture(autouse=True)
+def _legacy_chechnya_locations(db, city_slug):
+    region, _ = Region.objects.get_or_create(
+        code="12",
+        defaults={"name": "Чеченская Республика", "slug": "chechnya"},
+    )
+    Settlement.objects.get_or_create(
+        region=region,
+        slug="grozny",
+        defaults={"name": "Грозный", "is_active": True},
+    )
+    Settlement.objects.get_or_create(
+        region=region,
+        slug=city_slug,
+        defaults={"name": CITIES[city_slug], "is_active": True},
+    )
 
 
 @pytest.fixture

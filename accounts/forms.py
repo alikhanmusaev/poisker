@@ -5,6 +5,7 @@ from django.contrib.auth.forms import PasswordChangeForm, PasswordResetForm, Set
 from accounts.models import User
 from core.forms import HoneypotFormMixin
 from core.phone import ensure_phone_available, validate_phone
+from locations.models import Settlement
 
 
 def _style_auth_fields(form):
@@ -156,10 +157,21 @@ class ResendVerificationForm(forms.Form):
 
 
 class ProfileForm(forms.ModelForm):
+    preferred_settlement = forms.ModelChoiceField(
+        label="Основной населённый пункт",
+        queryset=Settlement.objects.filter(is_active=True, region__is_active=True),
+        required=False,
+        widget=forms.HiddenInput(attrs={"id": "preferred_settlement"}),
+    )
+
     class Meta:
         model = User
-        fields = ("display_name", "phone")
-        labels = {"display_name": "Имя", "phone": "Телефон для связи"}
+        fields = ("display_name", "phone", "preferred_settlement")
+        labels = {
+            "display_name": "Имя",
+            "phone": "Телефон для связи",
+            "preferred_settlement": "Основной населённый пункт",
+        }
         widgets = {
             "display_name": forms.TextInput(attrs={"class": "input"}),
             "phone": forms.TextInput(

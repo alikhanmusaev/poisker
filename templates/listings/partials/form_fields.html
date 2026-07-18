@@ -5,8 +5,8 @@
   </div>
 {% endif %}
 {% for field in form %}
-  {% if field.name == 'city' %}
-    {% include "listings/partials/city_autocomplete.html" with field=field suggestions_id=suggestions_id %}
+  {% if field.name == 'settlement_id' %}
+    {% include "listings/partials/city_autocomplete.html" with field=field suggestions_id=suggestions_id settlement_name=settlement_name %}
   {% elif field.name == 'condition' %}
     <div class="field{% if field.errors %} field-has-error{% endif %}">
       <span class="field-label">{{ field.label }}</span>
@@ -20,7 +20,7 @@
       </div>
       {% if field.errors %}<p class="field-error">{{ field.errors.0 }}</p>{% endif %}
     </div>
-  {% elif field.name != 'images' and field.name != 'website' %}
+  {% elif field.name != 'images' and field.name != 'website' and field.name != 'city' %}
     <div class="field{% if field.errors %} field-has-error{% endif %}">
       <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
       {{ field }}

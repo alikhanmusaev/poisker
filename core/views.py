@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.db import connection
+from django.db import connection, models
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,25 +14,20 @@ from listings.constants import (
     RESERVED_SLUGS,
 )
 from listings.models import Post
-from listings.services.geo_preference import (
-    attach_city_cookie,
-    clear_city_cookie,
-    preferred_city_from_request,
-    resolve_boost_city,
-)
+from listings.services.geo_preference import resolve_boost_city
 from listings.services.search import search_posts, suggest as search_suggest
 from listings.services.seo_urls import make_seo_slug, post_public_url
 from listings.services.smart_query import parse_search_query
+from locations.models import Region, Settlement
+from locations.services.geo import attach_geo_cookies, clear_geo_cookies, resolve_geo
+from locations.services.search import popular_settlements
 
 PER_PAGE = 20
 
 
 def _render_listing(request, template_name, ctx):
     response = render(request, template_name, ctx)
-    city = ctx.get("city") or None
-    if city:
-        return attach_city_cookie(response, city)
-    return response
+    return attach_geo_cookies(response, ctx["geo"])
 
 
 def _strip_all_flag(request):
@@ -41,32 +36,91 @@ def _strip_all_flag(request):
     return qs
 
 
-def _preferred_city_redirect(request, *, category=None):
-    """Keep the last chosen city when opening home / category without a city."""
-    if request.GET.get("all") == "1":
-        return None
-    preferred = preferred_city_from_request(request)
-    if not preferred:
-        return None
-    path = f"/{preferred}/{category}/" if category else f"/{preferred}/"
-    qs = _strip_all_flag(request)
-    if qs:
-        path = f"{path}?{qs.urlencode()}"
-    return redirect(path)
-
-
 def _clear_city_and_redirect(request, path):
     qs = _strip_all_flag(request)
     target = path
     if qs:
         target = f"{path}?{qs.urlencode()}"
-    return clear_city_cookie(redirect(target))
+    return clear_geo_cookies(redirect(target))
 
 
-def _listing_context(request, *, fixed_city=None, fixed_category=None):
+def _seo_for_listing(*, geo, category, category_name, search_text):
+    site = settings.SITE_NAME
+    if geo.scope == "settlement" and geo.settlement is not None:
+        place = geo.settlement.name
+        if category:
+            return (
+                f"{category_name} в {place} — объявления на {site}",
+                f"{category_name} в {place}: свежие объявления на «{site}». "
+                "Купить и продать на доске объявлений России.",
+            )
+        return (
+            f"Объявления в {place} — купить и продать на {site}",
+            f"Бесплатные объявления в {place} на «{site}». "
+            "Недвижимость, авто, услуги и товары.",
+        )
+    if geo.scope == "region" and geo.region is not None:
+        place = geo.region.name
+        if category:
+            return (
+                f"{category_name} в регионе {place} — объявления на {site}",
+                f"{category_name} в регионе {place} на «{site}».",
+            )
+        return (
+            f"Объявления в {place} — {site}",
+            f"Бесплатные объявления в регионе {place} на «{site}».",
+        )
+    if category:
+        return (
+            f"{category_name} — объявления по России | {site}",
+            f"Объявления в категории «{category_name}» по всей России на «{site}».",
+        )
+    if search_text:
+        return f"Поиск: {search_text} | {site}", settings.SITE_DESCRIPTION
+    return (
+        f"Доска объявлений России — купить и продать на {site}",
+        settings.SITE_DESCRIPTION,
+    )
+
+
+def _listing_h1(geo, category_name=""):
+    if category_name and geo.scope == "settlement" and geo.settlement:
+        return f"{category_name} в {geo.settlement.name}"
+    if category_name and geo.scope == "region" and geo.region:
+        return f"{category_name} в {geo.region.name}"
+    if category_name:
+        return f"{category_name} по России"
+    if geo.scope == "settlement" and geo.settlement:
+        return f"Объявления в {geo.settlement.name}"
+    if geo.scope == "region" and geo.region:
+        return f"Объявления в {geo.region.name}"
+    return "Объявления по всей России"
+
+
+def _listing_context(request, *, fixed_settlement=None, fixed_region=None, fixed_category=None):
     raw_query = request.GET.get("q", "").strip()
     parsed = parse_search_query(raw_query)
-    city = fixed_city or request.GET.get("city", "") or parsed.get("city") or ""
+    legacy_city = request.GET.get("city", "") or parsed.get("city") or ""
+    legacy_settlement = None
+    if fixed_settlement is None and fixed_region is None and legacy_city:
+        legacy_settlement = (
+            Settlement.objects.filter(slug=legacy_city, is_active=True)
+            .select_related("region")
+            .order_by(
+                models.Case(
+                    models.When(region__code="12", then=models.Value(0)),
+                    default=models.Value(1),
+                ),
+                "-population",
+            )
+            .first()
+        )
+    geo = resolve_geo(
+        request,
+        url_settlement=fixed_settlement or legacy_settlement,
+        url_region=fixed_region,
+    )
+    city = geo.settlement.slug if geo.settlement is not None else legacy_city
     category = fixed_category or request.GET.get("category", "") or parsed.get("category") or ""
     search_text = parsed.get("text") or raw_query
 
@@ -82,9 +136,13 @@ def _listing_context(request, *, fixed_city=None, fixed_category=None):
     price_min = int(price_min) if price_min and str(price_min).isdigit() else parsed.get("price_min")
     price_max = int(price_max) if price_max and str(price_max).isdigit() else parsed.get("price_max")
 
+    region_id = None
+    if geo.scope == "region" and geo.region is not None:
+        region_id = geo.region.id
+
     results, total = search_posts(
         query=search_text,
-        city=city or None,
+        city=(city or None) if geo.settlement is None and geo.scope != "region" else None,
         category=category or None,
         price_min=price_min,
         price_max=price_max,
@@ -92,39 +150,48 @@ def _listing_context(request, *, fixed_city=None, fixed_category=None):
         limit=PER_PAGE,
         offset=offset,
         expanded_terms=parsed.get("expanded_terms"),
-        boost_city=resolve_boost_city(request, filtered_city=city or None),
+        boost_city=resolve_boost_city(
+            request, filtered_city=city if geo.settlement is not None else None
+        ),
+        settlement_id=geo.settlement.id if geo.settlement is not None else None,
+        region_id=region_id,
     )
     has_next = page * PER_PAGE < total
 
     category_name = CATEGORY_LABELS.get(category, "") if category else ""
-    city_name = CITIES.get(city, city) if city else ""
-
-    if category and city:
-        seo_title = f"{category_name} — {city_name} | {settings.SITE_NAME}"
-        seo_description = (
-            f"{category_name} в городе {city_name}: свежие объявления на «{settings.SITE_NAME}». "
-            f"Бесплатная доска объявлений по Чеченской Республике."
-        )
-    elif category:
-        seo_title = f"{category_name} | {settings.SITE_NAME}"
-        seo_description = (
-            f"Объявления в категории «{category_name}» на «{settings.SITE_NAME}». "
-            f"Поиск по Чеченской Республике."
-        )
-    elif city:
-        seo_title = f"Объявления {city_name} | {settings.SITE_NAME}"
-        seo_description = (
-            f"Бесплатные объявления в городе {city_name} на «{settings.SITE_NAME}». "
-            f"Недвижимость, авто, услуги и товары."
-        )
-    elif search_text:
-        seo_title = f"Поиск: {search_text} | {settings.SITE_NAME}"
-        seo_description = settings.SITE_DESCRIPTION
+    if geo.settlement is not None:
+        city_name = geo.settlement.name
+    elif geo.region is not None:
+        city_name = geo.region.name
     else:
-        seo_title = f"{settings.SITE_NAME} — {settings.SITE_TAGLINE}"
-        seo_description = settings.SITE_DESCRIPTION
+        city_name = CITIES.get(city, city) if city else "Россия"
+
+    seo_title, seo_description = _seo_for_listing(
+        geo=geo, category=category, category_name=category_name, search_text=search_text
+    )
+    listing_h1 = _listing_h1(geo, category_name)
 
     canonical_url = f"https://{settings.APP_DOMAIN}{request.path}"
+
+    breadcrumbs = [{"name": "Главная", "url": "/"}]
+    if geo.region is not None:
+        breadcrumbs.append(
+            {"name": geo.region.name, "url": f"/{geo.region.slug}/"}
+        )
+    if geo.settlement is not None:
+        breadcrumbs.append(
+            {
+                "name": geo.settlement.name,
+                "url": f"/{geo.settlement.region.slug}/{geo.settlement.slug}/",
+            }
+        )
+    if category:
+        breadcrumbs.append(
+            {
+                "name": category_name,
+                "url": request.path,
+            }
+        )
 
     ctx = {
         "query": raw_query,
@@ -133,6 +200,7 @@ def _listing_context(request, *, fixed_city=None, fixed_category=None):
         "category": category,
         "category_name": category_name,
         "city_name": city_name,
+        "listing_h1": listing_h1,
         "sort": sort,
         "page": page,
         "results": results,
@@ -144,9 +212,18 @@ def _listing_context(request, *, fixed_city=None, fixed_category=None):
         "seo_description": seo_description,
         "canonical_url": canonical_url,
         "listing_path": request.path,
-        "fixed_city": fixed_city,
+        "fixed_city": city if fixed_settlement else None,
         "fixed_category": fixed_category,
-        "robots_noindex": bool(search_text or page > 1 or sort not in (DEFAULT_SORT, DEFAULT_SEARCH_SORT)),
+        "geo": geo,
+        "breadcrumbs": breadcrumbs,
+        "popular_settlements": popular_settlements(12),
+        "robots_noindex": bool(
+            search_text
+            or page > 1
+            or sort not in (DEFAULT_SORT, DEFAULT_SEARCH_SORT)
+            or (fixed_settlement is not None and total == 0)
+            or (fixed_region is not None and total == 0)
+        ),
         "category_bookmarked": False,
         "bookmarked_post_ids": set(),
     }
@@ -165,11 +242,8 @@ def _listing_context(request, *, fixed_city=None, fixed_category=None):
 
 
 def index(request):
-    if request.GET.get("all") == "1":
+    if request.GET.get("all") == "1" or request.GET.get("geo") == "russia":
         return _clear_city_and_redirect(request, "/")
-    preferred_redirect = _preferred_city_redirect(request)
-    if preferred_redirect:
-        return preferred_redirect
     ctx = _listing_context(request)
     if request.headers.get("HX-Request"):
         return _render_listing(request, "partials/feed_panel.html", ctx)
@@ -179,11 +253,8 @@ def index(request):
 def category_listing(request, category_slug):
     if category_slug not in CATEGORIES:
         raise Http404
-    if request.GET.get("all") == "1":
+    if request.GET.get("all") == "1" or request.GET.get("geo") == "russia":
         return _clear_city_and_redirect(request, f"/{category_slug}/")
-    preferred_redirect = _preferred_city_redirect(request, category=category_slug)
-    if preferred_redirect:
-        return preferred_redirect
     ctx = _listing_context(request, fixed_category=category_slug)
     if request.headers.get("HX-Request"):
         return _render_listing(request, "partials/feed_panel.html", ctx)
@@ -191,25 +262,104 @@ def category_listing(request, category_slug):
 
 
 def city_listing(request, city_slug):
-    if city_slug not in CITIES:
+    settlement = (
+        Settlement.objects.filter(slug=city_slug, is_active=True)
+        .select_related("region")
+        .order_by(
+            models.Case(
+                models.When(region__code="12", then=models.Value(0)),
+                default=models.Value(1),
+            ),
+            "-population",
+        )
+        .first()
+    )
+    if settlement is None:
         raise Http404
-    ctx = _listing_context(request, fixed_city=city_slug)
+    ctx = _listing_context(request, fixed_settlement=settlement)
+    if request.headers.get("HX-Request"):
+        return _render_listing(request, "partials/feed_panel.html", ctx)
+    return _render_listing(request, "index.html", ctx)
+
+
+def region_listing(request, region_slug):
+    region = get_object_or_404(Region, slug=region_slug, is_active=True)
+    ctx = _listing_context(request, fixed_region=region)
+    if request.headers.get("HX-Request"):
+        return _render_listing(request, "partials/feed_panel.html", ctx)
+    return _render_listing(request, "index.html", ctx)
+
+
+def region_settlement_listing(request, region_slug, settlement_slug):
+    settlement = get_object_or_404(
+        Settlement.objects.select_related("region"),
+        slug=settlement_slug,
+        region__slug=region_slug,
+        is_active=True,
+        region__is_active=True,
+    )
+    ctx = _listing_context(request, fixed_settlement=settlement)
     if request.headers.get("HX-Request"):
         return _render_listing(request, "partials/feed_panel.html", ctx)
     return _render_listing(request, "index.html", ctx)
 
 
 def city_category_listing(request, city_slug, category_slug):
-    if city_slug not in CITIES or category_slug not in CATEGORIES:
+    # Legacy: /grozny/avto/  OR new: /chechenskaya-respublika/grozny/ when second is not category
+    if category_slug in CATEGORIES:
+        settlement = (
+            Settlement.objects.filter(slug=city_slug, is_active=True)
+            .select_related("region")
+            .order_by(
+                models.Case(
+                    models.When(region__code="12", then=models.Value(0)),
+                    default=models.Value(1),
+                ),
+                "-population",
+            )
+            .first()
+        )
+        if settlement is None:
+            # /<region>/<category>/
+            region = Region.objects.filter(slug=city_slug, is_active=True).first()
+            if region is None:
+                raise Http404
+            ctx = _listing_context(
+                request, fixed_region=region, fixed_category=category_slug
+            )
+        else:
+            ctx = _listing_context(
+                request, fixed_settlement=settlement, fixed_category=category_slug
+            )
+    else:
+        return region_settlement_listing(request, city_slug, category_slug)
+    if request.headers.get("HX-Request"):
+        return _render_listing(request, "partials/feed_panel.html", ctx)
+    return _render_listing(request, "index.html", ctx)
+
+
+def region_settlement_category_listing(request, region_slug, settlement_slug, category_slug):
+    if category_slug not in CATEGORIES:
         raise Http404
-    ctx = _listing_context(request, fixed_city=city_slug, fixed_category=category_slug)
+    settlement = get_object_or_404(
+        Settlement.objects.select_related("region"),
+        slug=settlement_slug,
+        region__slug=region_slug,
+        is_active=True,
+        region__is_active=True,
+    )
+    ctx = _listing_context(
+        request, fixed_settlement=settlement, fixed_category=category_slug
+    )
     if request.headers.get("HX-Request"):
         return _render_listing(request, "partials/feed_panel.html", ctx)
     return _render_listing(request, "index.html", ctx)
 
 
 def post_public(request, city_slug, category_slug, slug, post_id):
-    post = get_object_or_404(Post.objects.select_related("user"), pk=post_id)
+    post = get_object_or_404(
+        Post.objects.select_related("user", "settlement__region"), pk=post_id
+    )
     if post.city != city_slug or post.category != category_slug:
         raise Http404
     if post.status != "published" or post.expires_at <= timezone.now():
@@ -327,19 +477,44 @@ def assetlinks_json(request):
 
 
 def sitemap_xml(request):
+    now = timezone.now()
+    active = Post.objects.filter(status="published", expires_at__gte=now)
     posts = list(
-        Post.objects.filter(status="published", expires_at__gte=timezone.now())
-        .order_by("-updated_at")[:5000]
+        active.select_related("settlement__region").order_by("-updated_at")[:5000]
     )
     base = f"https://{settings.APP_DOMAIN}"
     entries = [(f"{base}/", None)]
     for slug in CATEGORIES:
         entries.append((f"{base}/{slug}/", None))
-    for slug in CITIES:
-        entries.append((f"{base}/{slug}/", None))
-    for city_slug in CITIES:
-        for category_slug in CATEGORIES:
-            entries.append((f"{base}/{city_slug}/{category_slug}/", None))
+
+    region_slugs = (
+        active.exclude(settlement__isnull=True)
+        .values_list("settlement__region__slug", flat=True)
+        .distinct()
+    )
+    for region_slug in region_slugs:
+        if region_slug:
+            entries.append((f"{base}/{region_slug}/", None))
+
+    settlement_rows = (
+        active.exclude(settlement__isnull=True)
+        .values_list("settlement__region__slug", "settlement__slug")
+        .distinct()[:5000]
+    )
+    for region_slug, settlement_slug in settlement_rows:
+        if region_slug and settlement_slug:
+            entries.append((f"{base}/{region_slug}/{settlement_slug}/", None))
+
+    # Legacy city URLs that still have ads without settlement FK
+    legacy_cities = (
+        active.filter(settlement__isnull=True)
+        .exclude(city="")
+        .values_list("city", flat=True)
+        .distinct()
+    )
+    for city_slug in legacy_cities:
+        entries.append((f"{base}/{city_slug}/", None))
+
     for path in ("/privacy", "/terms", "/consent", "/guidelines"):
         entries.append((f"{base}{path}", None))
     for post in posts:
@@ -364,6 +539,23 @@ def slug_router(request, slug):
         raise Http404
     if slug in CATEGORIES:
         return category_listing(request, slug)
+    region = Region.objects.filter(slug=slug, is_active=True).first()
+    if region is not None:
+        return region_listing(request, slug)
+    settlement = (
+        Settlement.objects.filter(slug=slug, is_active=True)
+        .select_related("region")
+        .order_by(
+            models.Case(
+                models.When(region__code="12", then=models.Value(0)),
+                default=models.Value(1),
+            ),
+            "-population",
+        )
+        .first()
+    )
+    if settlement is not None:
+        return city_listing(request, slug)
     if slug in CITIES:
         return city_listing(request, slug)
     raise Http404

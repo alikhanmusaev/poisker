@@ -139,14 +139,11 @@
   function categoryFromPath() {
     const parts = window.location.pathname.split('/').filter(Boolean);
     if (!parts.length) return '';
-    const cities = citiesMap();
-    if (parts.length >= 2 && cities[parts[0]]) {
-      const cat = parts[1];
-      return document.querySelector(`.category-chip[data-category="${cssEsc(cat)}"]`) ? cat : '';
+    const last = parts[parts.length - 1];
+    if (document.querySelector(`.category-chip[data-category="${cssEsc(last)}"]`)) {
+      return last;
     }
-    const slug = parts[0];
-    if (cities[slug]) return '';
-    return document.querySelector(`.category-chip[data-category="${cssEsc(slug)}"]`) ? slug : '';
+    return '';
   }
 
   function listingPath(city, category) {
@@ -162,19 +159,50 @@
   function clearPreferredCityCookie() {
     const secure = window.location.protocol === 'https:' ? '; Secure' : '';
     document.cookie = `poisker_city=; Max-Age=0; Path=/; SameSite=Lax${secure}`;
+    document.cookie = `poisker_settlement_id=; Max-Age=0; Path=/; SameSite=Lax${secure}`;
+    document.cookie = `poisker_region_id=; Max-Age=0; Path=/; SameSite=Lax${secure}`;
+    document.cookie = `poisker_geo_scope=; Max-Age=0; Path=/; SameSite=Lax${secure}`;
   }
 
-  function navigateToListing(city, category) {
+  function listingPathFromGeo({ regionSlug, settlementSlug, category }) {
+    const P = window.Poisker;
+    if (regionSlug && !P?.isSafeSlug?.(regionSlug)) regionSlug = '';
+    if (settlementSlug && !P?.isSafeSlug?.(settlementSlug)) settlementSlug = '';
+    if (category && !P?.isSafeSlug?.(category)) category = '';
+    if (regionSlug && settlementSlug && category) {
+      return `/${regionSlug}/${settlementSlug}/${category}/`;
+    }
+    if (regionSlug && settlementSlug) return `/${regionSlug}/${settlementSlug}/`;
+    if (regionSlug && category) return `/${regionSlug}/${category}/`;
+    if (regionSlug) return `/${regionSlug}/`;
+    if (settlementSlug && category) return `/${settlementSlug}/${category}/`;
+    if (settlementSlug) return `/${settlementSlug}/`;
+    if (category) return `/${category}/`;
+    return '/';
+  }
+
+  function navigateToGeo({ regionSlug, settlementSlug, russia, category }) {
     const params = new URLSearchParams(window.location.search);
     params.delete('city');
     params.delete('category');
-    if (!city) {
+    params.delete('settlement');
+    params.delete('region');
+    params.delete('geo');
+    const cat = category || categoryField?.value || '';
+    if (russia) {
       clearPreferredCityCookie();
       params.set('all', '1');
-    } else {
-      params.delete('all');
+      const path = cat ? `/${cat}/` : '/';
+      const qs = params.toString();
+      window.location.assign(qs ? `${path}?${qs}` : path);
+      return;
     }
-    const path = listingPath(city || '', category || '');
+    params.delete('all');
+    const path = listingPathFromGeo({
+      regionSlug,
+      settlementSlug,
+      category: cat,
+    });
     const qs = params.toString();
     window.location.assign(qs ? `${path}?${qs}` : path);
   }
@@ -185,14 +213,16 @@
     const panel = document.getElementById('home-city-panel');
     const input = document.getElementById('home-city-input');
     const hidden = document.getElementById('home-city-slug');
+    const settlementIdInput = document.getElementById('home-settlement-id');
     const list = document.getElementById('home-city-suggestions');
     const clearBtn = document.getElementById('home-city-clear');
     const label = document.getElementById('home-city-label');
+    const regionPick = document.getElementById('home-region-pick');
+    const russiaPick = document.getElementById('home-russia-pick');
+    const headerGeo = document.getElementById('header-geo-btn');
     if (!wrap || !toggle || !panel || !input || !hidden || !list || !window.initCityAutocomplete) {
       return;
     }
-
-    const cities = citiesMap();
 
     function setOpen(open) {
       panel.hidden = !open;
@@ -205,9 +235,13 @@
       }
     }
 
-    window.initCityAutocomplete(input, hidden, list, cities, {
-      onSelect(slug) {
-        navigateToListing(slug, categoryField?.value || categoryFromPath() || '');
+    window.initCityAutocomplete(input, settlementIdInput || hidden, list, {}, {
+      valueMode: 'id',
+      onSelect(_id, _label, item) {
+        navigateToGeo({
+          regionSlug: item?.regionSlug || item?.region?.slug || '',
+          settlementSlug: item?.slug || hidden.value,
+        });
       },
     });
 
@@ -217,20 +251,48 @@
       setOpen(panel.hidden);
     });
 
+    headerGeo?.addEventListener('click', (event) => {
+      event.preventDefault();
+      setOpen(true);
+      panel.scrollIntoView?.({ block: 'nearest' });
+    });
+
+    function goRussia() {
+      hidden.value = '';
+      if (settlementIdInput) settlementIdInput.value = '';
+      input.value = '';
+      if (label) label.textContent = 'Вся Россия';
+      toggle.classList.remove('is-active');
+      navigateToGeo({ russia: true });
+    }
+
     clearBtn?.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      hidden.value = '';
-      input.value = '';
-      clearBtn.hidden = true;
-      if (label) label.textContent = 'Город';
-      toggle.classList.remove('is-active');
-      toggle.setAttribute('aria-label', 'Выбрать город');
-      navigateToListing('', categoryField?.value || categoryFromPath() || '');
+      goRussia();
+    });
+    russiaPick?.addEventListener('click', (event) => {
+      event.preventDefault();
+      goRussia();
+    });
+    regionPick?.addEventListener('click', (event) => {
+      event.preventDefault();
+      const regionSlug = regionPick.dataset.regionSlug || '';
+      if (regionSlug) navigateToGeo({ regionSlug });
+    });
+
+    document.querySelectorAll('.home-popular-city').forEach((btn) => {
+      btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        navigateToGeo({
+          regionSlug: btn.dataset.regionSlug || '',
+          settlementSlug: btn.dataset.settlementSlug || '',
+        });
+      });
     });
 
     document.addEventListener('click', (event) => {
-      if (!panel.hidden && !wrap.contains(event.target)) {
+      if (!panel.hidden && !wrap.contains(event.target) && event.target !== headerGeo) {
         setOpen(false);
       }
     });
@@ -242,7 +304,7 @@
       }
     });
 
-    clearBtn && (clearBtn.hidden = !hidden.value);
+    clearBtn && (clearBtn.hidden = !hidden.value && !settlementIdInput?.value);
   }
 
   initHomeCityPicker();

@@ -1,46 +1,36 @@
-"""Remember the visitor's preferred city for feed filtering and geo-boost."""
+"""Compatibility aliases for the location-based geo selection service."""
 
-from django.conf import settings
+from locations.services.geo import (
+    COOKIE_MAX_AGE,
+    LEGACY_CITY_COOKIE,
+    attach_geo_cookies,
+    clear_geo_cookies,
+    resolve_geo,
+)
 
-from listings.constants import CITIES
-
-PREFERRED_CITY_COOKIE = "poisker_city"
-COOKIE_MAX_AGE = 60 * 60 * 24 * 180  # 180 days
+PREFERRED_CITY_COOKIE = LEGACY_CITY_COOKIE
 
 
 def preferred_city_from_request(request) -> str | None:
+    """Return the legacy city slug, including a valid settlement preference."""
     raw = (request.COOKIES.get(PREFERRED_CITY_COOKIE) or "").strip()
-    return raw if raw in CITIES else None
+    if raw:
+        return raw
+    geo = resolve_geo(request)
+    return geo.settlement.slug if geo.settlement is not None else None
 
 
 def resolve_boost_city(request, *, filtered_city: str | None) -> str | None:
-    """Boost only when the listing is not already hard-filtered by city."""
-    if filtered_city:
-        return None
-    return preferred_city_from_request(request)
-
-
-def _cookie_kwargs():
-    return {
-        "max_age": COOKIE_MAX_AGE,
-        "samesite": "Lax",
-        "secure": bool(getattr(settings, "SESSION_COOKIE_SECURE", False)),
-        "httponly": False,
-        "path": "/",
-    }
+    return None if filtered_city else preferred_city_from_request(request)
 
 
 def attach_city_cookie(response, city: str | None):
-    if not city or city not in CITIES:
-        return response
-    response.set_cookie(PREFERRED_CITY_COOKIE, city, **_cookie_kwargs())
+    if city:
+        response.set_cookie(
+            PREFERRED_CITY_COOKIE, city, max_age=COOKIE_MAX_AGE, samesite="Lax", path="/"
+        )
     return response
 
 
 def clear_city_cookie(response):
-    response.delete_cookie(
-        PREFERRED_CITY_COOKIE,
-        path="/",
-        samesite="Lax",
-    )
-    return response
+    return clear_geo_cookies(response)

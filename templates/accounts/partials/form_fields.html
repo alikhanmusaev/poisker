@@ -7,6 +7,17 @@
 {% for field in form %}
   {% if field.name == 'website' %}
     <div class="hp-wrap" aria-hidden="true">{{ field }}</div>
+  {% elif field.name == 'preferred_settlement' %}
+    <div class="field city-autocomplete-field{% if field.errors %} field-has-error{% endif %}">
+      <label class="field-label" for="preferred-settlement-input">{{ field.label }}</label>
+      <div class="city-autocomplete">
+        <input type="text" id="preferred-settlement-input" class="input" autocomplete="off"
+          placeholder="Начните вводить название…" value="{{ user.preferred_settlement.display_name|default:'' }}">
+        {{ field }}
+        <ul id="preferred-settlement-suggestions" class="suggest-list city-suggest-list" role="listbox" hidden></ul>
+      </div>
+      {% if field.errors %}<p class="field-error">{{ field.errors.0 }}</p>{% endif %}
+    </div>
   {% elif field.name == 'accept_terms' %}
     <div class="field field-consent{% if field.errors %} field-has-error{% endif %}">
       <label class="consent-label">

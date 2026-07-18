@@ -16,18 +16,35 @@
   }
 }
 </script>
+{% if breadcrumbs %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {% for crumb in breadcrumbs %}
+    {
+      "@type": "ListItem",
+      "position": {{ forloop.counter }},
+      "name": "{{ crumb.name|escapejs }}",
+      "item": "https://{{ request.get_host }}{{ crumb.url }}"
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endif %}
 {% endblock %}
 {% block body_class %}page-home{% endblock %}
 {% block content %}
 <div class="home-page">
-  <h1 class="sr-only">{{ seo_title }}</h1>
+  <h1 class="sr-only">{{ listing_h1|default:seo_title }}</h1>
   <div class="home-mobile-toolbar" id="home-mobile-toolbar">
     <form method="get" action="{{ listing_path }}" class="home-search-form" id="home-search-form"
           hx-get="{{ listing_path }}" hx-target="#feed-panel" hx-push-url="true" hx-trigger="submit">
       <input type="hidden" name="category" id="category-field" value="{{ category }}">
       <input type="hidden" name="sort" id="sort-field" value="{{ sort }}">
-      {{ cities|json_script:"listing-cities" }}
-      <div class="search-bar search-bar--split{% if city %} has-city{% endif %}" id="home-search-bar">
+      <div class="search-bar search-bar--split{% if geo.scope != 'russia' %} has-city{% endif %}" id="home-search-bar">
         <div class="search-bar-query">
           <i data-lucide="search" class="icon search-bar-icon" aria-hidden="true"></i>
           <input type="search" name="q" value="{{ query }}" placeholder="iPhone, квартира, автомобиль…"
@@ -39,23 +56,21 @@
           <button
             type="button"
             id="home-city-toggle"
-            class="search-bar-city-btn{% if city %} is-active{% endif %}"
+            class="search-bar-city-btn{% if geo.scope != 'russia' %} is-active{% endif %}"
             aria-expanded="false"
             aria-controls="home-city-panel"
             aria-haspopup="dialog"
-            aria-label="{% if city %}Город: {{ cities|get_item:city }}{% else %}Выбрать город{% endif %}"
+            aria-label="Местоположение: {{ geo.label }}"
           >
             <i data-lucide="map-pin" class="icon search-bar-city-pin" aria-hidden="true"></i>
-            <span class="search-bar-city-label" id="home-city-label">
-              {% if city %}{{ cities|get_item:city }}{% else %}Город{% endif %}
-            </span>
+            <span class="search-bar-city-label" id="home-city-label">{{ geo.label }}</span>
             <i data-lucide="chevron-down" class="icon search-bar-city-chevron" aria-hidden="true"></i>
           </button>
-          <div class="home-city-panel" id="home-city-panel" hidden role="dialog" aria-label="Выбор города">
+          <div class="home-city-panel" id="home-city-panel" hidden role="dialog" aria-label="Выбор населённого пункта">
             <div class="home-city-panel__head">
               <label class="home-city-panel__title" for="home-city-input">Населённый пункт</label>
-              <button type="button" id="home-city-clear" class="home-city-clear-link"{% if not city %} hidden{% endif %}>
-                Сбросить
+              <button type="button" id="home-city-clear" class="home-city-clear-link"{% if geo.scope == 'russia' %} hidden{% endif %}>
+                Вся Россия
               </button>
             </div>
             <div class="home-city-panel__field city-autocomplete">
@@ -70,11 +85,36 @@
                 aria-autocomplete="list"
                 aria-expanded="false"
                 aria-controls="home-city-suggestions"
-                value="{% if city %}{{ cities|get_item:city }}{% endif %}"
+                value="{% if geo.settlement %}{{ geo.settlement.name }}{% elif geo.region %}{{ geo.region.name }}{% endif %}"
               >
-              <input type="hidden" id="home-city-slug" value="{{ city }}">
+              <input type="hidden" id="home-city-slug" value="{% if geo.settlement %}{{ geo.settlement.slug }}{% endif %}">
+              <input type="hidden" id="home-settlement-id" value="{% if geo.settlement %}{{ geo.settlement.id }}{% endif %}">
+              <input type="hidden" id="home-region-slug" value="{% if geo.region %}{{ geo.region.slug }}{% endif %}">
               <ul id="home-city-suggestions" class="suggest-list city-suggest-list" role="listbox" hidden></ul>
             </div>
+            <div class="home-city-panel__actions">
+              {% if geo.region %}
+              <button type="button" class="home-geo-chip" id="home-region-pick"
+                      data-region-slug="{{ geo.region.slug }}">
+                Весь регион: {{ geo.region.name }}
+              </button>
+              {% endif %}
+              <button type="button" class="home-geo-chip" id="home-russia-pick">Вся Россия</button>
+            </div>
+            {% if popular_settlements %}
+            <div class="home-city-panel__popular" id="home-popular-cities">
+              <div class="home-city-panel__popular-title">Популярные города</div>
+              <div class="home-city-panel__popular-list">
+                {% for s in popular_settlements %}
+                <button type="button" class="home-geo-chip home-popular-city"
+                        data-settlement-id="{{ s.id }}"
+                        data-settlement-slug="{{ s.slug }}"
+                        data-region-slug="{{ s.region.slug }}"
+                        data-label="{{ s.name }}">{{ s.name }}</button>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -88,19 +128,19 @@
       </button>
       <div class="category-carousel-shell" id="category-carousel-shell">
         <div class="category-carousel" id="category-carousel" role="navigation" aria-label="Категории">
-          <a href="{% if city %}{% city_category_path city %}{% else %}{% url 'core:index' %}{% endif %}"
+          <a href="{% geo_listing_path geo %}"
              class="category-chip {% if not category %}is-active{% endif %}" data-category=""
              {% if not category %}aria-current="page"{% endif %}
-             hx-get="{% if city %}{% city_category_path city %}{% else %}{% url 'core:index' %}{% endif %}"
+             hx-get="{% geo_listing_path geo %}"
              hx-target="#feed-panel" hx-push-url="true">
             <span class="category-chip-icon"><i data-lucide="layout-grid" class="icon" aria-hidden="true"></i></span>
             <span class="category-chip-label">Все</span>
           </a>
           {% for slug, label_icon in categories.items %}
-            <a href="{% if city %}{% city_category_path city slug %}{% else %}{% category_path slug %}{% endif %}"
+            <a href="{% geo_listing_path geo slug %}"
                class="category-chip {% if category == slug %}is-active{% endif %}" data-category="{{ slug }}"
                {% if category == slug %}aria-current="page"{% endif %}
-               hx-get="{% if city %}{% city_category_path city slug %}{% else %}{% category_path slug %}{% endif %}"
+               hx-get="{% geo_listing_path geo slug %}"
                hx-target="#feed-panel" hx-push-url="true">
               <span class="category-chip-icon"><i data-lucide="{{ label_icon.1 }}" class="icon" aria-hidden="true"></i></span>
               <span class="category-chip-label">{{ label_icon.0 }}</span>

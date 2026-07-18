@@ -7,9 +7,23 @@ def site_context(request):
         CATEGORY_LABELS,
         CITIES,
         CONDITION_LABELS,
-        POPULAR_FEED_CITIES,
         SORT_OPTIONS,
     )
+    from locations.services.geo import resolve_geo
+    from locations.services.search import popular_settlements
+
+    geo = getattr(request, "geo", None)
+    if geo is None:
+        try:
+            geo = resolve_geo(request)
+        except Exception:
+            geo = None
+
+    popular = []
+    try:
+        popular = popular_settlements(12)
+    except Exception:
+        popular = []
 
     return {
         "site_name": settings.SITE_NAME,
@@ -27,7 +41,7 @@ def site_context(request):
         "category_labels": CATEGORY_LABELS,
         "condition_labels": CONDITION_LABELS,
         "sort_options": SORT_OPTIONS,
-        "popular_cities": [
-            (slug, CITIES[slug]) for slug in POPULAR_FEED_CITIES if slug in CITIES
-        ],
+        "geo": geo,
+        "popular_settlements": popular,
+        "popular_cities": [(s.slug, s.name) for s in popular],
     }

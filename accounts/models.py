@@ -49,6 +49,14 @@ class User(AbstractUser):
     is_blocked = models.BooleanField("Заблокирован", default=False, db_index=True)
     rating_avg = models.FloatField("Средняя оценка", default=0.0)
     rating_count = models.PositiveIntegerField("Число отзывов", default=0)
+    preferred_settlement = models.ForeignKey(
+        "locations.Settlement",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="users_preferring",
+        verbose_name="Основной населённый пункт",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = "email"

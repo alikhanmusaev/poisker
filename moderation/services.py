@@ -8,6 +8,7 @@ from listings.models import Post, Report
 from listings.services.posts import ValidationError
 from listings.services.ranking import calculate_rank_score
 from listings.services.seo_urls import make_seo_slug
+from locations.models import Settlement
 
 REASON_MAX_LEN = 400
 
@@ -113,6 +114,12 @@ def approve_post(post: Post, user) -> Post:
             post.category = str(revision["category"])
         if revision.get("city"):
             post.city = str(revision["city"])
+        if revision.get("settlement_id"):
+            settlement = Settlement.objects.filter(
+                pk=revision["settlement_id"], is_active=True
+            ).first()
+            if settlement is not None:
+                post.settlement = settlement
         if revision.get("condition") in {"used", "new"}:
             post.condition = str(revision["condition"])
         if "price" in revision:

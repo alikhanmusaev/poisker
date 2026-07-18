@@ -8,6 +8,7 @@ from listings.media_views import serve_media
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("api.urls")),
+    path("api/locations/", include("locations.urls")),
     path("moderation/", include("moderation.urls")),
     path("media/<path:key>", serve_media, name="media"),
     path("accounts/", include("accounts.urls")),

@@ -45,7 +45,6 @@
       </div>
     {% endif %}
 
-    {{ cities|json_script:"listing-cities" }}
     <form method="post" enctype="multipart/form-data" class="listing-form" id="edit-post-form" novalidate>
       {% csrf_token %}
       {% include "listings/partials/form_fields.html" with suggestions_id='city-suggestions-edit' %}

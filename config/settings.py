@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "accounts",
+    "locations",
     "listings",
     "messaging",
     "bookmarks",
@@ -223,7 +224,7 @@ SITE_DESCRIPTION = os.getenv(
     "Поискер — бесплатные объявления по Чеченской Республике.",
 )
 SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "info@poisker.ru")
-STATIC_VERSION = os.getenv("STATIC_VERSION", "django-57")
+STATIC_VERSION = os.getenv("STATIC_VERSION", "django-58")
 # Version of the separate PD consent document (152-FZ / 156-FZ). Bump when text changes.
 PDN_CONSENT_VERSION = os.getenv("PDN_CONSENT_VERSION", "2026-07-16b")
 OPERATOR_NAME = os.getenv(

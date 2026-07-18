@@ -10,13 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const input = document.getElementById('city-input');
-  const hidden = document.getElementById('city');
+  const hidden = document.getElementById('settlement_id');
   const list =
     document.getElementById('city-suggestions') ||
     document.getElementById('city-suggestions-edit');
 
   if (window.initCityAutocomplete && input && hidden && list) {
-    window.initCityAutocomplete(input, hidden, list, cities);
+    window.initCityAutocomplete(input, hidden, list, cities, { valueMode: 'id' });
   }
 
   const form = document.getElementById('create-post-form') || document.getElementById('edit-post-form');

@@ -24,10 +24,19 @@
         <a href="{% url 'core:index' %}">Главная</a>
       </li>
       <li class="breadcrumbs-item">
-        <a href="{% city_category_path post.city %}">{{ cities|get_item:post.city }}</a>
+        {% if region_url and region_name %}
+        <a href="{{ region_url }}">{{ region_name }}</a>
+        {% else %}
+        <a href="{{ settlement_url }}">{{ location_label }}</a>
+        {% endif %}
       </li>
+      {% if region_url and region_name %}
       <li class="breadcrumbs-item">
-        <a href="{% city_category_path post.city post.category %}">{{ category_labels|get_item:post.category }}</a>
+        <a href="{{ settlement_url }}">{{ post.settlement.name|default:location_label }}</a>
+      </li>
+      {% endif %}
+      <li class="breadcrumbs-item">
+        <a href="{% if post.settlement_id %}{{ settlement_url }}{{ post.category }}/{% else %}{% city_category_path post.city post.category %}{% endif %}">{{ category_labels|get_item:post.category }}</a>
       </li>
       <li class="breadcrumbs-item breadcrumbs-item-current" aria-current="page">{{ post.title }}</li>
     </ol>
@@ -127,7 +136,12 @@
       <span class="meta-dot">·</span>
     {% endif %}
     <i data-lucide="map-pin" class="icon icon-xs" aria-hidden="true"></i>
+    {% if post.settlement_id %}
+    <a href="{{ settlement_url }}">{{ post.settlement.name }}</a>{% if region_name %},
+    <a href="{{ region_url }}">{{ region_name }}</a>{% endif %}
+    {% else %}
     <span>{{ cities|get_item:post.city }}</span>
+    {% endif %}
     <span class="meta-dot">·</span>
     <i data-lucide="tag" class="icon icon-xs" aria-hidden="true"></i>
     <span>{{ category_labels|get_item:post.category }}</span>
@@ -142,6 +156,18 @@
     Не переводите предоплату, пока не осмотрите товар и не убедитесь в надёжности продавца.
   </p>
   <div class="post-body">{{ post.body }}</div>
+
+  <section class="post-location-block" aria-label="Местоположение">
+    <h2 class="post-location-title">Местоположение</h2>
+    <p class="post-location-value">
+      {% if post.settlement_id %}
+      <a href="{{ settlement_url }}">{{ post.settlement.name }}</a>{% if region_name %},
+      <a href="{{ region_url }}">{{ region_name }}</a>{% endif %}
+      {% else %}
+      {{ location_label }}
+      {% endif %}
+    </p>
+  </section>
 
   <div class="contact-box">
     {% url 'messaging:start' post.id as message_start_url %}
