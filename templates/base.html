@@ -55,10 +55,10 @@
           </span>
         </a>
         {% if geo %}
-        <a href="#geo-picker" class="header-geo" id="header-geo-btn" aria-label="Местоположение: {{ geo.label }}">
+        <button type="button" class="header-geo" id="header-geo-btn" aria-label="Местоположение: {{ geo.label }}">
           <i data-lucide="map-pin" class="icon icon-sm" aria-hidden="true"></i>
           <span>{{ geo.label }}</span>
-        </a>
+        </button>
         {% endif %}
         {% if user.is_authenticated %}
           {% if not user.is_staff %}

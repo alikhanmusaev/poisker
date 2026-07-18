@@ -109,7 +109,7 @@
         if (!slug || (P?.isSafeSlug && !P.isSafeSlug(slug))) return;
         hiddenInput.value = slug;
       }
-      input.value = item.display || item.label || slug;
+        input.value = item.display || item.label || item.name || slug || '';
       hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
       closeList();
       if (onSelect) onSelect(hiddenInput.value, item.label || item.display, item);

@@ -218,13 +218,13 @@ S3_BUCKET = os.getenv("S3_BUCKET", "board-images")
 S3_PUBLIC_URL = os.getenv("S3_PUBLIC_URL", "http://localhost:9000/board-images")
 
 SITE_NAME = os.getenv("SITE_NAME", "Поискер")
-SITE_TAGLINE = os.getenv("SITE_TAGLINE", "Доска объявлений по Чеченской Республике")
+SITE_TAGLINE = os.getenv("SITE_TAGLINE", "Доска объявлений России")
 SITE_DESCRIPTION = os.getenv(
     "SITE_DESCRIPTION",
-    "Поискер — бесплатные объявления по Чеченской Республике.",
+    "Бесплатная доска объявлений по всей России: купить и продать недвижимость, авто, услуги и товары.",
 )
 SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "info@poisker.ru")
-STATIC_VERSION = os.getenv("STATIC_VERSION", "django-58")
+STATIC_VERSION = os.getenv("STATIC_VERSION", "django-59")
 # Version of the separate PD consent document (152-FZ / 156-FZ). Bump when text changes.
 PDN_CONSENT_VERSION = os.getenv("PDN_CONSENT_VERSION", "2026-07-16b")
 OPERATOR_NAME = os.getenv(
