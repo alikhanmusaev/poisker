@@ -119,7 +119,7 @@
     <form method="post" action="{% url 'listings:promote' post.id %}" class="promote-form" style="margin:0 0 16px;">
       {% csrf_token %}
       <button type="submit" class="btn btn-secondary btn-block">
-        <i data-lucide="rocket" class="icon" aria-hidden="true"></i>
+        <i data-lucide="zap" class="icon" aria-hidden="true"></i>
         {% if post.is_promoted %}Продлить поднятие — {{ promote_label }}{% else %}Поднять в поиске — {{ promote_label }}{% endif %}
       </button>
     </form>

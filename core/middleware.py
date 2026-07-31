@@ -11,7 +11,8 @@ _DEFAULT_CSP = (
     "connect-src 'self'; "
     "object-src 'none'; "
     "base-uri 'self'; "
-    "form-action 'self'; "
+    # form-action also covers 302 targets after POST (Chrome). Allow T-Bank pay form.
+    "form-action 'self' https://securepay.tinkoff.ru https://*.tinkoff.ru https://*.tbank.ru; "
     "frame-ancestors 'none'; "
     "upgrade-insecure-requests"
 )
