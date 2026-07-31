@@ -1115,8 +1115,8 @@ body.confirm-open {
 }
 
 .post-card-condition {
-  font-weight: 600;
-  color: var(--slate-600);
+  font-weight: 500;
+  color: var(--slate-500);
 }
 
 .input-icon-wrap { position: relative; }
@@ -1375,13 +1375,6 @@ textarea:focus {
   padding-bottom: 64px;
 }
 
-.post-card-link {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  color: inherit;
-}
 
 .post-card-media {
   position: relative;
@@ -1473,13 +1466,23 @@ textarea:focus {
 .post-card-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   padding: 12px 14px 14px;
   flex: 1;
   min-width: 0;
 }
 
+.post-card-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+
 .post-card-price {
+  margin: 0;
   font-size: 17px;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -1493,6 +1496,7 @@ textarea:focus {
 }
 
 .post-card-title {
+  margin: 0;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.35;
@@ -1509,7 +1513,8 @@ textarea:focus {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px 6px;
+  gap: 0 6px;
+  margin: 0;
   margin-top: auto;
   padding-top: 2px;
   font-size: 12px;
@@ -1517,7 +1522,11 @@ textarea:focus {
   color: var(--color-muted);
 }
 
-.meta-dot { opacity: 0.5; }
+.post-card-meta > * {
+  min-width: 0;
+}
+
+.meta-dot { opacity: 0.45; }
 
 .badge {
   position: absolute;
@@ -5341,15 +5350,24 @@ body.page-notifications .site-main {
   color: var(--slate-700);
   overflow-wrap: anywhere;
 }
-.post-location-value a,
-.post-card-location {
+.post-location-value a {
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.post-location-value a:hover,
-.post-card-location:hover {
+.post-location-value a:hover {
   color: var(--color-primary);
+}
+
+.post-card-location {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 500;
+}
+.post-card-location:hover {
+  color: var(--primary-700);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .city-autocomplete .is-loading {
