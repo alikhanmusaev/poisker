@@ -28,11 +28,15 @@ from listings.services.posts import (
     update_post,
 )
 from listings.services.promote import (
+    FAILED_STATUSES,
+    PAID_STATUSES,
     PromoteError,
     apply_paid_promotion,
     find_promotion_for_notification,
+    has_pending_promotion,
     mark_promotion_failed,
     start_promotion,
+    sync_promotion_after_return,
 )
 from listings.services.show_context import build_show_context, increment_views
 from listings.services.storage import upload_image
@@ -326,6 +330,18 @@ def show(request, post_id):
     is_staff = bool(getattr(request.user, "is_staff", False) and request.user.is_authenticated)
     if post.status != "published" and not is_owner and not is_staff:
         raise Http404
+    if is_owner and has_pending_promotion(post) and not post.is_promoted:
+        outcome = sync_promotion_after_return(post)
+        post.refresh_from_db()
+        if outcome == "promoted" and post.is_promoted and post.paid_until:
+            until = timezone.localtime(post.paid_until).strftime("%d.%m.%Y %H:%M")
+            messages.success(
+                request,
+                f"Объявление поднято. Оно выше в поиске до {until}.",
+            )
+            from listings.services.seo_urls import post_public_url
+
+            return redirect(post_public_url(post))
     increment_views(request, post)
     return render(request, "listings/show.html", build_show_context(request, post))
 
@@ -389,25 +405,42 @@ def promote(request, post_id):
 @login_required
 def promote_success(request, post_id):
     post = get_object_or_404(Post, pk=post_id, user=request.user)
-    if post.is_promoted:
-        messages.success(
-            request,
-            f"Объявление поднято до {post.paid_until.strftime('%d.%m.%Y %H:%M')}.",
-        )
-    else:
-        messages.info(
-            request,
-            "Платёж принят. Поднятие появится в течение минуты после подтверждения банком.",
-        )
     from listings.services.seo_urls import post_public_url
 
-    return redirect(post_public_url(post))
+    outcome = sync_promotion_after_return(post)
+    post.refresh_from_db()
+    redirect_url = post_public_url(post)
+
+    if outcome == "promoted" and post.is_promoted and post.paid_until:
+        until = timezone.localtime(post.paid_until).strftime("%d.%m.%Y %H:%M")
+        messages.success(
+            request,
+            f"Объявление поднято. Оно выше в поиске до {until}.",
+        )
+        return redirect(redirect_url)
+
+    if outcome == "failed":
+        messages.error(
+            request,
+            "Оплата не подтверждена. Объявление не поднято — можно попробовать снова.",
+        )
+        return redirect(redirect_url)
+
+    messages.warning(
+        request,
+        "Платёж получен. Ждём подтверждение банка — обычно до минуты. "
+        "Статус обновится на этой странице автоматически.",
+    )
+    return redirect(f"{redirect_url}?promote=pending")
 
 
 @login_required
 def promote_fail(request, post_id):
     post = get_object_or_404(Post, pk=post_id, user=request.user)
-    messages.error(request, "Оплата не завершена. Можно попробовать поднять объявление снова.")
+    messages.error(
+        request,
+        "Оплата не завершена. Объявление не поднято — можно попробовать снова.",
+    )
     from listings.services.seo_urls import post_public_url
 
     return redirect(post_public_url(post) if post.status == "published" else "accounts:profile")
@@ -433,13 +466,13 @@ def tbank_notify(request):
         logger.warning("T-Bank notify: promotion not found order=%s payment=%s", order_id, payment_id)
         return HttpResponse("OK")
 
-    if status in {"CONFIRMED", "AUTHORIZED"}:
+    if status in PAID_STATUSES:
         try:
             apply_paid_promotion(promo)
         except Exception:
             logger.exception("T-Bank notify: apply failed for promo=%s", promo.pk)
             return HttpResponse("error", status=500)
-    elif status in {"REJECTED", "CANCELED", "DEADLINE_EXPIRED", "AUTH_FAIL"}:
+    elif status in FAILED_STATUSES:
         mark_promotion_failed(promo)
 
     return HttpResponse("OK")

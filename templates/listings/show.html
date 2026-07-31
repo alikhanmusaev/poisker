@@ -109,20 +109,64 @@
       </div>
     </div>
   {% endif %}
-  {% if post.is_promoted %}
+  {% if is_owner and post.status == 'published' and promote_enabled %}
+    <section
+      class="promote-panel{% if post.is_promoted %} is-active{% elif promote_pending or request.GET.promote == 'pending' %} is-pending{% endif %}"
+      aria-live="polite"
+      {% if promote_pending or request.GET.promote == 'pending' %}data-promote-pending="1"{% endif %}
+    >
+      {% if post.is_promoted %}
+        <div class="promote-panel__icon" aria-hidden="true">
+          <i data-lucide="zap" class="icon"></i>
+        </div>
+        <div class="promote-panel__body">
+          <p class="promote-panel__title">Объявление поднято</p>
+          <p class="promote-panel__text">
+            Оно выше в поиске{% if post.paid_until %} до {{ post.paid_until|date:"d.m.Y H:i" }}{% endif %}.
+          </p>
+          <form method="post" action="{% url 'listings:promote' post.id %}" class="promote-panel__actions">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary btn-sm">
+              Продлить ещё на {{ promote_days }} дн. — {{ promote_price_rub }} ₽
+            </button>
+          </form>
+        </div>
+      {% elif promote_pending or request.GET.promote == 'pending' %}
+        <div class="promote-panel__icon" aria-hidden="true">
+          <i data-lucide="clock" class="icon"></i>
+        </div>
+        <div class="promote-panel__body">
+          <p class="promote-panel__title">Ждём подтверждение оплаты</p>
+          <p class="promote-panel__text">
+            Банк ещё обрабатывает платёж. Обычно это занимает до минуты — статус обновится сам.
+          </p>
+          <button type="button" class="btn btn-secondary btn-sm" data-promote-refresh>
+            Обновить статус
+          </button>
+        </div>
+      {% else %}
+        <div class="promote-panel__icon" aria-hidden="true">
+          <i data-lucide="zap" class="icon"></i>
+        </div>
+        <div class="promote-panel__body">
+          <p class="promote-panel__title">Поднять в поиске</p>
+          <p class="promote-panel__text">
+            За {{ promote_price_rub }} ₽ объявление будет выше в выдаче {{ promote_days }} дней.
+          </p>
+          <form method="post" action="{% url 'listings:promote' post.id %}" class="promote-panel__actions">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-sm">
+              Оплатить {{ promote_label }}
+            </button>
+          </form>
+        </div>
+      {% endif %}
+    </section>
+  {% elif post.is_promoted %}
     <span class="badge badge-promoted" style="position:static;display:inline-flex;margin-bottom:12px;">
       <i data-lucide="zap" class="icon icon-xs" aria-hidden="true"></i>
       Поднято{% if post.paid_until %} до {{ post.paid_until|date:"d.m.Y H:i" }}{% endif %}
     </span>
-  {% endif %}
-  {% if user.is_authenticated and user.id == post.user_id and post.status == 'published' and promote_enabled %}
-    <form method="post" action="{% url 'listings:promote' post.id %}" class="promote-form" style="margin:0 0 16px;">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-secondary btn-block">
-        <i data-lucide="zap" class="icon" aria-hidden="true"></i>
-        {% if post.is_promoted %}Продлить поднятие — {{ promote_label }}{% else %}Поднять в поиске — {{ promote_label }}{% endif %}
-      </button>
-    </form>
   {% endif %}
   {% if post.price is not None %}
     <p class="post-price">{{ post.price|post_price_display }}</p>

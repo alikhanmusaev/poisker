@@ -104,7 +104,9 @@
               </form>
               {% endif %}
               {% if post.is_promoted and post.paid_until %}
-                <span class="my-post-status my-post-status-active" title="Поднято до {{ post.paid_until|date:'d.m.Y H:i' }}">Поднято</span>
+                <span class="my-post-status my-post-status-active" title="Поднято до {{ post.paid_until|date:'d.m.Y H:i' }}">
+                  Поднято до {{ post.paid_until|date:"d.m.Y" }}
+                </span>
               {% endif %}
               <form method="post" action="{% url 'listings:delete' post.id %}" onsubmit="return confirm('Снять объявление с публикации? Оно исчезнет из поиска и появится во вкладке «Снятые».')">
                 {% csrf_token %}

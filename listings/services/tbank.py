@@ -148,3 +148,29 @@ def init_payment(
     if not data.get("PaymentURL"):
         raise TBankError("T-Bank Init returned no PaymentURL", payload=data)
     return data
+
+
+def get_payment_state(payment_id: str | int) -> dict[str, Any]:
+    """Query T-Bank GetState for a PaymentId."""
+    if not is_configured():
+        raise TBankError("T-Bank is not configured (TBANK_TERMINAL_KEY / TBANK_PASSWORD).")
+    body: dict[str, Any] = {
+        "TerminalKey": _terminal_key(),
+        "PaymentId": str(payment_id),
+    }
+    body["Token"] = generate_token(body)
+    url = f"{_api_url()}/GetState"
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            response = client.post(url, json=body)
+            data = response.json()
+    except Exception as exc:
+        logger.exception("T-Bank GetState request failed")
+        raise TBankError(f"T-Bank GetState request failed: {exc}") from exc
+    if not data.get("Success"):
+        raise TBankError(
+            data.get("Message") or data.get("Details") or "T-Bank GetState failed",
+            code=str(data.get("ErrorCode") or ""),
+            payload=data,
+        )
+    return data

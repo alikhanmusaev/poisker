@@ -89,5 +89,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  const promotePanel = document.querySelector('[data-promote-pending]');
+  const promoteRefresh = document.querySelector('[data-promote-refresh]');
+  promoteRefresh?.addEventListener('click', () => {
+    window.location.reload();
+  });
+  if (promotePanel) {
+    let attempts = 0;
+    const maxAttempts = 8;
+    const timer = window.setInterval(() => {
+      attempts += 1;
+      if (attempts > maxAttempts) {
+        window.clearInterval(timer);
+        return;
+      }
+      window.location.reload();
+    }, 3000);
+  }
+
   if (window.refreshIcons) refreshIcons();
 });

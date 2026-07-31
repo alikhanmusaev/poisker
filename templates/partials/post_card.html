@@ -1,6 +1,12 @@
 {% load static poisker_tags %}
 <article class="post-card">
   <div class="post-card-media{% if post.images|length > 1 %} post-card-media-slider{% endif %}"{% if post.images|length > 1 %} data-post-card-slider{% endif %}>
+    {% if post.is_promoted %}
+      <span class="badge badge-promoted">
+        <i data-lucide="zap" class="icon icon-xs" aria-hidden="true"></i>
+        Поднято
+      </span>
+    {% endif %}
     {% if post.images %}
       {% if post.images|length > 1 %}
         <div class="post-card-track" data-post-card-track>

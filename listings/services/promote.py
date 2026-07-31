@@ -11,7 +11,12 @@ from django.utils import timezone
 
 from listings.models import Post, Promotion
 from listings.services.ranking import calculate_rank_score
-from listings.services.tbank import TBankError, init_payment, is_configured
+from listings.services.tbank import TBankError, get_payment_state, init_payment, is_configured
+
+PAID_STATUSES = frozenset({"CONFIRMED", "AUTHORIZED"})
+FAILED_STATUSES = frozenset(
+    {"REJECTED", "CANCELED", "DEADLINE_EXPIRED", "AUTH_FAIL", "REVERSED", "REFUNDED"}
+)
 
 
 class PromoteError(Exception):
@@ -140,3 +145,48 @@ def find_promotion_for_notification(*, order_id: str, payment_id: str) -> Promot
             .first()
         )
     return promo
+
+
+def latest_pending_promotion(post: Post) -> Promotion | None:
+    return (
+        Promotion.objects.filter(post=post, status="pending", type="boost")
+        .order_by("-created_at")
+        .first()
+    )
+
+
+def has_pending_promotion(post: Post) -> bool:
+    return latest_pending_promotion(post) is not None
+
+
+def sync_promotion_after_return(post: Post) -> str:
+    """
+    After bank SuccessURL: apply boost if already paid/confirmed.
+
+    Returns one of: "promoted", "pending", "failed".
+    """
+    post.refresh_from_db()
+    if post.is_promoted and not latest_pending_promotion(post):
+        return "promoted"
+
+    promo = latest_pending_promotion(post)
+    if promo is None:
+        return "promoted" if post.is_promoted else "failed"
+
+    if not promo.payment_ref:
+        return "pending"
+
+    try:
+        state = get_payment_state(promo.payment_ref)
+    except TBankError:
+        return "pending"
+
+    status = str(state.get("Status") or "")
+    if status in PAID_STATUSES:
+        apply_paid_promotion(promo)
+        post.refresh_from_db()
+        return "promoted"
+    if status in FAILED_STATUSES:
+        mark_promotion_failed(promo)
+        return "failed"
+    return "pending"

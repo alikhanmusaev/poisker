@@ -51,8 +51,21 @@ def build_show_context(request, post: Post) -> dict:
             back_url = referrer
 
     from bookmarks.services import is_post_bookmarked
-    from listings.services.promote import promote_label, promote_price_rub, promote_days
+    from listings.services.promote import (
+        has_pending_promotion,
+        promote_days,
+        promote_label,
+        promote_price_rub,
+    )
     from listings.services.tbank import is_configured as tbank_configured
+
+    user = getattr(request, "user", None)
+    is_owner = bool(
+        user is not None
+        and getattr(user, "is_authenticated", False)
+        and post.user_id == getattr(user, "id", None)
+    )
+    promote_pending = bool(is_owner and has_pending_promotion(post) and not post.is_promoted)
 
     if post.settlement_id and post.settlement is not None:
         city_name = post.settlement.name
@@ -167,8 +180,10 @@ def build_show_context(request, post: Post) -> dict:
         "json_ld_json": json.dumps(json_ld, ensure_ascii=False),
         "breadcrumb_ld_json": json.dumps(breadcrumb_ld, ensure_ascii=False),
         "robots_noindex": post.status != "published",
+        "is_owner": is_owner,
         "promote_enabled": tbank_configured(),
         "promote_label": promote_label(),
         "promote_price_rub": promote_price_rub(),
         "promote_days": promote_days(),
+        "promote_pending": promote_pending,
     }

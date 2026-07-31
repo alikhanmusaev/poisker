@@ -130,6 +130,44 @@ def test_promote_starts_payment(seller, make_post, client, settings):
 
 
 @pytest.mark.django_db
+def test_promote_success_syncs_via_getstate(seller, make_post, client, settings):
+    settings.TBANK_TERMINAL_KEY = "Demo"
+    settings.TBANK_PASSWORD = "secret"
+    settings.PROMOTE_DAYS = 7
+    post = make_post(user=seller, status="published")
+    promo = Promotion.objects.create(
+        post=post, type="boost", amount=19900, status="pending", payment_ref="777"
+    )
+    client.force_login(seller)
+    fake_state = {"Success": True, "Status": "CONFIRMED", "PaymentId": "777"}
+    with patch("listings.services.promote.get_payment_state", return_value=fake_state):
+        response = client.get(reverse("listings:promote_success", args=[post.pk]))
+    assert response.status_code == 302
+    post.refresh_from_db()
+    promo.refresh_from_db()
+    assert promo.status == "paid"
+    assert post.is_promoted
+
+
+@pytest.mark.django_db
+def test_promote_success_pending_when_bank_not_ready(seller, make_post, client, settings):
+    settings.TBANK_TERMINAL_KEY = "Demo"
+    settings.TBANK_PASSWORD = "secret"
+    post = make_post(user=seller, status="published")
+    Promotion.objects.create(
+        post=post, type="boost", amount=19900, status="pending", payment_ref="888"
+    )
+    client.force_login(seller)
+    fake_state = {"Success": True, "Status": "AUTHORIZING", "PaymentId": "888"}
+    with patch("listings.services.promote.get_payment_state", return_value=fake_state):
+        response = client.get(reverse("listings:promote_success", args=[post.pk]))
+    assert response.status_code == 302
+    assert "promote=pending" in response["Location"]
+    post.refresh_from_db()
+    assert not post.is_promoted
+
+
+@pytest.mark.django_db
 def test_tbank_notify_confirms(seller, make_post, client, settings):
     settings.TBANK_TERMINAL_KEY = "Demo"
     settings.TBANK_PASSWORD = "secret"
