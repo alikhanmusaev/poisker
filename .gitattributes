@@ -1,0 +1,3 @@
+*.sh text eol=lf
+entrypoint.sh text eol=lf
+scheduler_entrypoint.sh text eol=lf
