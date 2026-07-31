@@ -3,12 +3,15 @@ from concurrent.futures import ThreadPoolExecutor
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import F
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
+import json
+import logging
 
 from listings.constants import CATEGORY_LABELS, CITIES
 from listings.forms import DraftPostForm, EditDraftPostForm, EditPostForm, PostForm
@@ -24,8 +27,18 @@ from listings.services.posts import (
     unpublish_post,
     update_post,
 )
+from listings.services.promote import (
+    PromoteError,
+    apply_paid_promotion,
+    find_promotion_for_notification,
+    mark_promotion_failed,
+    start_promotion,
+)
 from listings.services.show_context import build_show_context, increment_views
 from listings.services.storage import upload_image
+from listings.services.tbank import verify_notification
+
+logger = logging.getLogger(__name__)
 
 
 def _user_post_or_404(user, post_id):
@@ -353,3 +366,80 @@ def contact(request, post_id):
 
         record_phone_reveal(reviewer=request.user, post=post)
     return JsonResponse({"phone": phone})
+
+
+@login_required
+@require_POST
+def promote(request, post_id):
+    post = get_object_or_404(Post, pk=post_id)
+    try:
+        payment_url = start_promotion(
+            post,
+            user=request.user,
+            absolute_uri=request.build_absolute_uri,
+        )
+    except PromoteError as exc:
+        messages.error(request, str(exc))
+        from listings.services.seo_urls import post_public_url
+
+        return redirect(post_public_url(post) if post.status == "published" else "accounts:profile")
+    return redirect(payment_url)
+
+
+@login_required
+def promote_success(request, post_id):
+    post = get_object_or_404(Post, pk=post_id, user=request.user)
+    if post.is_promoted:
+        messages.success(
+            request,
+            f"Объявление поднято до {post.paid_until.strftime('%d.%m.%Y %H:%M')}.",
+        )
+    else:
+        messages.info(
+            request,
+            "Платёж принят. Поднятие появится в течение минуты после подтверждения банком.",
+        )
+    from listings.services.seo_urls import post_public_url
+
+    return redirect(post_public_url(post))
+
+
+@login_required
+def promote_fail(request, post_id):
+    post = get_object_or_404(Post, pk=post_id, user=request.user)
+    messages.error(request, "Оплата не завершена. Можно попробовать поднять объявление снова.")
+    from listings.services.seo_urls import post_public_url
+
+    return redirect(post_public_url(post) if post.status == "published" else "accounts:profile")
+
+
+@csrf_exempt
+@require_POST
+def tbank_notify(request):
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return HttpResponse("bad request", status=400)
+
+    if not verify_notification(payload):
+        logger.warning("T-Bank notify: invalid token")
+        return HttpResponse("invalid token", status=403)
+
+    status = str(payload.get("Status") or "")
+    order_id = str(payload.get("OrderId") or "")
+    payment_id = str(payload.get("PaymentId") or "")
+    promo = find_promotion_for_notification(order_id=order_id, payment_id=payment_id)
+    if promo is None:
+        logger.warning("T-Bank notify: promotion not found order=%s payment=%s", order_id, payment_id)
+        return HttpResponse("OK")
+
+    if status in {"CONFIRMED", "AUTHORIZED"}:
+        try:
+            apply_paid_promotion(promo)
+        except Exception:
+            logger.exception("T-Bank notify: apply failed for promo=%s", promo.pk)
+            return HttpResponse("error", status=500)
+    elif status in {"REJECTED", "CANCELED", "DEADLINE_EXPIRED", "AUTH_FAIL"}:
+        mark_promotion_failed(promo)
+
+    return HttpResponse("OK")

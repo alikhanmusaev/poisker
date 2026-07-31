@@ -51,6 +51,8 @@ def build_show_context(request, post: Post) -> dict:
             back_url = referrer
 
     from bookmarks.services import is_post_bookmarked
+    from listings.services.promote import promote_label, promote_price_rub, promote_days
+    from listings.services.tbank import is_configured as tbank_configured
 
     if post.settlement_id and post.settlement is not None:
         city_name = post.settlement.name
@@ -165,4 +167,8 @@ def build_show_context(request, post: Post) -> dict:
         "json_ld_json": json.dumps(json_ld, ensure_ascii=False),
         "breadcrumb_ld_json": json.dumps(breadcrumb_ld, ensure_ascii=False),
         "robots_noindex": post.status != "published",
+        "promote_enabled": tbank_configured(),
+        "promote_label": promote_label(),
+        "promote_price_rub": promote_price_rub(),
+        "promote_days": promote_days(),
     }

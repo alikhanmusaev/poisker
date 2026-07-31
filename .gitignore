@@ -27,6 +27,8 @@ Thumbs.db
 **/firebase-adminsdk*.json
 **/google-services (1).json
 .firebaserc.local
+locations/pay
+selectel account api key
 
 # Large geo dumps (generate CSV via build_locations_csv)
 locations/data/*.zip

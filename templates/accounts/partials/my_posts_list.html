@@ -94,6 +94,18 @@
                 </button>
               </form>
             {% elif post.status == 'published' %}
+              {% if promote_enabled %}
+              <form method="post" action="{% url 'listings:promote' post.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-sm">
+                  <i data-lucide="rocket" class="icon icon-xs" aria-hidden="true"></i>
+                  {% if post.is_promoted %}Продлить — {{ promote_label }}{% else %}Поднять — {{ promote_label }}{% endif %}
+                </button>
+              </form>
+              {% endif %}
+              {% if post.is_promoted and post.paid_until %}
+                <span class="my-post-status my-post-status-active" title="Поднято до {{ post.paid_until|date:'d.m.Y H:i' }}">Поднято</span>
+              {% endif %}
               <form method="post" action="{% url 'listings:delete' post.id %}" onsubmit="return confirm('Снять объявление с публикации? Оно исчезнет из поиска и появится во вкладке «Снятые».')">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ return_url }}">

@@ -112,8 +112,17 @@
   {% if post.is_promoted %}
     <span class="badge badge-promoted" style="position:static;display:inline-flex;margin-bottom:12px;">
       <i data-lucide="zap" class="icon icon-xs" aria-hidden="true"></i>
-      Поднято
+      Поднято{% if post.paid_until %} до {{ post.paid_until|date:"d.m.Y H:i" }}{% endif %}
     </span>
+  {% endif %}
+  {% if user.is_authenticated and user.id == post.user_id and post.status == 'published' and promote_enabled %}
+    <form method="post" action="{% url 'listings:promote' post.id %}" class="promote-form" style="margin:0 0 16px;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-secondary btn-block">
+        <i data-lucide="rocket" class="icon" aria-hidden="true"></i>
+        {% if post.is_promoted %}Продлить поднятие — {{ promote_label }}{% else %}Поднять в поиске — {{ promote_label }}{% endif %}
+      </button>
+    </form>
   {% endif %}
   {% if post.price is not None %}
     <p class="post-price">{{ post.price|post_price_display }}</p>

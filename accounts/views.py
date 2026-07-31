@@ -234,6 +234,9 @@ class RateLimitedPasswordResetView(auth_views.PasswordResetView):
 @login_required
 @require_http_methods(["GET"])
 def profile(request):
+    from listings.services.promote import promote_label
+    from listings.services.tbank import is_configured as tbank_configured
+
     tab = request.GET.get("tab", "active")
     if tab not in ("active", "hidden", "drafts", "expired"):
         tab = "active"
@@ -262,6 +265,8 @@ def profile(request):
             "seller_stats": seller_stats_summary(request.user),
             "category_labels": CATEGORY_LABELS,
             "cities": CITIES,
+            "promote_enabled": tbank_configured(),
+            "promote_label": promote_label(),
         },
     )
 

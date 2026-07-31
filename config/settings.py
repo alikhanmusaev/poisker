@@ -264,3 +264,11 @@ if not DEBUG:
 FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "").strip()
 FIREBASE_CREDENTIALS_FILE = os.getenv("FIREBASE_CREDENTIALS_FILE", "").strip()
 FCM_ENABLED = env_bool("FCM_ENABLED", "true")
+
+# --- T-Bank acquiring (paid listing boost) ---
+TBANK_TERMINAL_KEY = os.getenv("TBANK_TERMINAL_KEY", "").strip()
+TBANK_PASSWORD = os.getenv("TBANK_PASSWORD", "").strip()
+TBANK_API_URL = os.getenv("TBANK_API_URL", "https://securepay.tinkoff.ru/v2").rstrip("/")
+PROMOTE_PRICE_RUB = env_int("PROMOTE_PRICE_RUB", 199)
+PROMOTE_DAYS = env_int("PROMOTE_DAYS", 7)
+PROMOTE_BOOST = float(os.getenv("PROMOTE_BOOST", "2.0"))
