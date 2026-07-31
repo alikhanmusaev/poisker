@@ -14,12 +14,13 @@ alwaysApply: true
 
 ## Production
 
-- Сервер: `root@161.104.51.103` (DNS `poisker.ru` → этот хост)
+- Сервер: `root@87.228.16.187` (Selectel ru-9, DNS `poisker.ru` → этот хост)
 - Путь: `/opt/poisker`
 - Домен: `https://poisker.ru`
 - Репозиторий: `https://github.com/alikhanmusaev/poisker.git` (ветка `main`)
+- Compose: `docker-compose.yml` + `docker-compose.prod.yml` + `docker-compose.edge.yml` + `docker-compose.certs.yml`
 
-**Не путать:** `45.131.43.217` — другой VPS (etsuri/cicig), не poisker.
+**Не путать:** `45.131.43.217` — другой VPS (etsuri/cicig); `161.104.51.103` — старый VPS, больше не production.
 
 ## Команды деплоя
 
@@ -30,12 +31,12 @@ rsync -az --delete \
   --exclude '.git' --exclude '*.db' --exclude '*.sqlite3' --exclude '.env' \
   --exclude 'staticfiles' --exclude 'media' --exclude 'backups' \
   --exclude '.agents' --exclude '.cursor' \
-  ./ root@161.104.51.103:/opt/poisker/
+  ./ root@87.228.16.187:/opt/poisker/
 
 # Пересборка и перезапуск
-ssh root@161.104.51.103 'cd /opt/poisker && set -a && source .env && set +a && \
-  docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.server.yml build web scheduler && \
-  docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.server.yml up -d --force-recreate web scheduler'
+ssh root@87.228.16.187 'cd /opt/poisker && set -a && source .env && set +a && \
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.edge.yml -f docker-compose.certs.yml build web scheduler && \
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.edge.yml -f docker-compose.certs.yml up -d --force-recreate'
 ```
 
 Миграции применяются автоматически при старте `web` (`RUN_DB_UPGRADE=true`).
