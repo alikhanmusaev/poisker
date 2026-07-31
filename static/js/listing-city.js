@@ -16,7 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('city-suggestions-edit');
 
   if (window.initCityAutocomplete && input && hidden && list) {
-    window.initCityAutocomplete(input, hidden, list, cities, { valueMode: 'id' });
+    window.initCityAutocomplete(input, hidden, list, cities, {
+      valueMode: 'id',
+      showPopularOnEmpty: true,
+    });
   }
 
   const form = document.getElementById('create-post-form') || document.getElementById('edit-post-form');

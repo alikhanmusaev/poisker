@@ -41,6 +41,7 @@
     let abortController = null;
     let loading = false;
     const useRemote = options.remote !== false;
+    const showPopularOnEmpty = options.showPopularOnEmpty === true;
     const onSelect = typeof options.onSelect === 'function' ? options.onSelect : null;
     const valueMode = options.valueMode || 'slug'; // slug | id
     const regionParam = options.region || '';
@@ -172,7 +173,7 @@
     const runSearch = debounce(async () => {
       const query = String(input.value || '').trim();
       if (!query) {
-        if (useRemote) {
+        if (useRemote && showPopularOnEmpty) {
           const popular = await fetchPopular();
           activeIndex = -1;
           renderList(popular);
@@ -182,13 +183,7 @@
         return;
       }
       if (query.length < MIN_LEN) {
-        listEl.innerHTML = '';
-        const li = document.createElement('li');
-        li.className = 'suggest-empty';
-        li.textContent = 'Введите минимум 2 символа';
-        listEl.appendChild(li);
-        listEl.hidden = false;
-        input.setAttribute('aria-expanded', 'true');
+        closeList();
         return;
       }
       let items;

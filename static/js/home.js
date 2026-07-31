@@ -236,6 +236,7 @@
 
     window.initCityAutocomplete(input, settlementIdInput || hidden, list, {}, {
       valueMode: 'id',
+      showPopularOnEmpty: false,
       onSelect(_id, _label, item) {
         navigateToGeo({
           regionSlug: item?.regionSlug || item?.region?.slug || '',
