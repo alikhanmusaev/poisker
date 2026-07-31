@@ -6,3 +6,7 @@ __pycache__
 *.db
 .env
 chechnya_board.db
+locations/data/*.zip
+locations/data/admin1CodesASCII.txt
+locations/data/*.txt
+selectel account api key

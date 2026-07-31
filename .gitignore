@@ -28,9 +28,12 @@ Thumbs.db
 **/google-services (1).json
 .firebaserc.local
 
-# Large geo dumps (import locally / on server)
-locations/data/*.csv
+# Large geo dumps (generate CSV via build_locations_csv)
+locations/data/*.zip
+locations/data/admin1CodesASCII.txt
+locations/data/*.txt
 locations/data/*.json
+# Keep committed: locations/data/regions.csv, settlements.csv
 
 # Precompressed static (generated on deploy)
 static/**/*.gz
