@@ -1601,6 +1601,8 @@ textarea:focus {
   border-radius: var(--radius-lg);
   padding: 20px;
   box-shadow: var(--shadow-sm);
+  overflow-x: clip;
+  min-width: 0;
 }
 
 @media (min-width: 768px) {
@@ -2044,6 +2046,9 @@ body.lightbox-open {
 
 .post-body {
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
   font-size: 15px;
   line-height: 1.65;
   color: var(--slate-700);

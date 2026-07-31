@@ -714,6 +714,8 @@ body.admin-shell {
   line-height: 1.55;
   margin-top: 12px;
   overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
 }
 .admin-card__hint { margin: 0 0 12px; }
 .admin-detail-nav { margin-bottom: 16px; }
