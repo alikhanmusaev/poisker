@@ -24,17 +24,31 @@ alwaysApply: true
 
 ## Команды деплоя
 
+На Windows **не** лить код через `tar | ssh` — ломает UTF-8 (кириллица в шаблонах становится `???`).
+
+Предпочтительно с Windows:
+
+```powershell
+git archive --format=tar.gz -o $env:TEMP/poisker-deploy.tar.gz HEAD
+scp $env:TEMP/poisker-deploy.tar.gz root@87.228.16.187:/tmp/
+ssh root@87.228.16.187 "cd /opt/poisker && tar -xzf /tmp/poisker-deploy.tar.gz && perl -pi -e 's/\r\n/\n/g' entrypoint.sh scheduler_entrypoint.sh"
+```
+
+Или rsync с Linux/WSL (если SSH-ключ доступен в WSL; не перезаписывать `.env`):
+
 ```bash
-# Синхронизация кода (не перезаписывать .env на сервере)
 rsync -az --delete \
   --exclude '.venv' --exclude '__pycache__' --exclude '.pytest_cache' \
   --exclude '.git' --exclude '*.db' --exclude '*.sqlite3' --exclude '.env' \
   --exclude 'staticfiles' --exclude 'media' --exclude 'backups' \
   --exclude '.agents' --exclude '.cursor' \
   ./ root@87.228.16.187:/opt/poisker/
+```
 
-# Пересборка и перезапуск
-ssh root@87.228.16.187 'cd /opt/poisker && set -a && source .env && set +a && \
+Пересборка (compose сам читает `.env`; `source .env` на сервере может ломаться на кириллице в кавычках):
+
+```bash
+ssh root@87.228.16.187 'cd /opt/poisker && \
   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.edge.yml -f docker-compose.certs.yml build web scheduler && \
   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.edge.yml -f docker-compose.certs.yml up -d --force-recreate'
 ```
