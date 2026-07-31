@@ -60,6 +60,7 @@ def start_promotion(post: Post, *, user, absolute_uri) -> str:
     success_url = absolute_uri(reverse("listings:promote_success", args=[post.pk]))
     fail_url = absolute_uri(reverse("listings:promote_fail", args=[post.pk]))
 
+    item_name = f"Поднятие объявления на {promote_days()} дн."
     try:
         data = init_payment(
             amount_kopecks=amount,
@@ -69,6 +70,8 @@ def start_promotion(post: Post, *, user, absolute_uri) -> str:
             success_url=success_url,
             fail_url=fail_url,
             customer_email=getattr(user, "email", None) or None,
+            customer_phone=getattr(user, "phone", None) or None,
+            item_name=item_name,
         )
     except TBankError as exc:
         promo.status = "failed"

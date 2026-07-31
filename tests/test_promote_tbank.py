@@ -84,6 +84,25 @@ def test_promote_requires_owner(seller, make_post, client, settings):
 
 
 @pytest.mark.django_db
+def test_build_receipt_for_promote(settings):
+    from listings.services.tbank import build_receipt
+
+    settings.TBANK_TAXATION = "usn_income"
+    receipt = build_receipt(
+        amount_kopecks=19900,
+        item_name="Поднятие объявления",
+        customer_email="buyer@example.com",
+    )
+    assert receipt["Taxation"] == "usn_income"
+    assert receipt["Email"] == "buyer@example.com"
+    item = receipt["Items"][0]
+    assert item["Amount"] == 19900
+    assert item["Tax"] == "none"
+    assert item["PaymentMethod"] == "full_payment"
+    assert item["PaymentObject"] == "service"
+
+
+@pytest.mark.django_db
 def test_promote_starts_payment(seller, make_post, client, settings):
     settings.TBANK_TERMINAL_KEY = "Demo"
     settings.TBANK_PASSWORD = "pass"
@@ -101,6 +120,9 @@ def test_promote_starts_payment(seller, make_post, client, settings):
     assert response.status_code == 302
     assert response["Location"] == fake["PaymentURL"]
     mocked.assert_called_once()
+    kwargs = mocked.call_args.kwargs
+    assert kwargs["item_name"]
+    assert kwargs["customer_email"] == seller.email
     promo = Promotion.objects.get()
     assert promo.status == "pending"
     assert promo.payment_ref == "999001"

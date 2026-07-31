@@ -59,6 +59,41 @@ def verify_notification(payload: dict[str, Any]) -> bool:
     return hmac.compare_digest(expected.lower(), received.lower())
 
 
+def build_receipt(
+    *,
+    amount_kopecks: int,
+    item_name: str,
+    customer_email: str | None = None,
+    customer_phone: str | None = None,
+) -> dict[str, Any]:
+    """Fiscal receipt (54-FZ) required for refunds via T-Bank cabinet/API."""
+    taxation = (
+        getattr(settings, "TBANK_TAXATION", "") or "usn_income"
+    ).strip() or "usn_income"
+    name = (item_name or "Услуга").strip()[:128] or "Услуга"
+    amount = int(amount_kopecks)
+    item: dict[str, Any] = {
+        "Name": name,
+        "Price": amount,
+        "Quantity": 1,
+        "Amount": amount,
+        "Tax": "none",
+        "PaymentMethod": "full_payment",
+        "PaymentObject": "service",
+    }
+    receipt: dict[str, Any] = {
+        "Taxation": taxation,
+        "Items": [item],
+    }
+    if customer_email:
+        receipt["Email"] = customer_email.strip()
+    if customer_phone:
+        digits = "".join(c for c in customer_phone if c.isdigit())
+        if len(digits) >= 10:
+            receipt["Phone"] = f"+{digits}"
+    return receipt
+
+
 def init_payment(
     *,
     amount_kopecks: int,
@@ -68,6 +103,8 @@ def init_payment(
     success_url: str,
     fail_url: str,
     customer_email: str | None = None,
+    customer_phone: str | None = None,
+    item_name: str | None = None,
 ) -> dict[str, Any]:
     if not is_configured():
         raise TBankError("T-Bank is not configured (TBANK_TERMINAL_KEY / TBANK_PASSWORD).")
@@ -82,6 +119,12 @@ def init_payment(
         "FailURL": fail_url,
         "Language": "ru",
         "PayType": "O",
+        "Receipt": build_receipt(
+            amount_kopecks=amount_kopecks,
+            item_name=item_name or description,
+            customer_email=customer_email,
+            customer_phone=customer_phone,
+        ),
     }
     if customer_email:
         body["DATA"] = {"Email": customer_email}

@@ -272,3 +272,5 @@ TBANK_API_URL = os.getenv("TBANK_API_URL", "https://securepay.tinkoff.ru/v2").rs
 PROMOTE_PRICE_RUB = env_int("PROMOTE_PRICE_RUB", 199)
 PROMOTE_DAYS = env_int("PROMOTE_DAYS", 7)
 PROMOTE_BOOST = float(os.getenv("PROMOTE_BOOST", "2.0"))
+# usn_income | usn_income_outcome | osn | patent | esn
+TBANK_TAXATION = os.getenv("TBANK_TAXATION", "usn_income").strip() or "usn_income"
