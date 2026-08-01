@@ -20,6 +20,7 @@ services:
     ports: !reset []
     volumes:
       - ./staticfiles:/app/staticfiles
+      - /opt/poisker-secrets/firebase-adminsdk.json:/run/secrets/firebase-adminsdk.json:ro
     environment:
       DJANGO_DEBUG: "false"
       SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY}
@@ -47,8 +48,13 @@ services:
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-poisker.ru,www.poisker.ru}
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-https://poisker.ru,https://www.poisker.ru}
       STATIC_VERSION: ${STATIC_VERSION:-django-31}
+      FCM_ENABLED: ${FCM_ENABLED:-true}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-poisker-84437}
+      FIREBASE_CREDENTIALS_FILE: ${FIREBASE_CREDENTIALS_FILE:-/run/secrets/firebase-adminsdk.json}
 
   scheduler:
+    volumes:
+      - /opt/poisker-secrets/firebase-adminsdk.json:/run/secrets/firebase-adminsdk.json:ro
     environment:
       DJANGO_DEBUG: "false"
       SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY}
@@ -59,6 +65,9 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY}
       SCHEDULER_ENABLED: "true"
       SEED_DEMO_DATA: "0"
+      FCM_ENABLED: ${FCM_ENABLED:-true}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-poisker-84437}
+      FIREBASE_CREDENTIALS_FILE: ${FIREBASE_CREDENTIALS_FILE:-/run/secrets/firebase-adminsdk.json}
 
   nginx:
     profiles:
