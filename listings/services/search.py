@@ -270,9 +270,10 @@ def _build_search_query(query: str, expanded_terms: list[str] | None) -> str:
 def _typesense_search(query, city, category, price_min, price_max, with_photo, with_price, sort, limit, offset, expanded_terms=None):
     ensure_collection_exists()
     has_query = bool(query)
-    # Empty browse feed: trust Typesense rank_score sort — no 3× candidate over-fetch.
-    use_rerank = bool(has_query) and (
-        uses_hybrid_ranking(sort) or sort in {"price_asc", "price_desc"}
+    # Over-fetch candidates when we will re-rank in Python (search or browse rank).
+    use_rerank = (
+        (has_query and (uses_hybrid_ranking(sort) or sort in {"price_asc", "price_desc"}))
+        or ((not has_query) and sort == "rank")
     )
     if use_rerank:
         per_page = _candidate_limit(limit, offset)
@@ -373,14 +374,16 @@ def search_posts_fallback(query, city=None, category=None, price_min=None, price
     qs = _apply_text_filter(qs, query, expanded_terms)
     total = qs.count()
 
-    if query and (uses_hybrid_ranking(sort) or sort in {"price_asc", "price_desc"}):
-        posts = list(qs[: _candidate_limit(limit, offset)])
+    browse_rerank = (not query) and sort == "rank"
+    search_rerank = bool(query) and (uses_hybrid_ranking(sort) or sort in {"price_asc", "price_desc"})
+    if browse_rerank or search_rerank:
+        posts = list(_apply_sql_sort(qs, sort)[: _candidate_limit(limit, offset)])
         hits = [{"document": {"id": str(p.pk)}, "text_match": 0, "highlights": []} for p in posts]
         posts_map = {str(p.pk): p for p in posts}
         ranked = rerank_hits(
             hits,
             posts_map,
-            query=query,
+            query=query or "",
             mode="search" if query else "feed",
             sort=sort,
             price_min=price_min,
@@ -397,23 +400,8 @@ def search_posts_fallback(query, city=None, category=None, price_min=None, price
 def _hydrate_posts_map(post_ids: list[str]) -> dict:
     if not post_ids:
         return {}
-    # Fields needed for feed cards, SEO URLs, and light seller diversity.
-    qs = _live_posts_qs().filter(pk__in=post_ids).only(
-        "id",
-        "title",
-        "slug",
-        "price",
-        "condition",
-        "city",
-        "category",
-        "images",
-        "cover_index",
-        "user_id",
-        "rank_score",
-        "created_at",
-        "status",
-        "expires_at",
-    )
+    # Avoid .only() here: it conflicts with select_related("settlement") on the base qs.
+    qs = _live_posts_qs().filter(pk__in=post_ids)
     return {str(p.pk): p for p in qs}
 
 
@@ -448,28 +436,21 @@ def search_posts(query, city=None, category=None, price_min=None, price_max=None
             sort, limit, offset, expanded_terms, boost_city=boost_city,
             settlement_id=settlement_id, region_id=region_id,
         )
-    use_rerank = bool(query) and (
-        uses_hybrid_ranking(sort) or sort in {"price_asc", "price_desc"}
+    use_rerank = (
+        (bool(query) and (uses_hybrid_ranking(sort) or sort in {"price_asc", "price_desc"}))
+        or ((not query) and sort == "rank")
     )
-    # Empty browse: keep Typesense order (optional light seller diversity for default rank).
-    trust_typesense_order = not query
     try:
         result = _typesense_search(query, city, category, price_min, price_max, with_photo, with_price, sort, limit, offset, expanded_terms)
         hits = result.get("hits", [])
         post_ids = [h["document"]["id"] for h in hits if h.get("document", {}).get("id")]
         posts_map = _hydrate_posts_map(post_ids)
-        if trust_typesense_order:
-            results = _results_from_typesense_order(
-                hits,
-                posts_map,
-                diversify=(sort == "rank"),
-            )
-        else:
+        if use_rerank:
             mode = "search" if query else "feed"
             results = rerank_hits(
                 hits,
                 posts_map,
-                query=query,
+                query=query or "",
                 mode=mode,
                 sort=sort,
                 price_min=price_min,
@@ -477,8 +458,13 @@ def search_posts(query, city=None, category=None, price_min=None, price_max=None
                 boost_city=boost_city,
                 extract_highlight=_extract_highlight,
             )
-            if use_rerank:
-                results = results[offset : offset + limit]
+            results = results[offset : offset + limit]
+        else:
+            results = _results_from_typesense_order(
+                hits,
+                posts_map,
+                diversify=False,
+            )
         if not results and hits:
             return search_posts_fallback(
                 query, city, category, price_min, price_max, with_photo, with_price,

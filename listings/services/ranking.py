@@ -28,15 +28,15 @@ def freshness_score(created_at: datetime, bumped_at: datetime | None = None) -> 
 def completeness_score(post: Post) -> float:
     score = 0.0
     if post.has_photo:
-        score += 0.4
+        score += 0.25
     if post.images and len(post.images) >= 2:
-        score += 0.2
+        score += 0.1
     if post.price is not None:
-        score += 0.2
+        score += 0.25
     if len(post.body or "") >= 100:
-        score += 0.1
+        score += 0.2
     if 10 <= len(post.title or "") <= 50:
-        score += 0.1
+        score += 0.2
     return min(score, 1.0)
 
 
@@ -88,17 +88,16 @@ def active_paid_boost(post: Post) -> float:
 
 
 def calculate_rank_score(post: Post) -> float:
-    fresh = freshness_score(post.created_at, post.bumped_at)
+    """Quality score stored in DB (no time decay — freshness applied live in feed)."""
     complete = completeness_score(post)
     trust = trust_score(post)
     engage = engagement_score(post)
     reputation = seller_reputation_score(getattr(post, "user", None))
     base = (
-        fresh * 0.40
-        + complete * 0.22
-        + trust * 0.18
-        + engage * 0.08
-        + reputation * 0.12
+        complete * 0.36
+        + trust * 0.26
+        + engage * 0.14
+        + reputation * 0.24
     )
     return round(base * active_paid_boost(post), 4)
 

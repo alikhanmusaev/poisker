@@ -9,22 +9,22 @@ Mode = Literal["feed", "search"]
 
 FEED_WEIGHTS = {
     "relevance": 0.0,
-    "rank": 0.45,
-    "fresh": 0.22,
-    "promo": 0.13,
+    "rank": 0.36,
+    "fresh": 0.30,
+    "promo": 0.20,
     "exact": 0.0,
-    "price": 0.05,
-    "geo": 0.15,
+    "price": 0.04,
+    "geo": 0.10,
 }
 
 SEARCH_WEIGHTS = {
     "relevance": 0.42,
-    "rank": 0.22,
-    "fresh": 0.10,
-    "promo": 0.10,
+    "rank": 0.20,
+    "fresh": 0.12,
+    "promo": 0.12,
     "exact": 0.08,
     "price": 0.02,
-    "geo": 0.06,
+    "geo": 0.04,
 }
 
 HYBRID_SORTS = frozenset({"rank", "relevance"})
@@ -107,7 +107,7 @@ def compute_final_score(
     weights = SEARCH_WEIGHTS if mode == "search" else FEED_WEIGHTS
     relevance = normalize_relevance(text_match, max_text_match)
     rank = normalize_rank_score(post.rank_score)
-    fresh = freshness_score(post.created_at)
+    fresh = freshness_score(post.created_at, getattr(post, "bumped_at", None))
     promo = promotion_boost(post)
     exact = exact_title_bonus(query, post.title) if query else 0.0
     price = price_fit_bonus(price_min, price_max, post.price)
