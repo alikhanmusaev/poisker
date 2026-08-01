@@ -91,8 +91,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const promotePanel = document.querySelector('[data-promote-pending]');
   const promoteRefresh = document.querySelector('[data-promote-refresh]');
-  promoteRefresh?.addEventListener('click', () => {
-    window.location.reload();
+  promoteRefresh?.addEventListener('click', (event) => {
+    event.preventDefault();
+    const url = new URL(window.location.href);
+    url.searchParams.set('_ts', String(Date.now()));
+    window.location.replace(url.toString());
   });
   if (promotePanel) {
     let attempts = 0;
@@ -103,7 +106,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.clearInterval(timer);
         return;
       }
-      window.location.reload();
+      const url = new URL(window.location.href);
+      url.searchParams.set('_ts', String(Date.now()));
+      window.location.replace(url.toString());
     }, 3000);
   }
 

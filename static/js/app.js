@@ -18,7 +18,22 @@ if ('serviceWorker' in navigator) {
             '<button type="button" class="sw-update-banner-dismiss" data-sw-dismiss aria-label="Закрыть">×</button>';
           document.body.appendChild(banner);
           banner.querySelector('[data-sw-update]')?.addEventListener('click', () => {
-            worker.postMessage({ type: 'SKIP_WAITING' });
+            const btn = banner.querySelector('[data-sw-update]');
+            if (btn) {
+              btn.disabled = true;
+              btn.textContent = 'Обновление…';
+            }
+            try {
+              worker.postMessage({ type: 'SKIP_WAITING' });
+            } catch (_) {
+              /* ignore */
+            }
+            // Fallback: some browsers miss controllerchange after skipWaiting.
+            window.setTimeout(() => {
+              if (window.__swReloading) return;
+              window.__swReloading = true;
+              window.location.reload();
+            }, 400);
           });
           banner.querySelector('[data-sw-dismiss]')?.addEventListener('click', () => {
             banner.remove();
