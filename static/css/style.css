@@ -44,7 +44,7 @@
   --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
   --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.1);
 
-  --header-h: 64px;
+  --header-h: 56px;
   --mobile-nav-h: 72px;
   --container-max: 1200px;
   --sidebar-w: 300px;
@@ -90,7 +90,7 @@ img { display: block; max-width: 100%; height: auto; }
 }
 
 @media (min-width: 768px) {
-  .container { padding: 0 24px; }
+  .container { padding: 0 20px; }
 }
 
 /* Icons */
@@ -257,25 +257,25 @@ img { display: block; max-width: 100%; height: auto; }
 /* Main */
 .site-main {
   flex: 1;
-  padding: 20px 0 24px;
+  padding: 12px 0 16px;
 }
 
 @media (min-width: 768px) {
-  .site-main { padding: 28px 0 40px; }
+  .site-main { padding: 20px 0 28px; }
 }
 
 body:not(.page-home) .site-main {
-  padding-bottom: calc(var(--mobile-nav-h) + 16px);
+  padding-bottom: calc(var(--mobile-nav-h) + 12px);
 }
 
 @media (min-width: 768px) {
-  body:not(.page-home) .site-main { padding-bottom: 40px; }
+  body:not(.page-home) .site-main { padding-bottom: 28px; }
 }
 
 .page-home .site-main { padding-bottom: calc(var(--mobile-nav-h) + 8px); }
 
 @media (min-width: 768px) {
-  .page-home .site-main { padding-bottom: 40px; }
+  .page-home .site-main { padding-bottom: 28px; }
 }
 
 /* Mobile nav */
@@ -920,7 +920,7 @@ body:not(.page-home) .site-main {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .feed-count {
@@ -936,9 +936,9 @@ body:not(.page-home) .site-main {
 .feed-geo-fallback {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  margin: -4px 0 16px;
-  padding: 12px 14px;
+  gap: 8px;
+  margin: -2px 0 12px;
+  padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid rgba(245, 158, 11, 0.28);
   background: #fffbeb;
@@ -958,7 +958,7 @@ body:not(.page-home) .site-main {
 }
 
 .feed-section {
-  margin: 0 0 32px;
+  margin: 0 0 20px;
 }
 
 .feed-section__head {
@@ -966,7 +966,7 @@ body:not(.page-home) .site-main {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 6px 12px;
-  margin: 0 0 14px;
+  margin: 0 0 8px;
 }
 
 .feed-section__title {
@@ -974,7 +974,7 @@ body:not(.page-home) .site-main {
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--slate-900);
@@ -989,7 +989,7 @@ body:not(.page-home) .site-main {
 }
 
 .feed-section__title--organic {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
 }
 
 .feed-section--promoted {
@@ -1303,7 +1303,7 @@ textarea:focus {
 }
 
 .form .field,
-.form label { display: block; margin-bottom: 16px; }
+.form label { display: block; margin-bottom: 12px; }
 
 .form label { font-size: 13px; font-weight: 500; color: var(--slate-700); }
 
@@ -1369,7 +1369,7 @@ textarea:focus {
 .post-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 8px;
 }
 
 .post-grid-append {
@@ -1377,11 +1377,11 @@ textarea:focus {
 }
 
 @media (min-width: 640px) {
-  .post-grid { gap: 16px; }
+  .post-grid { gap: 12px; }
 }
 
 @media (min-width: 1024px) {
-  .post-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .post-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; }
 }
 
 @media (min-width: 1280px) {
@@ -1575,8 +1575,8 @@ textarea:focus {
 .post-card-body {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px 14px;
+  gap: 4px;
+  padding: 10px 12px 12px;
   flex: 1;
   min-width: 0;
 }
@@ -1676,7 +1676,7 @@ textarea:focus {
   align-items: center;
   gap: 8px;
   min-height: 44px;
-  margin: -6px 0 12px;
+  margin: -4px 0 8px;
   color: var(--primary-800);
   font-size: 14px;
   font-weight: 600;
@@ -1745,7 +1745,7 @@ textarea:focus {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 18px;
-  padding: 16px;
+  padding: 12px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   overflow-x: clip;
   min-width: 0;
@@ -1756,7 +1756,7 @@ textarea:focus {
 }
 
 @media (min-width: 768px) {
-  .page-card { padding: 28px; }
+  .page-card { padding: 20px; }
 }
 
 .post-detail .post-gallery {
@@ -1855,8 +1855,8 @@ textarea:focus {
 
 .contact-box {
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: 8px;
+  padding: 12px;
   border-radius: 14px;
   background: var(--slate-50);
   border: 1px solid var(--color-border);
