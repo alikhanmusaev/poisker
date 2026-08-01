@@ -9,12 +9,12 @@ cleanup() { rm -rf "$WORKDIR"; }
 trap cleanup EXIT
 
 ICONS=(
-  alert-circle apple arrow-left baby banknote bell bookmark bookmark-check bookmark-x
+  alert-circle apple arrow-left arrow-up baby banknote bell bookmark bookmark-check bookmark-x
   briefcase car check check-circle check-circle-2 chevron-down chevron-left chevron-right
   clock cog dumbbell external-link eye eye-off file-pen-line flag flower-2 folder-heart
   hammer handshake home image image-plus inbox key-round layout-dashboard layout-grid
   lock-keyhole log-in log-out mail mail-check map-pin menu message-circle message-square-warning
-  messages-square paw-print pencil phone plus reply save search send settings share-2
+  messages-square paw-print pencil phone plus refresh-cw reply save search send settings share-2
   shield-alert shield-check shopping-bag smartphone sofa sparkles star store tag trash-2
   user user-plus wifi-off wrench x zap zoom-in zoom-out shirt
 )
@@ -27,12 +27,12 @@ python3 - "$WORKDIR" <<'PY'
 import sys
 from pathlib import Path
 icons = """
-alert-circle apple arrow-left baby banknote bell bookmark bookmark-check bookmark-x
+alert-circle apple arrow-left arrow-up baby banknote bell bookmark bookmark-check bookmark-x
 briefcase car check check-circle check-circle-2 chevron-down chevron-left chevron-right
 clock cog dumbbell external-link eye eye-off file-pen-line flag flower-2 folder-heart
 hammer handshake home image image-plus inbox key-round layout-dashboard layout-grid
 lock-keyhole log-in log-out mail mail-check map-pin menu message-circle message-square-warning
-messages-square paw-print pencil phone plus reply save search send settings share-2
+messages-square paw-print pencil phone plus refresh-cw reply save search send settings share-2
 shield-alert shield-check shopping-bag smartphone sofa sparkles star store tag trash-2
 user user-plus wifi-off wrench x zap zoom-in zoom-out shirt
 """.split()

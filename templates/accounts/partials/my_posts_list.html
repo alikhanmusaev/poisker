@@ -45,7 +45,7 @@
               {% endif %}
               {% if post.is_promoted and post.status == 'published' and post.paid_until %}
                 <span class="my-post-status my-post-status-promoted" title="Поднято до {{ post.paid_until|date:'d.m.Y H:i' }}">
-                  <i data-lucide="zap" class="icon icon-xs" aria-hidden="true"></i>
+                  <i data-lucide="arrow-up" class="icon icon-xs" aria-hidden="true"></i>
                   до {{ post.paid_until|date:"d.m" }}
                 </span>
               {% endif %}
@@ -107,7 +107,7 @@
                 <form method="post" action="{% url 'listings:promote' post.id %}">
                   {% csrf_token %}
                   <button type="submit" class="btn btn-primary btn-sm" title="{% if post.is_promoted %}Продлить{% else %}Поднять{% endif %} — {{ promote_label }}">
-                    <i data-lucide="zap" class="icon icon-xs" aria-hidden="true"></i>
+                    <i data-lucide="{% if post.is_promoted %}refresh-cw{% else %}arrow-up{% endif %}" class="icon icon-xs" aria-hidden="true"></i>
                     {% if post.is_promoted %}Продлить{% else %}Поднять{% endif %}
                     <span class="my-post-promote-price">{{ promote_label }}</span>
                   </button>

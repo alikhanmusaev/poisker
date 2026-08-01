@@ -116,7 +116,7 @@
     >
       {% if post.is_promoted %}
         <div class="promote-panel__icon" aria-hidden="true">
-          <i data-lucide="zap" class="icon"></i>
+          <i data-lucide="arrow-up" class="icon"></i>
         </div>
         <div class="promote-panel__body">
           <p class="promote-panel__title">Объявление поднято</p>
@@ -126,6 +126,7 @@
           <form method="post" action="{% url 'listings:promote' post.id %}" class="promote-panel__actions">
             {% csrf_token %}
             <button type="submit" class="btn btn-secondary btn-sm">
+              <i data-lucide="refresh-cw" class="icon icon-xs" aria-hidden="true"></i>
               Продлить ещё на {{ promote_days }} дн. — {{ promote_price_rub }} ₽
             </button>
           </form>
@@ -145,7 +146,7 @@
         </div>
       {% else %}
         <div class="promote-panel__icon" aria-hidden="true">
-          <i data-lucide="zap" class="icon"></i>
+          <i data-lucide="arrow-up" class="icon"></i>
         </div>
         <div class="promote-panel__body">
           <p class="promote-panel__title">Поднять в поиске</p>
@@ -155,6 +156,7 @@
           <form method="post" action="{% url 'listings:promote' post.id %}" class="promote-panel__actions">
             {% csrf_token %}
             <button type="submit" class="btn btn-primary btn-sm">
+              <i data-lucide="arrow-up" class="icon icon-xs" aria-hidden="true"></i>
               Оплатить {{ promote_label }}
             </button>
           </form>
@@ -163,7 +165,7 @@
     </section>
   {% elif post.is_promoted %}
     <span class="badge badge-promoted" style="position:static;display:inline-flex;margin-bottom:12px;">
-      <i data-lucide="zap" class="icon icon-xs" aria-hidden="true"></i>
+      <i data-lucide="arrow-up" class="icon icon-xs" aria-hidden="true"></i>
       Поднято{% if post.paid_until %} до {{ post.paid_until|date:"d.m.Y H:i" }}{% endif %}
     </span>
   {% endif %}
