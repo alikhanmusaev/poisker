@@ -1973,7 +1973,7 @@ textarea:focus {
 .post-gallery-viewport {
   position: relative;
   overflow: hidden;
-  border-radius: var(--radius-md);
+  border-radius: 0;
   background: var(--slate-100);
   aspect-ratio: 4 / 3;
   touch-action: pan-y;
