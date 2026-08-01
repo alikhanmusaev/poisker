@@ -933,6 +933,30 @@ body:not(.page-home) .site-main {
   font-weight: 600;
 }
 
+.feed-geo-fallback {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: -4px 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.feed-geo-fallback p {
+  margin: 0;
+}
+
+.feed-geo-fallback .icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #b45309;
+}
+
 .sort-control {
   display: flex;
   align-items: center;

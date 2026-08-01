@@ -37,6 +37,13 @@
     </div>
   </div>
 
+  {% if geo_fallback and geo_fallback_label %}
+    <div class="feed-geo-fallback" role="status">
+      <i data-lucide="map-pin" class="icon icon-sm" aria-hidden="true"></i>
+      <p>{{ geo_fallback_label }}</p>
+    </div>
+  {% endif %}
+
   <div id="post-list">
     {% include "partials/post_list.html" %}
   </div>

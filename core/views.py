@@ -14,8 +14,9 @@ from listings.constants import (
     RESERVED_SLUGS,
 )
 from listings.models import Post
+from listings.services.geo_fallback import search_posts_with_geo_fallback
 from listings.services.geo_preference import resolve_boost_city
-from listings.services.search import search_posts, suggest as search_suggest
+from listings.services.search import suggest as search_suggest
 from listings.services.seo_urls import make_seo_slug, post_public_url
 from listings.services.smart_query import parse_search_query
 from locations.models import Region, Settlement
@@ -140,7 +141,14 @@ def _listing_context(request, *, fixed_settlement=None, fixed_region=None, fixed
     if geo.scope == "region" and geo.region is not None:
         region_id = geo.region.id
 
-    results, total = search_posts(
+    settlement_name = geo.settlement.name if geo.settlement is not None else ""
+    region_name = ""
+    if geo.region is not None:
+        region_name = geo.region.name
+    elif geo.settlement is not None:
+        region_name = geo.settlement.region.name
+
+    found = search_posts_with_geo_fallback(
         query=search_text,
         city=(city or None) if geo.settlement is None and geo.scope != "region" else None,
         category=category or None,
@@ -155,7 +163,11 @@ def _listing_context(request, *, fixed_settlement=None, fixed_region=None, fixed
         ),
         settlement_id=geo.settlement.id if geo.settlement is not None else None,
         region_id=region_id,
+        settlement_name=settlement_name,
+        region_name=region_name,
     )
+    results = found.results
+    total = found.total
     has_next = page * PER_PAGE < total
 
     category_name = CATEGORY_LABELS.get(category, "") if category else ""
@@ -205,6 +217,9 @@ def _listing_context(request, *, fixed_settlement=None, fixed_region=None, fixed
         "page": page,
         "results": results,
         "total": total,
+        "local_total": found.local_total,
+        "geo_fallback": found.fallback,
+        "geo_fallback_label": found.fallback_label,
         "has_next": has_next,
         "price_min": price_min,
         "price_max": price_max,
@@ -221,8 +236,9 @@ def _listing_context(request, *, fixed_settlement=None, fixed_region=None, fixed
             search_text
             or page > 1
             or sort not in (DEFAULT_SORT, DEFAULT_SEARCH_SORT)
-            or (fixed_settlement is not None and total == 0)
-            or (fixed_region is not None and total == 0)
+            or found.fallback
+            or (fixed_settlement is not None and found.local_total == 0)
+            or (fixed_region is not None and found.local_total == 0)
         ),
         "category_bookmarked": False,
         "bookmarked_post_ids": set(),
