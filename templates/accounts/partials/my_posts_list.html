@@ -3,45 +3,61 @@
   <div class="my-posts-list">
     {% for post in posts %}
       {% post_cover_image post as cover_image %}
-      <article class="my-post-card">
+      <article class="my-post-card{% if post.is_promoted and post.status == 'published' %} is-promoted{% endif %}">
         <a href="{% post_public_url post %}" class="my-post-card-media" aria-label="{{ post.title }}">
           {% if cover_image %}
-            <img src="{{ cover_image|image_sm }}" alt="" class="my-post-card-img" loading="lazy" width="72" height="72">
+            <img src="{{ cover_image|image_sm }}" alt="" class="my-post-card-img" loading="lazy" width="88" height="88">
           {% else %}
             <div class="my-post-card-img my-post-card-img-placeholder" aria-hidden="true">
               <i data-lucide="image" class="icon" aria-hidden="true"></i>
             </div>
           {% endif %}
         </a>
-        <div class="my-post-card-content">
-          <div class="my-post-card-title-row">
-            <h3 class="my-post-card-title">
-              <a href="{% post_public_url post %}" class="my-post-card-title-link">{{ post.title }}</a>
-            </h3>
-            {% if post.status == 'published' and post.pending_revision %}
-              <span class="my-post-status my-post-status-muted">Правки на модерации</span>
-            {% elif post.status == 'published' %}
-              <span class="my-post-status my-post-status-active">{{ post.get_status_display }}</span>
-            {% elif post.status == 'pending' %}
-              <span class="my-post-status my-post-status-muted">{{ post.get_status_display }}</span>
-            {% elif post.status == 'draft' %}
-              <span class="my-post-status my-post-status-draft">{{ post.get_status_display }}</span>
-            {% elif post.status == 'hidden' %}
-              <span class="my-post-status my-post-status-hidden">{{ post.get_status_display }}</span>
-            {% else %}
-              <span class="my-post-status my-post-status-ended">{{ post.get_status_display }}</span>
-            {% endif %}
+
+        <div class="my-post-card-body">
+          <div class="my-post-card-top">
+            <div class="my-post-card-heading">
+              <p class="my-post-card-price {% if post.price is None %}is-muted{% endif %}">{{ post.price|post_price_display }}</p>
+              <h3 class="my-post-card-title">
+                <a href="{% post_public_url post %}" class="my-post-card-title-link">{{ post.title }}</a>
+              </h3>
+              <p class="my-post-card-meta">
+                {{ cities|get_item:post.city }}
+                <span class="my-post-meta-sep" aria-hidden="true">·</span>
+                {{ category_labels|get_item:post.category }}
+                <span class="my-post-meta-sep" aria-hidden="true">·</span>
+                {{ condition_labels|get_item:post.condition }}
+              </p>
+            </div>
+            <div class="my-post-card-badges">
+              {% if post.status == 'published' and post.pending_revision %}
+                <span class="my-post-status my-post-status-muted">Правки на проверке</span>
+              {% elif post.status == 'published' %}
+                <span class="my-post-status my-post-status-active">{{ post.get_status_display }}</span>
+              {% elif post.status == 'pending' %}
+                <span class="my-post-status my-post-status-muted">{{ post.get_status_display }}</span>
+              {% elif post.status == 'draft' %}
+                <span class="my-post-status my-post-status-draft">{{ post.get_status_display }}</span>
+              {% elif post.status == 'hidden' %}
+                <span class="my-post-status my-post-status-hidden">{{ post.get_status_display }}</span>
+              {% else %}
+                <span class="my-post-status my-post-status-ended">{{ post.get_status_display }}</span>
+              {% endif %}
+              {% if post.is_promoted and post.status == 'published' and post.paid_until %}
+                <span class="my-post-status my-post-status-promoted" title="Поднято до {{ post.paid_until|date:'d.m.Y H:i' }}">
+                  <i data-lucide="zap" class="icon icon-xs" aria-hidden="true"></i>
+                  до {{ post.paid_until|date:"d.m" }}
+                </span>
+              {% endif %}
+            </div>
           </div>
+
           {% if post.pending_revision %}
             <p class="my-post-moderation-note">Новые заголовок и описание появятся после проверки модератором.</p>
           {% elif post.status == 'hidden' and post.moderation_note %}
             <p class="my-post-moderation-note">Причина: {{ post.moderation_note }}</p>
           {% endif %}
-          <p class="my-post-card-date">
-            {{ cities|get_item:post.city }} · {{ category_labels|get_item:post.category }}
-            · {{ post.price|post_price_display }}
-            · {{ condition_labels|get_item:post.condition }}
-          </p>
+
           {% if post.status != 'draft' %}
             <ul class="my-post-stats" aria-label="Статистика объявления">
               <li title="Просмотры">
@@ -70,72 +86,74 @@
               {% endwith %}
             </ul>
           {% endif %}
+
           <div class="my-post-card-actions">
-            {% if post.status != 'expired' and post.status != 'hidden' or not post.ever_published and post.status == 'hidden' %}
-              <a href="{% url 'listings:edit' post.id %}" class="btn btn-secondary btn-sm">
-                <i data-lucide="pencil" class="icon icon-xs" aria-hidden="true"></i>
-                Редактировать
-              </a>
-            {% endif %}
-            {% if post.status == 'draft' %}
-              <form method="post" action="{% url 'listings:submit' post.id %}" onsubmit="return confirm('Отправить объявление на модерацию?')">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-primary btn-sm">
-                  <i data-lucide="send" class="icon icon-xs" aria-hidden="true"></i>
-                  На модерацию
-                </button>
-              </form>
-              <form method="post" action="{% url 'listings:delete' post.id %}" onsubmit="return confirm('Удалить черновик?')">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ return_url }}">
-                <button type="submit" class="btn btn-secondary btn-sm">
-                  <i data-lucide="trash-2" class="icon icon-xs" aria-hidden="true"></i>
-                  Удалить
-                </button>
-              </form>
-            {% elif post.status == 'published' %}
-              {% if promote_enabled %}
-              <form method="post" action="{% url 'listings:promote' post.id %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-primary btn-sm" title="{% if post.is_promoted %}Продлить{% else %}Поднять{% endif %} — {{ promote_label }}">
-                  <i data-lucide="zap" class="icon icon-xs" aria-hidden="true"></i>
-                  {% if post.is_promoted %}Продлить{% else %}Поднять{% endif %}
-                  <span class="my-post-promote-price">{{ promote_label }}</span>
-                </button>
-              </form>
+            <div class="my-post-card-actions-primary">
+              {% if post.status != 'expired' and post.status != 'hidden' or not post.ever_published and post.status == 'hidden' %}
+                <a href="{% url 'listings:edit' post.id %}" class="btn btn-secondary btn-sm">
+                  <i data-lucide="pencil" class="icon icon-xs" aria-hidden="true"></i>
+                  Изменить
+                </a>
               {% endif %}
-              {% if post.is_promoted and post.paid_until %}
-                <span class="my-post-status my-post-status-active" title="Поднято до {{ post.paid_until|date:'d.m.Y H:i' }}">
-                  Поднято до {{ post.paid_until|date:"d.m.Y" }}
-                </span>
+              {% if post.status == 'draft' %}
+                <form method="post" action="{% url 'listings:submit' post.id %}" onsubmit="return confirm('Отправить объявление на модерацию?')">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-primary btn-sm">
+                    <i data-lucide="send" class="icon icon-xs" aria-hidden="true"></i>
+                    На модерацию
+                  </button>
+                </form>
+              {% elif post.status == 'published' and promote_enabled %}
+                <form method="post" action="{% url 'listings:promote' post.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-primary btn-sm" title="{% if post.is_promoted %}Продлить{% else %}Поднять{% endif %} — {{ promote_label }}">
+                    <i data-lucide="zap" class="icon icon-xs" aria-hidden="true"></i>
+                    {% if post.is_promoted %}Продлить{% else %}Поднять{% endif %}
+                    <span class="my-post-promote-price">{{ promote_label }}</span>
+                  </button>
+                </form>
+              {% elif post.status == 'hidden' or post.status == 'expired' %}
+                <form method="post" action="{% url 'listings:republish' post.id %}" onsubmit="return confirm('Отправить объявление на модерацию снова?')">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{% url 'accounts:profile' %}">
+                  <button type="submit" class="btn btn-primary btn-sm">
+                    <i data-lucide="send" class="icon icon-xs" aria-hidden="true"></i>
+                    Снова на модерацию
+                  </button>
+                </form>
               {% endif %}
-              <form method="post" action="{% url 'listings:delete' post.id %}" onsubmit="return confirm('Снять объявление с публикации? Оно исчезнет из поиска и появится во вкладке «Снятые».')">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ return_url }}">
-                <button type="submit" class="btn btn-secondary btn-sm">
-                  <i data-lucide="eye-off" class="icon icon-xs" aria-hidden="true"></i>
-                  Снять с публикации
-                </button>
-              </form>
-            {% elif post.status == 'hidden' or post.status == 'expired' %}
-              <form method="post" action="{% url 'listings:republish' post.id %}" onsubmit="return confirm('Отправить объявление на модерацию снова?')">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{% url 'accounts:profile' %}">
-                <button type="submit" class="btn btn-primary btn-sm">
-                  <i data-lucide="send" class="icon icon-xs" aria-hidden="true"></i>
-                  На модерацию снова
-                </button>
-              </form>
-            {% elif not post.ever_published and post.status != 'deleted' %}
-              <form method="post" action="{% url 'listings:delete' post.id %}" onsubmit="return confirm('Удалить объявление?')">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ return_url }}">
-                <button type="submit" class="btn btn-secondary btn-sm">
-                  <i data-lucide="trash-2" class="icon icon-xs" aria-hidden="true"></i>
-                  Удалить
-                </button>
-              </form>
-            {% endif %}
+            </div>
+
+            <div class="my-post-card-actions-secondary">
+              {% if post.status == 'draft' %}
+                <form method="post" action="{% url 'listings:delete' post.id %}" onsubmit="return confirm('Удалить черновик?')">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ return_url }}">
+                  <button type="submit" class="my-post-text-action is-danger">
+                    <i data-lucide="trash-2" class="icon icon-xs" aria-hidden="true"></i>
+                    Удалить
+                  </button>
+                </form>
+              {% elif post.status == 'published' %}
+                <form method="post" action="{% url 'listings:delete' post.id %}" onsubmit="return confirm('Снять объявление с публикации? Оно исчезнет из поиска и появится во вкладке «Снятые».')">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ return_url }}">
+                  <button type="submit" class="my-post-text-action">
+                    <i data-lucide="eye-off" class="icon icon-xs" aria-hidden="true"></i>
+                    Снять
+                  </button>
+                </form>
+              {% elif not post.ever_published and post.status != 'deleted' and post.status != 'hidden' and post.status != 'expired' %}
+                <form method="post" action="{% url 'listings:delete' post.id %}" onsubmit="return confirm('Удалить объявление?')">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ return_url }}">
+                  <button type="submit" class="my-post-text-action is-danger">
+                    <i data-lucide="trash-2" class="icon icon-xs" aria-hidden="true"></i>
+                    Удалить
+                  </button>
+                </form>
+              {% endif %}
+            </div>
           </div>
         </div>
       </article>

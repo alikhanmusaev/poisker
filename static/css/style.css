@@ -2850,28 +2850,34 @@ body.lightbox-open {
 .my-posts-list {
   list-style: none;
   display: grid;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 16px;
 }
 
 .my-post-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  padding: 12px;
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 12px;
   align-items: start;
   overflow: hidden;
   min-width: 0;
+  box-shadow: var(--shadow-xs);
+}
+
+.my-post-card.is-promoted {
+  border-color: rgba(185, 28, 28, 0.22);
+  box-shadow: var(--shadow-xs), inset 3px 0 0 var(--primary-600);
 }
 
 .my-post-card-media {
   display: block;
-  width: 64px;
-  height: 64px;
-  border-radius: 6px;
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
   overflow: hidden;
   flex-shrink: 0;
   background: var(--slate-100);
@@ -2888,6 +2894,8 @@ body.lightbox-open {
 .my-post-card-img-placeholder {
   display: grid;
   place-items: center;
+  width: 100%;
+  height: 100%;
   color: var(--slate-400);
   background: linear-gradient(180deg, var(--slate-100), var(--slate-200));
 }
@@ -2897,23 +2905,49 @@ body.lightbox-open {
   height: 22px;
 }
 
-.my-post-card-content {
+.my-post-card-body {
   min-width: 0;
-  display: grid;
-  gap: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-@media (min-width: 480px) {
-  .my-post-card {
-    grid-template-columns: 72px minmax(0, 1fr);
-    padding: 10px 12px;
-    gap: 12px;
-  }
+.my-post-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
 
-  .my-post-card-media {
-    width: 72px;
-    height: 72px;
-  }
+.my-post-card-heading {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+
+.my-post-card-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.my-post-card-price {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--primary-800);
+  font-variant-numeric: tabular-nums;
+}
+
+.my-post-card-price.is-muted {
+  color: var(--slate-500);
+  font-weight: 600;
+  font-size: 14px;
 }
 
 .my-post-card-title {
@@ -2934,61 +2968,124 @@ body.lightbox-open {
 
 .my-post-card-title-link:hover {
   color: var(--primary-700);
-  text-decoration: underline;
 }
 
-.my-post-card-date {
-  font-size: 11px;
-  color: var(--color-muted);
+.my-post-card-meta {
   margin: 0;
+  font-size: 12px;
   line-height: 1.35;
+  color: var(--color-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.my-post-meta-sep {
+  margin: 0 2px;
+  color: var(--slate-300);
+}
+
 .my-post-card-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--slate-100);
   max-width: 100%;
   min-width: 0;
+}
+
+.my-post-card-actions-primary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.my-post-card-actions-secondary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .my-post-card-actions form {
   margin: 0;
   min-width: 0;
-  max-width: 100%;
 }
 
 .my-post-card-actions .btn-sm {
-  height: auto;
-  min-height: 32px;
+  height: 34px;
+  min-height: 34px;
   min-width: 0;
-  max-width: 100%;
-  padding: 6px 8px;
-  font-size: 11px;
-  gap: 4px;
-  white-space: normal;
-  line-height: 1.25;
-  text-align: left;
+  padding: 0 10px;
+  font-size: 12px;
+  gap: 5px;
+  white-space: nowrap;
+  line-height: 1;
 }
 
 .my-post-card-actions .btn-sm .icon-xs {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
 }
 
 .my-post-promote-price {
-  opacity: 0.9;
+  opacity: 0.85;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.my-post-text-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 0 6px;
+  border: none;
+  background: transparent;
+  color: var(--slate-500);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.my-post-text-action:hover {
+  color: var(--slate-800);
+  background: var(--slate-50);
+}
+
+.my-post-text-action.is-danger:hover {
+  color: var(--color-danger);
+  background: var(--red-50);
 }
 
 .my-post-status {
-  padding: 1px 6px;
-  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
   line-height: 1.5;
+}
+
+.my-post-status-promoted {
+  background: var(--primary-50);
+  color: var(--primary-800);
+}
+
+.my-post-status-promoted .icon {
+  width: 11px;
+  height: 11px;
 }
 
 .my-post-card-url {
@@ -3016,6 +3113,47 @@ body.lightbox-open {
 
 .my-posts-note p { margin: 0; }
 
+@media (min-width: 480px) {
+  .my-post-card {
+    grid-template-columns: 96px minmax(0, 1fr);
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .my-post-card-media {
+    width: 96px;
+    height: 96px;
+  }
+
+  .my-post-card-price {
+    font-size: 17px;
+  }
+}
+
+@media (max-width: 420px) {
+  .my-post-promote-price {
+    display: none;
+  }
+
+  .my-post-card-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .my-post-card-actions-primary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .my-post-card-actions-primary .btn-sm {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .my-post-card-actions-secondary {
+    justify-content: flex-end;
+  }
+}
 .create-hint {
   display: flex;
   gap: 10px;
@@ -3700,11 +3838,11 @@ input[type="file"].sr-only,
 
 .my-post-stats {
   list-style: none;
-  margin: 6px 0 0;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 12px;
+  gap: 6px 10px;
   font-size: 12px;
   color: var(--slate-600);
 }
