@@ -168,12 +168,24 @@ def _send_to_token(device: PushDevice, data: dict[str, str]) -> bool:
     from firebase_admin.messaging import UnregisteredError
 
     link = data.get("url") or ""
+    title = data.get("title") or "Поискер"
+    body = data.get("body") or ""
+    icon = "https://poisker.ru/static/icons/icon-192.png"
+
+    # Web needs an explicit notification payload (data-only is easy to miss
+    # when a tab is open, and some browsers won't surface it at all).
     message = messaging.Message(
         data={k: str(v) for k, v in data.items()},
         token=device.token,
         android=messaging.AndroidConfig(priority="high"),
         webpush=messaging.WebpushConfig(
-            headers={"Urgency": "high"},
+            headers={"Urgency": "high", "TTL": "86400"},
+            notification=messaging.WebpushNotification(
+                title=title,
+                body=body,
+                icon=icon,
+                language="ru",
+            ),
             fcm_options=messaging.WebpushFCMOptions(link=link) if link else None,
         ),
     )

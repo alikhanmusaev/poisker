@@ -133,6 +133,31 @@
     return token;
   }
 
+  function wireForegroundMessages() {
+    ensureFirebase()
+      .then((messaging) => {
+        messaging.onMessage((payload) => {
+          const data = payload?.data || {};
+          const title =
+            data.title || payload?.notification?.title || 'Поискер';
+          const body = data.body || payload?.notification?.body || '';
+          const url = data.url || '/';
+          if (Notification.permission !== 'granted') return;
+          const n = new Notification(title, {
+            body,
+            icon: '/static/icons/icon-192.png',
+            data: { url },
+          });
+          n.onclick = () => {
+            window.focus();
+            if (url) window.location.href = url;
+            n.close();
+          };
+        });
+      })
+      .catch((err) => console.warn('push foreground handler failed', err));
+  }
+
   async function unregisterToken() {
     try {
       const deviceId = localStorage.getItem(DEVICE_KEY);
@@ -180,6 +205,7 @@
           return;
         }
         await registerToken();
+        wireForegroundMessages();
         banner.remove();
       } catch (err) {
         console.warn('push enable failed', err);
@@ -200,6 +226,7 @@
     if (permission === 'granted') {
       try {
         await registerToken();
+        wireForegroundMessages();
       } catch (err) {
         console.warn('push register failed', err);
       }

@@ -141,9 +141,13 @@ firebase.initializeApp({
 try {
   const messaging = firebase.messaging();
   messaging.onBackgroundMessage((payload) => {
+    // If FCM already included a notification payload, the browser shows it.
+    if (payload?.notification?.title) {
+      return;
+    }
     const data = payload?.data || {};
-    const title = data.title || payload?.notification?.title || 'Поискер';
-    const body = data.body || payload?.notification?.body || '';
+    const title = data.title || 'Поискер';
+    const body = data.body || '';
     const url = data.url || self.location.origin + '/';
     return self.registration.showNotification(title, {
       body,
