@@ -1,4 +1,4 @@
-"""Home page ranking: promoted block + new / popular / recommended."""
+"""Home page ranking: new / popular / recommended (promoted mixed via score)."""
 
 from __future__ import annotations
 
@@ -7,8 +7,7 @@ from django.utils import timezone
 from listings.models import Post
 from listings.ranking.config import get_ranking_settings
 from listings.ranking.diversity import DiversityService
-from listings.ranking.promotion_service import PromotionService
-from listings.ranking.strategies.base import RankContext, RankingResult, as_items, score_post
+from listings.ranking.strategies.base import RankContext, RankingResult, score_post
 from listings.services.geo_fallback import search_posts_with_geo_fallback
 
 
@@ -17,21 +16,9 @@ class HomeRankingStrategy:
 
     def __init__(self):
         self.settings = get_ranking_settings()
-        self.promotions = PromotionService()
         self.diversity = DiversityService(self.settings)
 
     def build(self, ctx: RankContext) -> RankingResult:
-        promoted_posts: list[Post] = []
-        if ctx.page <= 1:
-            promoted_posts = self.promotions.promoted_for_block(
-                limit=self.settings.home_promoted_size,
-                category=ctx.category,
-                settlement_id=ctx.settlement_id,
-                region_id=ctx.region_id,
-            )
-        promoted_ids = {p.pk for p in promoted_posts}
-        promoted_items = as_items(promoted_posts)
-
         # Candidate pool via existing search + geo fallback (organic browse).
         found = search_posts_with_geo_fallback(
             query="",
@@ -45,11 +32,7 @@ class HomeRankingStrategy:
             region_id=ctx.region_id,
             boost_city=ctx.boost_city,
         )
-        candidates = [
-            row["post"]
-            for row in found.results
-            if row.get("post") is not None and row["post"].pk not in promoted_ids
-        ]
+        candidates = [row["post"] for row in found.results if row.get("post") is not None]
         # Top up from ORM if needed.
         if len(candidates) < 40:
             now = timezone.now()
@@ -62,7 +45,7 @@ class HomeRankingStrategy:
                 qs = qs.filter(settlement_id=ctx.settlement_id)
             elif ctx.region_id:
                 qs = qs.filter(settlement__region_id=ctx.region_id)
-            qs = qs.exclude(pk__in=promoted_ids | {p.pk for p in candidates})
+            qs = qs.exclude(pk__in={p.pk for p in candidates})
             candidates.extend(list(qs.order_by("-created_at")[:80]))
 
         weights = self.settings.home
@@ -78,7 +61,7 @@ class HomeRankingStrategy:
         scored.sort(key=lambda x: x["score"], reverse=True)
 
         section_size = self.settings.home_section_size
-        used: set = set(promoted_ids)
+        used: set = set()
 
         def take(pool: list[dict], n: int, key_fn) -> list[dict]:
             ordered = sorted(pool, key=key_fn, reverse=True)
@@ -113,15 +96,12 @@ class HomeRankingStrategy:
         )
 
         # Flat results for pagination / HTMX consumers: recommended-first organic.
-        organic = self.diversity.apply(
-            [i for i in scored if i["post"].pk not in promoted_ids],
-            enforce_category=True,
-        )
+        organic = self.diversity.apply(scored, enforce_category=True)
         page_items = organic[ctx.offset : ctx.offset + ctx.limit]
 
         return RankingResult(
             mode=self.mode,
-            promoted=promoted_items,
+            promoted=[],
             results=page_items,
             sections={
                 "new": new_items,

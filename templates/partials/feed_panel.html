@@ -27,22 +27,6 @@
     </div>
   {% endif %}
 
-  {% if promoted_results %}
-    <section class="feed-section feed-section--promoted" aria-label="Поднятые объявления">
-      <div class="feed-section__head">
-        <h2 class="feed-section__title">Поднятые</h2>
-        <p class="feed-section__hint">Объявления с расширенным охватом</p>
-      </div>
-      <div class="post-grid post-grid--promoted">
-        {% for item in promoted_results %}
-          {% with post=item.post|default:item %}
-            {% include "partials/post_card.html" with lcp_priority=forloop.first card_variant="promoted" %}
-          {% endwith %}
-        {% endfor %}
-      </div>
-    </section>
-  {% endif %}
-
   {% if ranking_mode == "home" and feed_sections and page == 1 and not query %}
     {% if feed_sections.new %}
       <section class="feed-section" aria-label="Новые объявления">
@@ -81,10 +65,6 @@
       </section>
     {% endif %}
   {% else %}
-    {% if ranking_mode == "category" and promoted_results and page == 1 %}
-      <div class="feed-section-divider" role="presentation"></div>
-      <h2 class="feed-section__title feed-section__title--organic">Все объявления</h2>
-    {% endif %}
     <div id="post-list">
       {% include "partials/post_list.html" %}
     </div>

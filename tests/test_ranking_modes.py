@@ -26,7 +26,7 @@ def cities(db):
 
 
 @pytest.mark.django_db
-def test_home_keeps_promoted_in_separate_block(make_post, cities, seller):
+def test_home_mixes_promoted_into_organic(make_post, cities, seller):
     region, grozny = cities
     now = timezone.now()
     organic = make_post(
@@ -55,21 +55,19 @@ def test_home_keeps_promoted_in_separate_block(make_post, cities, seller):
         limit=20,
         page=1,
     )
-    promo_ids = {row["post"].id for row in result.promoted}
+    assert result.promoted == []
     organic_ids = {row["post"].id for row in result.results}
     section_ids = {
         row["post"].id
         for key in ("new", "popular", "recommended")
         for row in result.sections.get(key, [])
     }
-    assert promoted.id in promo_ids
-    assert promoted.id not in organic_ids
-    assert promoted.id not in section_ids
-    assert organic.id not in promo_ids
+    assert promoted.id in organic_ids or promoted.id in section_ids
+    assert organic.id in organic_ids or organic.id in section_ids
 
 
 @pytest.mark.django_db
-def test_category_promoted_block_and_organic(make_post, cities):
+def test_category_promoted_mixed_in_results(make_post, cities):
     _region, grozny = cities
     now = timezone.now()
     make_post(
@@ -95,8 +93,8 @@ def test_category_promoted_block_and_organic(make_post, cities):
         mode="category",
         page=1,
     )
-    assert any(row["post"].id == promoted.id for row in result.promoted)
-    assert all(row["post"].id != promoted.id for row in result.results)
+    assert result.promoted == []
+    assert any(row["post"].id == promoted.id for row in result.results)
 
 
 @pytest.mark.django_db
