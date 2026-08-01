@@ -1,5 +1,5 @@
 {% load static poisker_tags %}
-<article class="post-card">
+<article class="post-card{% if card_variant == 'promoted' %} post-card--promoted{% endif %}">
   <div class="post-card-media{% if post.images|length > 1 %} post-card-media-slider{% endif %}"{% if post.images|length > 1 %} data-post-card-slider{% endif %}>
     {% if post.is_promoted %}
       <span class="badge badge-promoted">

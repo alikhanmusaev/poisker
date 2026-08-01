@@ -46,14 +46,14 @@
 
   {% if promoted_results %}
     <section class="feed-section feed-section--promoted" aria-label="Поднятые объявления">
-      <h2 class="feed-section__title">
-        <i data-lucide="zap" class="icon icon-sm" aria-hidden="true"></i>
-        Поднятые объявления
-      </h2>
+      <div class="feed-section__head">
+        <h2 class="feed-section__title">Поднятые</h2>
+        <p class="feed-section__hint">Объявления с расширенным охватом</p>
+      </div>
       <div class="post-grid post-grid--promoted">
         {% for item in promoted_results %}
           {% with post=item.post|default:item %}
-            {% include "partials/post_card.html" with lcp_priority=forloop.first %}
+            {% include "partials/post_card.html" with lcp_priority=forloop.first card_variant="promoted" %}
           {% endwith %}
         {% endfor %}
       </div>
