@@ -136,10 +136,8 @@ def approve_post(post: Post, user) -> Post:
     post.rank_score = calculate_rank_score(post)
     post.save()
 
-    from bookmarks.services import notify_category_new_post, notify_seller_moderation
+    from bookmarks.services import notify_seller_moderation
 
-    if was_first_publish:
-        notify_category_new_post(post)
     notify_seller_moderation(
         post,
         approved=True,

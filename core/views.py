@@ -251,14 +251,11 @@ def _listing_context(request, *, fixed_settlement=None, fixed_region=None, fixed
             or (fixed_settlement is not None and ranked.local_total == 0)
             or (fixed_region is not None and ranked.local_total == 0)
         ),
-        "category_bookmarked": False,
         "bookmarked_post_ids": set(),
     }
     if request.user.is_authenticated:
-        from bookmarks.services import bookmarked_post_ids_for, is_category_bookmarked
+        from bookmarks.services import bookmarked_post_ids_for
 
-        if category:
-            ctx["category_bookmarked"] = is_category_bookmarked(request.user, category)
         post_ids = []
         for bucket in (results, ranked.promoted, *(ranked.sections.values() if ranked.sections else [])):
             for item in bucket:
