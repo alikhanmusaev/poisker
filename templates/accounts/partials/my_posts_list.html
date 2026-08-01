@@ -97,9 +97,10 @@
               {% if promote_enabled %}
               <form method="post" action="{% url 'listings:promote' post.id %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-primary btn-sm">
+                <button type="submit" class="btn btn-primary btn-sm" title="{% if post.is_promoted %}Продлить{% else %}Поднять{% endif %} — {{ promote_label }}">
                   <i data-lucide="zap" class="icon icon-xs" aria-hidden="true"></i>
-                  {% if post.is_promoted %}Продлить — {{ promote_label }}{% else %}Поднять — {{ promote_label }}{% endif %}
+                  {% if post.is_promoted %}Продлить{% else %}Поднять{% endif %}
+                  <span class="my-post-promote-price">{{ promote_label }}</span>
                 </button>
               </form>
               {% endif %}

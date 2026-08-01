@@ -2862,7 +2862,9 @@ body.lightbox-open {
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
   gap: 10px;
-  align-items: center;
+  align-items: start;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .my-post-card-media {
@@ -2873,6 +2875,7 @@ body.lightbox-open {
   overflow: hidden;
   flex-shrink: 0;
   background: var(--slate-100);
+  align-self: start;
 }
 
 .my-post-card-img {
@@ -2949,20 +2952,37 @@ body.lightbox-open {
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 2px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.my-post-card-actions form {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .my-post-card-actions .btn-sm {
+  height: auto;
   min-height: 32px;
-  height: 32px;
-  min-width: 32px;
-  padding: 0 8px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 6px 8px;
   font-size: 11px;
   gap: 4px;
+  white-space: normal;
+  line-height: 1.25;
+  text-align: left;
 }
 
 .my-post-card-actions .btn-sm .icon-xs {
   width: 12px;
   height: 12px;
+}
+
+.my-post-promote-price {
+  opacity: 0.9;
+  font-weight: 500;
 }
 
 .my-post-status {
