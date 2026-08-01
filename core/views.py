@@ -14,7 +14,7 @@ from listings.constants import (
     RESERVED_SLUGS,
 )
 from listings.models import Post
-from listings.services.geo_fallback import search_posts_with_geo_fallback
+from listings.ranking import RankingService
 from listings.services.geo_preference import resolve_boost_city
 from listings.services.search import suggest as search_suggest
 from listings.services.seo_urls import make_seo_slug, post_public_url
@@ -148,26 +148,34 @@ def _listing_context(request, *, fixed_settlement=None, fixed_region=None, fixed
     elif geo.settlement is not None:
         region_name = geo.settlement.region.name
 
-    found = search_posts_with_geo_fallback(
+    has_filters = bool(price_min is not None or price_max is not None)
+    ranking_mode = None
+    if search_text:
+        ranking_mode = "search"
+    elif category:
+        ranking_mode = "category"
+    else:
+        ranking_mode = "home"
+
+    ranked = RankingService().build(
         query=search_text,
-        city=(city or None) if geo.settlement is None and geo.scope != "region" else None,
         category=category or None,
-        price_min=price_min,
-        price_max=price_max,
-        sort=sort,
-        limit=PER_PAGE,
-        offset=offset,
-        expanded_terms=parsed.get("expanded_terms"),
+        settlement=geo.settlement,
+        region=geo.region if geo.settlement is None else None,
         boost_city=resolve_boost_city(
             request, filtered_city=city if geo.settlement is not None else None
         ),
-        settlement_id=geo.settlement.id if geo.settlement is not None else None,
-        region_id=region_id,
-        settlement_name=settlement_name,
-        region_name=region_name,
+        price_min=price_min,
+        price_max=price_max,
+        has_filters=has_filters,
+        expanded_terms=parsed.get("expanded_terms"),
+        limit=PER_PAGE,
+        offset=offset,
+        page=page,
+        mode=ranking_mode,
     )
-    results = found.results
-    total = found.total
+    results = ranked.results
+    total = ranked.total
     has_next = page * PER_PAGE < total
 
     category_name = CATEGORY_LABELS.get(category, "") if category else ""
@@ -216,10 +224,13 @@ def _listing_context(request, *, fixed_settlement=None, fixed_region=None, fixed
         "sort": sort,
         "page": page,
         "results": results,
+        "promoted_results": ranked.promoted,
+        "feed_sections": ranked.sections,
+        "ranking_mode": ranked.mode,
         "total": total,
-        "local_total": found.local_total,
-        "geo_fallback": found.fallback,
-        "geo_fallback_label": found.fallback_label,
+        "local_total": ranked.local_total,
+        "geo_fallback": ranked.geo_fallback,
+        "geo_fallback_label": ranked.geo_fallback_label,
         "has_next": has_next,
         "price_min": price_min,
         "price_max": price_max,
@@ -236,9 +247,9 @@ def _listing_context(request, *, fixed_settlement=None, fixed_region=None, fixed
             search_text
             or page > 1
             or sort not in (DEFAULT_SORT, DEFAULT_SEARCH_SORT)
-            or found.fallback
-            or (fixed_settlement is not None and found.local_total == 0)
-            or (fixed_region is not None and found.local_total == 0)
+            or ranked.geo_fallback
+            or (fixed_settlement is not None and ranked.local_total == 0)
+            or (fixed_region is not None and ranked.local_total == 0)
         ),
         "category_bookmarked": False,
         "bookmarked_post_ids": set(),
@@ -249,10 +260,11 @@ def _listing_context(request, *, fixed_settlement=None, fixed_region=None, fixed
         if category:
             ctx["category_bookmarked"] = is_category_bookmarked(request.user, category)
         post_ids = []
-        for item in results:
-            post = item.get("post") if isinstance(item, dict) else item
-            if post is not None and getattr(post, "pk", None):
-                post_ids.append(post.pk)
+        for bucket in (results, ranked.promoted, *(ranked.sections.values() if ranked.sections else [])):
+            for item in bucket:
+                post = item.get("post") if isinstance(item, dict) else item
+                if post is not None and getattr(post, "pk", None):
+                    post_ids.append(post.pk)
         ctx["bookmarked_post_ids"] = bookmarked_post_ids_for(request.user, post_ids)
     return ctx
 

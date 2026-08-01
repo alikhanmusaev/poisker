@@ -957,6 +957,42 @@ body:not(.page-home) .site-main {
   color: #b45309;
 }
 
+.feed-section {
+  margin: 0 0 28px;
+}
+
+.feed-section__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--slate-900);
+  line-height: 1.3;
+}
+
+.feed-section__title--organic {
+  margin-top: 8px;
+}
+
+.feed-section--promoted {
+  padding: 14px 14px 4px;
+  border-radius: 16px;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: linear-gradient(180deg, #fffbeb 0%, #fff 70%);
+}
+
+.feed-section--promoted .feed-section__title {
+  color: #92400e;
+}
+
+.feed-section-divider {
+  height: 1px;
+  margin: 8px 0 16px;
+  background: var(--color-border);
+}
+
 .sort-control {
   display: flex;
   align-items: center;

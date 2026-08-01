@@ -88,7 +88,7 @@ def active_paid_boost(post: Post) -> float:
 
 
 def calculate_rank_score(post: Post) -> float:
-    """Quality score stored in DB (no time decay — freshness applied live in feed)."""
+    """Organic quality score (paid boost applied only in ranking strategies)."""
     complete = completeness_score(post)
     trust = trust_score(post)
     engage = engagement_score(post)
@@ -99,7 +99,7 @@ def calculate_rank_score(post: Post) -> float:
         + engage * 0.14
         + reputation * 0.24
     )
-    return round(base * active_paid_boost(post), 4)
+    return round(base, 4)
 
 
 def recalculate_all_rank_scores():

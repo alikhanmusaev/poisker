@@ -44,7 +44,72 @@
     </div>
   {% endif %}
 
-  <div id="post-list">
-    {% include "partials/post_list.html" %}
-  </div>
+  {% if promoted_results %}
+    <section class="feed-section feed-section--promoted" aria-label="Поднятые объявления">
+      <h2 class="feed-section__title">
+        <i data-lucide="zap" class="icon icon-sm" aria-hidden="true"></i>
+        Поднятые объявления
+      </h2>
+      <div class="post-grid post-grid--promoted">
+        {% for item in promoted_results %}
+          {% with post=item.post|default:item %}
+            {% include "partials/post_card.html" with lcp_priority=forloop.first %}
+          {% endwith %}
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if ranking_mode == "home" and feed_sections and page == 1 and not query %}
+    {% if feed_sections.new %}
+      <section class="feed-section" aria-label="Новые объявления">
+        <h2 class="feed-section__title">Новые объявления</h2>
+        <div class="post-grid">
+          {% for item in feed_sections.new %}
+            {% with post=item.post|default:item %}
+              {% include "partials/post_card.html" %}
+            {% endwith %}
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+    {% if feed_sections.popular %}
+      <section class="feed-section" aria-label="Популярные объявления">
+        <h2 class="feed-section__title">Популярные объявления</h2>
+        <div class="post-grid">
+          {% for item in feed_sections.popular %}
+            {% with post=item.post|default:item %}
+              {% include "partials/post_card.html" %}
+            {% endwith %}
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+    {% if feed_sections.recommended %}
+      <section class="feed-section" aria-label="Рекомендуемые объявления">
+        <h2 class="feed-section__title">Рекомендуемые объявления</h2>
+        <div class="post-grid">
+          {% for item in feed_sections.recommended %}
+            {% with post=item.post|default:item %}
+              {% include "partials/post_card.html" %}
+            {% endwith %}
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+  {% else %}
+    {% if ranking_mode == "category" and promoted_results and page == 1 %}
+      <div class="feed-section-divider" role="presentation"></div>
+      <h2 class="feed-section__title feed-section__title--organic">Все объявления</h2>
+    {% endif %}
+    <div id="post-list">
+      {% include "partials/post_list.html" %}
+    </div>
+  {% endif %}
+
+  {% if ranking_mode == "home" and feed_sections and page == 1 and not query and has_next %}
+    <nav class="feed-pagination" aria-label="Страницы ленты">
+      <a class="feed-pagination-link" href="{{ listing_path }}?page=2{% if sort %}&sort={{ sort }}{% endif %}">Ещё объявления →</a>
+    </nav>
+  {% endif %}
 </div>

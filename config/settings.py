@@ -219,7 +219,7 @@ SITE_DESCRIPTION = os.getenv(
     "Бесплатная доска объявлений по всей России: купить и продать недвижимость, авто, услуги и товары.",
 )
 SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "info@poisker.ru")
-STATIC_VERSION = os.getenv("STATIC_VERSION", "django-85")
+STATIC_VERSION = os.getenv("STATIC_VERSION", "django-86")
 # Version of the separate PD consent document (152-FZ / 156-FZ). Bump when text changes.
 PDN_CONSENT_VERSION = os.getenv("PDN_CONSENT_VERSION", "2026-07-16b")
 OPERATOR_NAME = os.getenv(
@@ -271,6 +271,42 @@ TBANK_PASSWORD = os.getenv("TBANK_PASSWORD", "").strip()
 TBANK_API_URL = os.getenv("TBANK_API_URL", "https://securepay.tinkoff.ru/v2").rstrip("/")
 PROMOTE_PRICE_RUB = env_int("PROMOTE_PRICE_RUB", 199)
 PROMOTE_DAYS = env_int("PROMOTE_DAYS", 7)
-PROMOTE_BOOST = float(os.getenv("PROMOTE_BOOST", "2.0"))
+# Kept for future paid products; organic rank_score no longer multiplies by this.
+PROMOTE_BOOST = float(os.getenv("PROMOTE_BOOST", "1.0"))
 # usn_income | usn_income_outcome | osn | patent | esn
 TBANK_TAXATION = os.getenv("TBANK_TAXATION", "usn_income").strip() or "usn_income"
+
+# --- Feed ranking (Home / Category / Search) ---
+def _env_float(name: str, default: float) -> float:
+    return float(os.getenv(name, str(default)))
+
+
+HOME_PROMOTED_BLOCK_SIZE = env_int("HOME_PROMOTED_BLOCK_SIZE", 6)
+CATEGORY_PROMOTED_BLOCK_SIZE = env_int("CATEGORY_PROMOTED_BLOCK_SIZE", 6)
+MAX_PROMOTED_BLOCK = env_int("MAX_PROMOTED_BLOCK", 6)
+
+HOME_QUALITY_WEIGHT = _env_float("HOME_QUALITY_WEIGHT", 0.35)
+HOME_FRESHNESS_WEIGHT = _env_float("HOME_FRESHNESS_WEIGHT", 0.30)
+HOME_DISTANCE_WEIGHT = _env_float("HOME_DISTANCE_WEIGHT", 0.15)
+HOME_ENGAGEMENT_WEIGHT = _env_float("HOME_ENGAGEMENT_WEIGHT", 0.15)
+HOME_PROMOTION_WEIGHT = _env_float("HOME_PROMOTION_WEIGHT", 0.05)
+
+CATEGORY_QUALITY_WEIGHT = _env_float("CATEGORY_QUALITY_WEIGHT", 0.40)
+CATEGORY_FRESHNESS_WEIGHT = _env_float("CATEGORY_FRESHNESS_WEIGHT", 0.25)
+CATEGORY_DISTANCE_WEIGHT = _env_float("CATEGORY_DISTANCE_WEIGHT", 0.15)
+CATEGORY_ENGAGEMENT_WEIGHT = _env_float("CATEGORY_ENGAGEMENT_WEIGHT", 0.10)
+CATEGORY_PROMOTION_WEIGHT = _env_float("CATEGORY_PROMOTION_WEIGHT", 0.10)
+
+SEARCH_RELEVANCE_WEIGHT = _env_float("SEARCH_RELEVANCE_WEIGHT", 0.55)
+SEARCH_QUALITY_WEIGHT = _env_float("SEARCH_QUALITY_WEIGHT", 0.20)
+SEARCH_FRESHNESS_WEIGHT = _env_float("SEARCH_FRESHNESS_WEIGHT", 0.15)
+SEARCH_DISTANCE_WEIGHT = _env_float("SEARCH_DISTANCE_WEIGHT", 0.05)
+SEARCH_PROMOTION_WEIGHT = _env_float("SEARCH_PROMOTION_WEIGHT", 0.05)
+SEARCH_FILTERED_PROMOTION_WEIGHT = _env_float("SEARCH_FILTERED_PROMOTION_WEIGHT", 0.03)
+
+MAX_SELLER_PER_SCREEN = env_int("MAX_SELLER_PER_SCREEN", 1)
+MAX_SAME_CATEGORY_IN_ROW = env_int("MAX_SAME_CATEGORY_IN_ROW", 2)
+MAX_PROMOTED_IN_ROW = env_int("MAX_PROMOTED_IN_ROW", 2)
+DIVERSITY_ENABLED = env_bool("DIVERSITY_ENABLED", "true")
+PROMOTION_ROTATION_ENABLED = env_bool("PROMOTION_ROTATION_ENABLED", "true")
+HOME_SECTION_SIZE = env_int("HOME_SECTION_SIZE", 8)
