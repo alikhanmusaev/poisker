@@ -594,7 +594,7 @@ def service_worker(request):
         "sw.js",
         {
             "static_version": getattr(settings, "STATIC_VERSION", "1"),
-            "firebase_web_config": settings.firebase_web_config(),
+            "firebase_web_config": getattr(settings, "FIREBASE_WEB_CONFIG", {}) or {},
         },
     )
     response["Content-Type"] = "application/javascript; charset=utf-8"

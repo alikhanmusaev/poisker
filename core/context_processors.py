@@ -44,5 +44,5 @@ def site_context(request):
         "geo": geo,
         "popular_settlements": popular,
         "popular_cities": [(s.slug, s.name) for s in popular],
-        "firebase_web_config": settings.firebase_web_config(),
+        "firebase_web_config": getattr(settings, "FIREBASE_WEB_CONFIG", {}) or {},
     }

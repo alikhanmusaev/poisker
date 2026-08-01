@@ -275,16 +275,15 @@ FIREBASE_AUTH_DOMAIN = os.getenv(
 # Optional; empty → Firebase Messaging default VAPID (works without Console key pair).
 FIREBASE_VAPID_KEY = os.getenv("FIREBASE_VAPID_KEY", "").strip()
 
-def firebase_web_config() -> dict:
-    if not (
-        FCM_ENABLED
-        and FIREBASE_WEB_API_KEY
-        and FIREBASE_WEB_APP_ID
-        and FIREBASE_MESSAGING_SENDER_ID
-        and FIREBASE_PROJECT_ID
-    ):
-        return {}
-    cfg = {
+FIREBASE_WEB_CONFIG: dict = {}
+if (
+    FCM_ENABLED
+    and FIREBASE_WEB_API_KEY
+    and FIREBASE_WEB_APP_ID
+    and FIREBASE_MESSAGING_SENDER_ID
+    and FIREBASE_PROJECT_ID
+):
+    FIREBASE_WEB_CONFIG = {
         "apiKey": FIREBASE_WEB_API_KEY,
         "authDomain": FIREBASE_AUTH_DOMAIN or f"{FIREBASE_PROJECT_ID}.firebaseapp.com",
         "projectId": FIREBASE_PROJECT_ID,
@@ -292,8 +291,7 @@ def firebase_web_config() -> dict:
         "appId": FIREBASE_WEB_APP_ID,
     }
     if FIREBASE_VAPID_KEY:
-        cfg["vapidKey"] = FIREBASE_VAPID_KEY
-    return cfg
+        FIREBASE_WEB_CONFIG["vapidKey"] = FIREBASE_VAPID_KEY
 
 # --- T-Bank acquiring (paid listing boost) ---
 TBANK_TERMINAL_KEY = os.getenv("TBANK_TERMINAL_KEY", "").strip()
