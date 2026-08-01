@@ -1027,10 +1027,10 @@ body:not(.page-home) .site-main {
   content: "";
   position: absolute;
   top: 0;
-  left: 12px;
-  right: 12px;
+  left: 0;
+  right: 0;
   height: 2px;
-  border-radius: 0 0 2px 2px;
+  border-radius: 0;
   background: var(--primary-600);
   z-index: 2;
 }
@@ -1394,7 +1394,7 @@ textarea:focus {
   flex-direction: column;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 16px;
+  border-radius: 0;
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -1745,6 +1745,10 @@ textarea:focus {
   min-width: 0;
 }
 
+.page-card.post-detail {
+  border-radius: 0;
+}
+
 @media (min-width: 768px) {
   .page-card { padding: 28px; }
 }
@@ -1756,7 +1760,7 @@ textarea:focus {
 @media (max-width: 767px) {
   .post-detail.post-detail {
     padding: 12px;
-    border-radius: 14px;
+    border-radius: 0;
   }
 
   .post-detail .post-gallery {
