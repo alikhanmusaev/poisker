@@ -4,11 +4,14 @@ from django.conf import settings
 # small admin bootstrap script; tighten later if those move to static files.
 _DEFAULT_CSP = (
     "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline'; "
+    "script-src 'self' 'unsafe-inline' https://www.gstatic.com; "
     "style-src 'self' 'unsafe-inline'; "
     "img-src 'self' data: blob:; "
     "font-src 'self'; "
-    "connect-src 'self'; "
+    "connect-src 'self' https://firebaseinstallations.googleapis.com "
+    "https://fcmregistrations.googleapis.com https://fcm.googleapis.com "
+    "https://*.googleapis.com https://*.firebaseio.com; "
+    "worker-src 'self'; "
     "object-src 'none'; "
     "base-uri 'self'; "
     # form-action also covers 302 targets after POST (Chrome). Allow T-Bank pay form.

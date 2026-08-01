@@ -36,7 +36,11 @@ def register_device(
     device_id = (device_id or "").strip()
     if not token or not device_id:
         raise ValueError("token and device_id are required")
-    if platform not in {PushDevice.PLATFORM_ANDROID, PushDevice.PLATFORM_IOS}:
+    if platform not in {
+        PushDevice.PLATFORM_ANDROID,
+        PushDevice.PLATFORM_IOS,
+        PushDevice.PLATFORM_WEB,
+    }:
         raise ValueError("unsupported platform")
 
     now = timezone.now()
@@ -163,10 +167,15 @@ def _send_to_token(device: PushDevice, data: dict[str, str]) -> bool:
     from firebase_admin.exceptions import FirebaseError
     from firebase_admin.messaging import UnregisteredError
 
+    link = data.get("url") or ""
     message = messaging.Message(
         data={k: str(v) for k, v in data.items()},
         token=device.token,
         android=messaging.AndroidConfig(priority="high"),
+        webpush=messaging.WebpushConfig(
+            headers={"Urgency": "high"},
+            fcm_options=messaging.WebpushFCMOptions(link=link) if link else None,
+        ),
     )
     try:
         messaging.send(message)

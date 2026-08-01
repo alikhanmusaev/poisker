@@ -219,7 +219,7 @@ SITE_DESCRIPTION = os.getenv(
     "Бесплатная доска объявлений по всей России: купить и продать недвижимость, авто, услуги и товары.",
 )
 SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "info@poisker.ru")
-STATIC_VERSION = os.getenv("STATIC_VERSION", "django-92")
+STATIC_VERSION = os.getenv("STATIC_VERSION", "django-93")
 # Version of the separate PD consent document (152-FZ / 156-FZ). Bump when text changes.
 PDN_CONSENT_VERSION = os.getenv("PDN_CONSENT_VERSION", "2026-07-16b")
 OPERATOR_NAME = os.getenv(
@@ -260,10 +260,40 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_BROWSER_XSS_FILTER = True
 
-# --- Firebase Cloud Messaging (server) ---
+# --- Firebase Cloud Messaging (server + PWA web) ---
 FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "").strip()
 FIREBASE_CREDENTIALS_FILE = os.getenv("FIREBASE_CREDENTIALS_FILE", "").strip()
 FCM_ENABLED = env_bool("FCM_ENABLED", "true")
+# Public web SDK config (safe to expose to the browser).
+FIREBASE_WEB_API_KEY = os.getenv("FIREBASE_WEB_API_KEY", "").strip()
+FIREBASE_WEB_APP_ID = os.getenv("FIREBASE_WEB_APP_ID", "").strip()
+FIREBASE_MESSAGING_SENDER_ID = os.getenv("FIREBASE_MESSAGING_SENDER_ID", "").strip()
+FIREBASE_AUTH_DOMAIN = os.getenv(
+    "FIREBASE_AUTH_DOMAIN",
+    f"{FIREBASE_PROJECT_ID}.firebaseapp.com" if FIREBASE_PROJECT_ID else "",
+).strip()
+# Optional; empty → Firebase Messaging default VAPID (works without Console key pair).
+FIREBASE_VAPID_KEY = os.getenv("FIREBASE_VAPID_KEY", "").strip()
+
+def firebase_web_config() -> dict:
+    if not (
+        FCM_ENABLED
+        and FIREBASE_WEB_API_KEY
+        and FIREBASE_WEB_APP_ID
+        and FIREBASE_MESSAGING_SENDER_ID
+        and FIREBASE_PROJECT_ID
+    ):
+        return {}
+    cfg = {
+        "apiKey": FIREBASE_WEB_API_KEY,
+        "authDomain": FIREBASE_AUTH_DOMAIN or f"{FIREBASE_PROJECT_ID}.firebaseapp.com",
+        "projectId": FIREBASE_PROJECT_ID,
+        "messagingSenderId": FIREBASE_MESSAGING_SENDER_ID,
+        "appId": FIREBASE_WEB_APP_ID,
+    }
+    if FIREBASE_VAPID_KEY:
+        cfg["vapidKey"] = FIREBASE_VAPID_KEY
+    return cfg
 
 # --- T-Bank acquiring (paid listing boost) ---
 TBANK_TERMINAL_KEY = os.getenv("TBANK_TERMINAL_KEY", "").strip()

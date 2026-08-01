@@ -9,6 +9,7 @@ from listings.views import tbank_notify
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/locations/", include("locations.urls")),
+    path("api/push/", include("notifications.urls")),
     path("moderation/", include("moderation.urls")),
     path("media/<path:key>", serve_media, name="media"),
     path("accounts/", include("accounts.urls")),

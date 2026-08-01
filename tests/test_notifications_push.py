@@ -1,5 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 
 from notifications.models import NotificationPreference, PushDevice
 from notifications.payloads import sanitize_push_url
@@ -37,6 +38,18 @@ def test_register_device_and_rebind(seller):
 
 
 @pytest.mark.django_db
+def test_register_web_platform(seller):
+    device = register_device(
+        user=seller,
+        token="web-token-1",
+        device_id="browser-1",
+        platform=PushDevice.PLATFORM_WEB,
+    )
+    assert device.platform == "web"
+    assert device.active
+
+
+@pytest.mark.django_db
 def test_deactivate_device(seller):
     register_device(user=seller, token="tok", device_id="dev-x")
     assert deactivate_device(user=seller, device_id="dev-x")
@@ -63,3 +76,51 @@ def test_send_push_skips_without_firebase(seller, settings):
     )
     assert result["skipped"] == 1
     assert result["sent"] == 0
+
+
+@pytest.mark.django_db
+def test_push_register_api_requires_auth(client):
+    url = reverse("notifications:register")
+    response = client.post(
+        url,
+        data='{"token":"t","device_id":"d","platform":"web"}',
+        content_type="application/json",
+    )
+    assert response.status_code in (302, 401, 403)
+
+
+@pytest.mark.django_db
+def test_push_register_api_ok(client, seller):
+    client.force_login(seller)
+    url = reverse("notifications:register")
+    response = client.post(
+        url,
+        data='{"token":"fcm-web-token","device_id":"web-abc","platform":"web"}',
+        content_type="application/json",
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is True
+    assert body["platform"] == "web"
+    assert PushDevice.objects.filter(
+        user=seller, device_id="web-abc", token="fcm-web-token", active=True
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_push_unregister_api(client, seller):
+    client.force_login(seller)
+    register_device(
+        user=seller,
+        token="tok",
+        device_id="web-xyz",
+        platform=PushDevice.PLATFORM_WEB,
+    )
+    response = client.post(
+        reverse("notifications:unregister"),
+        data='{"device_id":"web-xyz"}',
+        content_type="application/json",
+    )
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert not PushDevice.objects.get(user=seller, device_id="web-xyz").active

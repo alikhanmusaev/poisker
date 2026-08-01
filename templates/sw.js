@@ -102,3 +102,57 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target =
+    event.notification?.data?.url ||
+    event.notification?.data?.FCM_MSG?.data?.url ||
+    self.location.origin + '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          client.navigate?.(target);
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(target);
+      }
+      return undefined;
+    })
+  );
+});
+
+{% if firebase_web_config.apiKey %}
+/* Firebase Cloud Messaging — background pushes for the PWA */
+importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: '{{ firebase_web_config.apiKey|escapejs }}',
+  authDomain: '{{ firebase_web_config.authDomain|escapejs }}',
+  projectId: '{{ firebase_web_config.projectId|escapejs }}',
+  messagingSenderId: '{{ firebase_web_config.messagingSenderId|escapejs }}',
+  appId: '{{ firebase_web_config.appId|escapejs }}',
+});
+
+try {
+  const messaging = firebase.messaging();
+  messaging.onBackgroundMessage((payload) => {
+    const data = payload?.data || {};
+    const title = data.title || payload?.notification?.title || 'Поискер';
+    const body = data.body || payload?.notification?.body || '';
+    const url = data.url || self.location.origin + '/';
+    return self.registration.showNotification(title, {
+      body,
+      icon: '/static/icons/icon-192.png',
+      badge: '/static/icons/favicon-32.png',
+      data: { url },
+    });
+  });
+} catch (err) {
+  console.warn('FCM background handler failed', err);
+}
+{% endif %}

@@ -27,6 +27,9 @@
   <meta name="apple-mobile-web-app-title" content="{{ site_name }}">
   <meta name="static-version" content="{{ static_version }}">
   <meta name="csrf-token" content="{{ csrf_token }}">
+  {% if user.is_authenticated and firebase_web_config %}
+  {{ firebase_web_config|json_script:"firebase-web-config" }}
+  {% endif %}
   <link rel="manifest" href="{% url 'core:web_manifest' %}?v={{ static_version }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'icons/favicon-32.png' %}?v={{ static_version }}">
   <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/icon-192.png' %}?v={{ static_version }}">
@@ -217,6 +220,9 @@
   <script src="{% static 'js/core.js' %}?v={{ static_version }}" defer></script>
   <script src="{% static 'js/app.js' %}?v={{ static_version }}" defer></script>
   <script src="{% static 'js/post-card-slider.js' %}?v={{ static_version }}" defer></script>
+  {% if user.is_authenticated and firebase_web_config %}
+  <script src="{% static 'js/push.js' %}?v={{ static_version }}" defer></script>
+  {% endif %}
   {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -592,7 +592,10 @@ def service_worker(request):
     response = render(
         request,
         "sw.js",
-        {"static_version": getattr(settings, "STATIC_VERSION", "1")},
+        {
+            "static_version": getattr(settings, "STATIC_VERSION", "1"),
+            "firebase_web_config": settings.firebase_web_config(),
+        },
     )
     response["Content-Type"] = "application/javascript; charset=utf-8"
     return _no_cache_headers(response)
