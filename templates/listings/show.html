@@ -166,7 +166,7 @@
   {% elif post.is_promoted %}
     <span class="badge badge-promoted" style="position:static;display:inline-flex;margin-bottom:12px;">
       <i data-lucide="arrow-up" class="icon icon-xs" aria-hidden="true"></i>
-      Поднято{% if post.paid_until %} до {{ post.paid_until|date:"d.m.Y H:i" }}{% endif %}
+      Поднято
     </span>
   {% endif %}
   {% if post.price is not None %}
