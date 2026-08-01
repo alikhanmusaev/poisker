@@ -219,7 +219,7 @@ SITE_DESCRIPTION = os.getenv(
     "Бесплатная доска объявлений по всей России: купить и продать недвижимость, авто, услуги и товары.",
 )
 SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "info@poisker.ru")
-STATIC_VERSION = os.getenv("STATIC_VERSION", "django-95")
+STATIC_VERSION = os.getenv("STATIC_VERSION", "django-96")
 # Version of the separate PD consent document (152-FZ / 156-FZ). Bump when text changes.
 PDN_CONSENT_VERSION = os.getenv("PDN_CONSENT_VERSION", "2026-07-16b")
 OPERATOR_NAME = os.getenv(
