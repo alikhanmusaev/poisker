@@ -1688,6 +1688,12 @@ textarea:focus {
   margin: -6px 0 8px;
 }
 
+@media (max-width: 767px) {
+  .post-detail > .breadcrumbs {
+    display: none;
+  }
+}
+
 .breadcrumbs-list {
   display: flex;
   flex-wrap: wrap;
@@ -1817,7 +1823,7 @@ textarea:focus {
   font-size: 15px;
   line-height: 1.65;
   color: var(--slate-700);
-  margin: 0 0 20px;
+  margin: 0 0 16px;
 }
 
 .safety-note {
@@ -1831,6 +1837,20 @@ textarea:focus {
   color: var(--amber-700);
   font-size: 13px;
   line-height: 1.4;
+}
+
+.safety-note--quiet {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--slate-500);
+  font-size: 12px;
+  margin: 0 0 20px;
+}
+
+.safety-note--quiet .icon {
+  color: var(--slate-400);
+  margin-top: 1px;
 }
 
 .contact-box {
@@ -5739,36 +5759,6 @@ body.page-notifications .site-main {
   border-color: var(--slate-300);
   color: var(--slate-900);
   background: #fff;
-}
-
-.post-location-block {
-  margin: 0 0 20px;
-  padding: 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
-  background: #fff;
-}
-.post-location-title {
-  margin: 0 0 6px;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--slate-500);
-}
-.post-location-value {
-  margin: 0;
-  font-size: 0.9375rem;
-  color: var(--slate-700);
-  overflow-wrap: anywhere;
-}
-.post-location-value a {
-  color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.post-location-value a:hover {
-  color: var(--color-primary);
 }
 
 .post-card-location {
