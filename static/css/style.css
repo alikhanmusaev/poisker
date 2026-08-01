@@ -4836,7 +4836,8 @@ body.page-message-thread .site-main {
   display: flex;
   flex-direction: column;
   padding-top: 8px;
-  padding-bottom: calc(var(--mobile-nav-h) + env(safe-area-inset-bottom, 0px));
+  /* Extra room for the raised center FAB ("Подать") above the nav bar */
+  padding-bottom: calc(var(--mobile-nav-h) + 48px + env(safe-area-inset-bottom, 0px));
 }
 
 body.page-message-thread .site-main > .container {
@@ -4872,6 +4873,19 @@ body.page-message-thread .message-thread-participant {
 @media (max-width: 767px) {
   body.page-message-thread .site-main {
     padding-top: 4px;
+    padding-bottom: calc(var(--mobile-nav-h) + 52px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Keep FAB in the tab bar on chat — don't float over "Отправить" */
+  body.page-message-thread .mobile-nav-fab {
+    margin-top: 0;
+  }
+
+  body.page-message-thread .mobile-nav-fab .icon {
+    width: 44px;
+    height: 44px;
+    padding: 10px;
+    box-shadow: var(--shadow-sm);
   }
 
   body.page-message-thread .site-main > .container {
