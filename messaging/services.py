@@ -5,6 +5,17 @@ from listings.models import Post
 from messaging.models import Conversation, Message
 
 
+def users_blocked(user_a, user_b) -> bool:
+    from accounts.models import UserBlock
+    return UserBlock.objects.filter(Q(blocker=user_a, blocked=user_b) | Q(blocker=user_b, blocked=user_a)).exists()
+
+
+def is_blocked_by(blocker, blocked) -> bool:
+    from accounts.models import UserBlock
+
+    return UserBlock.objects.filter(blocker=blocker, blocked=blocked).exists()
+
+
 class MessagingError(Exception):
     pass
 
@@ -38,6 +49,8 @@ def ensure_can_message_post(post: Post, buyer) -> None:
         raise MessagingError("Аккаунт заблокирован.")
     if post.user_id == buyer.id:
         raise MessagingError("Нельзя написать самому себе по своему объявлению.")
+    if users_blocked(buyer, post.user):
+        raise MessagingError("Переписка с этим пользователем недоступна.")
     if post.status != "published":
         raise MessagingError("По этому объявлению пока нельзя написать.")
 
@@ -69,6 +82,8 @@ def send_message(conversation: Conversation, sender, body: str = "", *, image: s
         raise MessagingError("Аккаунт заблокирован.")
     if not conversation.involves(sender):
         raise MessagingError("Нет доступа к переписке.")
+    if users_blocked(sender, conversation.other_participant(sender)):
+        raise MessagingError("Переписка с этим пользователем недоступна.")
 
     body = (body or "").strip()
     image = (image or "").strip()

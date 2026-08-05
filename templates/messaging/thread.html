@@ -16,6 +16,17 @@
         <span class="message-thread-delete-label">Удалить чат</span>
       </button>
     </form>
+    {% if blocked_by_me %}
+      <form method="post" action="{% url 'messaging:unblock_user' conversation.id %}" class="message-thread-delete-form">
+        {% csrf_token %}
+        <button type="submit" class="message-thread-delete-btn">Разблокировать</button>
+      </form>
+    {% elif not blocked_other %}
+      <form method="post" action="{% url 'messaging:block_user' conversation.id %}" class="message-thread-delete-form" onsubmit="return confirm('Заблокировать пользователя?')">
+        {% csrf_token %}
+        <button type="submit" class="message-thread-delete-btn">Заблокировать</button>
+      </form>
+    {% endif %}
   </div>
 
   <section class="message-chat-card">
@@ -36,7 +47,7 @@
           <a href="{% post_public_url post %}" class="message-post-context-title-link">{{ post.title }}</a>
         </h1>
         <p class="message-post-context-meta">
-          {{ cities|get_item:post.city }} · {{ category_labels|get_item:post.category }}
+          {{ post.location_label }} · {{ category_labels|get_item:post.category }}
           {% if post.price is not None %} · {{ post.price|format_price }} ₽{% endif %}
         </p>
         <p class="message-thread-participant">
@@ -90,7 +101,7 @@
         {% endif %}
         {% if can_review_seller %}
           <p class="message-review-cta">
-            <a href="{% url 'reviews:review_seller' other_user.id %}" class="btn btn-secondary btn-sm">
+            <a href="{% url 'reviews:review_seller' other_user.id %}?conversation={{ conversation.id }}" class="btn btn-secondary btn-sm">
               <i data-lucide="star" class="icon icon-xs" aria-hidden="true"></i>
               {% if existing_seller_review %}Изменить отзыв{% else %}Оставить отзыв{% endif %}
             </a>
@@ -125,6 +136,13 @@
                       <span class="message-read-status is-unread">Не прочитано</span>
                     {% endif %}
                   {% endif %}
+                  {% if message.sender_id != user.id %}
+                    <form method="post" action="{% url 'messaging:report_message' message.id %}" class="message-report-form">
+                      {% csrf_token %}
+                      <input type="hidden" name="reason" value="abuse">
+                      <button type="submit" class="message-thread-delete-btn">Пожаловаться</button>
+                    </form>
+                  {% endif %}
                 </div>
               </div>
             {% endif %}
@@ -137,6 +155,9 @@
       {% endif %}
     </div>
 
+    {% if blocked_other %}
+      <p class="message-post-context-note">{% if blocked_by_me %}Вы заблокировали пользователя. Чтобы снова написать, разблокируйте его.{% else %}Переписка с этим пользователем недоступна.{% endif %}</p>
+    {% else %}
     <form method="post" class="message-compose-form" id="message-compose-form" action="{% url 'messaging:thread' conversation.id %}" enctype="multipart/form-data">
       {% csrf_token %}
       {% if form.non_field_errors %}
@@ -171,6 +192,7 @@
         <p class="field-error">{{ form.image.errors.0 }}</p>
       {% endif %}
     </form>
+    {% endif %}
   </section>
 </div>
 

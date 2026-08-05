@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import hashlib
 import logging
 import re
 import threading
@@ -56,21 +57,13 @@ def _client():
 
 
 def ensure_bucket():
+    """Verify that the private application bucket has been provisioned."""
     client = _client()
     bucket = settings.S3_BUCKET
     try:
         client.head_bucket(Bucket=bucket)
-    except Exception:
-        try:
-            client.create_bucket(Bucket=bucket)
-        except Exception:
-            logger.exception("Failed to create S3 bucket")
-    try:
-        client.delete_bucket_policy(Bucket=bucket)
-    except ClientError as exc:
-        code = exc.response.get("Error", {}).get("Code", "")
-        if code not in ("NoSuchBucketPolicy", "NoSuchBucket"):
-            logger.exception("Failed to make bucket private")
+    except Exception as exc:
+        raise RuntimeError(f"Storage bucket is unavailable: {bucket}") from exc
 
 
 def _stem_from_key(key: str) -> str:
@@ -190,6 +183,13 @@ def upload_image(uploaded: UploadedFile, *, prefix: str = "posts") -> str:
     url = f"/media/{key}"
     schedule_variant_generation(url)
     return url
+
+
+def uploaded_sha256(uploaded: UploadedFile) -> str:
+    uploaded.seek(0)
+    digest = hashlib.sha256(uploaded.read()).hexdigest()
+    uploaded.seek(0)
+    return digest
 
 
 def ensure_variant_exists(key: str) -> None:

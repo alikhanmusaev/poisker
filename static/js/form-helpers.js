@@ -78,6 +78,7 @@
         btn.dataset.cityId = item.id != null ? String(item.id) : '';
         btn.dataset.cityLabel = item.label || item.name || '';
         btn.dataset.cityDisplay = item.display || item.display_name || item.label || '';
+        btn.dataset.locationKind = item.kind || 'settlement';
         btn.innerHTML = window.Poisker
           ? `${window.Poisker.escapeHtml(item.label || item.name || '')}<span class="suggest-meta">${window.Poisker.escapeHtml(item.regionName || '')}</span>`
           : (item.display || item.label);
@@ -91,6 +92,7 @@
             display: item.display || item.display_name || item.label,
             regionSlug: item.regionSlug,
             region: item.region,
+            kind: item.kind,
           })
         );
         li.appendChild(btn);
@@ -131,12 +133,13 @@
         const data = await res.json();
         return (data.results || []).map((row) => ({
           id: row.id,
+          kind: row.kind || 'settlement',
           slug: row.slug,
-          label: row.name,
+          label: row.kind === 'region' ? `Регион: ${row.name}` : row.name,
           name: row.name,
           display: row.display_name,
           display_name: row.display_name,
-          regionName: row.region?.name || '',
+          regionName: row.kind === 'region' ? 'Искать во всём регионе' : (row.region?.name || ''),
           regionSlug: row.region?.slug || '',
           region: row.region || null,
         }));

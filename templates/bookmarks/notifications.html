@@ -40,6 +40,10 @@
                   <i data-lucide="star" class="icon" aria-hidden="true"></i>
                 {% elif item.kind == 'deal_confirm_request' %}
                   <i data-lucide="handshake" class="icon" aria-hidden="true"></i>
+                {% elif item.kind == 'promotion_paid' %}
+                  <i data-lucide="circle-check" class="icon" aria-hidden="true"></i>
+                {% elif item.kind == 'promotion_failed' %}
+                  <i data-lucide="circle-x" class="icon" aria-hidden="true"></i>
                 {% else %}
                   <i data-lucide="sparkles" class="icon" aria-hidden="true"></i>
                 {% endif %}

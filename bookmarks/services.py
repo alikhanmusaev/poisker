@@ -203,30 +203,50 @@ def _notify_user(user_id, *, kind, title, body, post=None, payload=None) -> int:
     return 1
 
 
-def _maybe_email_user(user_id, *, subject: str, body: str) -> None:
+def _maybe_email_user(
+    user_id,
+    *,
+    subject: str,
+    body: str,
+    action_url: str = "",
+    action_label: str = "",
+) -> None:
     from django.conf import settings
-    from django.core.mail import send_mail
+    from django.core.mail import EmailMultiAlternatives
+    from django.template.loader import render_to_string
 
     if not getattr(settings, "NOTIFY_SELLER_EMAIL", True):
         return
     from accounts.models import User
 
-    email = (
-        User.objects.filter(pk=user_id)
-        .exclude(email="")
-        .values_list("email", flat=True)
-        .first()
-    )
-    if not email:
+    user = User.objects.filter(pk=user_id).exclude(email="").only("email", "display_name").first()
+    if not user:
         return
     try:
-        send_mail(
+        message = EmailMultiAlternatives(
             subject=f"{settings.SITE_NAME}: {subject}",
-            message=body,
+            body=body,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=True,
+            to=[user.email],
+            reply_to=[settings.SUPPORT_EMAIL],
         )
+        message.attach_alternative(
+            render_to_string(
+                "emails/notification.html",
+                {
+                    "site_name": settings.SITE_NAME,
+                    "user_name": user.display_name,
+                    "title": subject,
+                    "body": body,
+                    "action_url": action_url,
+                    "action_label": action_label,
+                    "support_email": settings.SUPPORT_EMAIL,
+                    "logo_url": f"https://{settings.APP_DOMAIN}/static/brand/logo.png",
+                },
+            ),
+            "text/html",
+        )
+        message.send(fail_silently=True)
     except Exception:
         pass
 
@@ -279,6 +299,62 @@ def notify_seller_expired(post) -> int:
         body=f"«{post.title}» снято с публикации. Можете отправить его на модерацию снова.",
         post=post,
     )
+
+
+def notify_promotion_result(promotion, *, paid: bool) -> int:
+    """Notify the listing owner once after the bank reaches a final outcome."""
+    post = promotion.post
+    kind = Notification.KIND_PROMOTION_PAID if paid else Notification.KIND_PROMOTION_FAILED
+    payload = {"promotion_id": str(promotion.pk)}
+    if Notification.objects.filter(
+        user_id=post.user_id, kind=kind, payload__promotion_id=str(promotion.pk)
+    ).exists():
+        return 0
+
+    if paid:
+        until = promotion.ends_at.strftime("%d.%m.%Y %H:%M") if promotion.ends_at else "окончания срока"
+        title = "Продвижение подключено"
+        body = f"«{post.title}» поднято в поиске до {until}."
+    else:
+        title = "Оплата продвижения не прошла"
+        body = f"«{post.title}» не было поднято. Можно попробовать оплатить продвижение ещё раз."
+
+    Notification.objects.create(
+        user_id=post.user_id,
+        kind=kind,
+        title=title,
+        body=body[:500],
+        post=post,
+        payload=payload,
+    )
+    from django.conf import settings
+    from listings.services.seo_urls import post_public_url
+
+    _maybe_email_user(
+        post.user_id,
+        subject=title,
+        body=body,
+        action_url=f"https://{settings.APP_DOMAIN}{post_public_url(post)}",
+        action_label="Открыть объявление",
+    )
+    try:
+        from notifications.services import push_for_bookmark_notification
+
+        push_for_bookmark_notification(
+            user_id=post.user_id,
+            kind=kind,
+            title=title,
+            body=body,
+            post=post,
+            payload=payload,
+        )
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).exception(
+            "push_for_bookmark_notification failed for promotion=%s", promotion.pk
+        )
+    return 1
 
 
 def notify_new_review(*, seller_id, reviewer_name: str, rating: int, post=None, review_id, is_update=False) -> int:

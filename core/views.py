@@ -7,6 +7,7 @@ from django.utils import timezone
 from listings.constants import (
     CATEGORIES,
     CATEGORY_LABELS,
+    CATEGORY_VISUALS,
     CITIES,
     ALLOWED_SORTS,
     DEFAULT_SEARCH_SORT,
@@ -129,7 +130,10 @@ def _listing_context(request, *, fixed_settlement=None, fixed_region=None, fixed
     if sort not in ALLOWED_SORTS:
         sort = DEFAULT_SEARCH_SORT if search_text else DEFAULT_SORT
 
-    page = max(int(request.GET.get("page", 1)), 1)
+    try:
+        page = max(int(request.GET.get("page", 1)), 1)
+    except (TypeError, ValueError):
+        page = 1
     offset = (page - 1) * PER_PAGE
 
     price_min = request.GET.get("price_min")
@@ -219,6 +223,7 @@ def _listing_context(request, *, fixed_settlement=None, fixed_region=None, fixed
         "city": city,
         "category": category,
         "category_name": category_name,
+        "category_visual": CATEGORY_VISUALS.get(category),
         "city_name": city_name,
         "listing_h1": listing_h1,
         "sort": sort,
@@ -410,6 +415,17 @@ def post_public_legacy(request, city_slug, category_slug, slug):
 def suggest_view(request):
     if not request.headers.get("HX-Request"):
         raise Http404
+    from core.http import get_client_ip
+    from core.ratelimit import hit_rate_limit
+
+    ip = get_client_ip(request) or "unknown"
+    if hit_rate_limit(
+        f"suggest:{ip}",
+        limit=getattr(settings, "SUGGEST_RATE_LIMIT_PER_MINUTE", 60),
+        window_seconds=60,
+        fail_closed=True,
+    ):
+        return HttpResponse(status=429)
     query = request.GET.get("q", "").strip()
     items = search_suggest(query) if query else []
     return render(request, "partials/suggest.html", {"items": items, "query": query})

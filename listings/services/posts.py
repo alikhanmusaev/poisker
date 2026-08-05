@@ -8,12 +8,28 @@ from django.utils import timezone
 
 from core.phone import normalize_phone
 from listings.constants import CATEGORIES, CITIES, CONDITION_LABELS, POST_BODY_MAX_LEN, POST_BODY_MIN_LEN, POST_TITLE_MAX_LEN, POST_TITLE_MIN_LEN
-from listings.models import Post
+from listings.models import Post, PostStatusEvent
 from locations.models import Settlement
 
 
 class ValidationError(Exception):
     pass
+
+
+def moderation_flags_for(*, title: str, body: str, user_id, image_hashes=None) -> list[str]:
+    """Low-risk heuristic markers for moderator prioritisation, never auto-reject."""
+    text = f"{title} {body}".lower()
+    flags = []
+    if re.search(r"https?://|www\.", text):
+        flags.append("external_link")
+    if re.search(r"(?:telegram|телеграм|whatsapp|ватсап).{0,24}(?:предоплат|оплат|перевод)", text):
+        flags.append("advance_payment")
+    normalized_title = " ".join(re.findall(r"[\wа-яё]+", (title or "").lower()))
+    if normalized_title and Post.objects.filter(user_id=user_id, title__iexact=title.strip()).exclude(status__in=["deleted", "hidden"]).exists():
+        flags.append("duplicate_title")
+    if any(Post.objects.filter(image_hashes__contains=[image_hash]).exclude(status="deleted").exists() for image_hash in (image_hashes or [])):
+        flags.append("duplicate_photo")
+    return flags
 
 
 def _validate_text(title: str, body: str):
@@ -128,7 +144,7 @@ def can_edit_rejected_post(post: Post) -> bool:
 
 
 @transaction.atomic
-def create_post(user, data: dict, *, image_keys: list | None = None, as_draft: bool = False) -> Post:
+def create_post(user, data: dict, *, image_keys: list | None = None, image_hashes: list | None = None, as_draft: bool = False) -> Post:
     if user.is_blocked:
         raise ValidationError("Аккаунт заблокирован.")
 
@@ -165,7 +181,9 @@ def create_post(user, data: dict, *, image_keys: list | None = None, as_draft: b
         price=price,
         contact_phone=contact_phone,
         status=status,
+        moderation_flags=moderation_flags_for(title=title, body=body, user_id=user.id, image_hashes=image_hashes) if not as_draft else [],
         images=images,
+        image_hashes=image_hashes or [],
         cover_index=cover_index,
         has_photo=bool(images),
         expires_at=timezone.now() + timedelta(days=settings.POST_EXPIRY_DAYS),
@@ -229,6 +247,15 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
     contact_phone = _seller_phone(user)
     old_price = post.price
     was_published = post.status == "published"
+    images = list(image_keys) if image_keys is not None else None
+    image_cover_index = None
+    if images is not None:
+        image_cover_index = min(
+            max(int(data.get("cover_index") or 0), 0), max(len(images) - 1, 0)
+        )
+    image_changed = images is not None and (
+        images != list(post.images or []) or image_cover_index != post.cover_index
+    )
 
     sensitive_changed = title != post.title or body != post.body
     meta_changed = (
@@ -242,7 +269,8 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
     post.contact_phone = contact_phone
     post.updated_at = timezone.now()
 
-    if was_published and (sensitive_changed or meta_changed):
+    needs_moderation = was_published and (sensitive_changed or meta_changed or image_changed)
+    if needs_moderation:
         post.pending_revision = {
             "title": title,
             "body": body,
@@ -252,6 +280,14 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
             "condition": condition,
             "price": price,
         }
+        if image_changed:
+            post.pending_revision.update(
+                {
+                    "images": images,
+                    "cover_index": image_cover_index,
+                    "has_photo": bool(images),
+                }
+            )
     else:
         post.title = title
         post.body = body
@@ -288,11 +324,10 @@ def update_post(post: Post, user, data: dict, *, as_draft: bool = False, image_k
         post.moderation_note = ""
         post.slug = make_seo_slug(title, city)
 
-    if image_keys is not None:
-        cover_index = min(max(int(data.get("cover_index") or 0), 0), max(len(image_keys) - 1, 0))
-        post.images = image_keys
-        post.cover_index = cover_index
-        post.has_photo = bool(image_keys)
+    if images is not None and not needs_moderation:
+        post.images = images
+        post.cover_index = image_cover_index
+        post.has_photo = bool(images)
 
     post.rank_score = calculate_rank_score(post)
     post.save()
@@ -341,6 +376,9 @@ def unpublish_post(post: Post, user) -> None:
     post.status = "hidden"
     post.updated_at = timezone.now()
     post.save(update_fields=["status", "updated_at"])
+    PostStatusEvent.objects.create(
+        post=post, actor=user, previous_status="published", new_status="hidden", reason="seller_unpublished"
+    )
     from bookmarks.services import notify_post_unpublished
 
     notify_post_unpublished(post)
@@ -352,12 +390,13 @@ def republish_post(post: Post, user) -> Post:
     if post.user_id != user.id and not user.is_staff:
         raise ValidationError("Нет доступа.")
     if post.status not in ("hidden", "expired"):
-        raise ValidationError("Можно отправить на модерацию только снятое или истёкшее объявление.")
+        raise ValidationError("Можно отправить на модерацию только снятое, проданное или истёкшее объявление.")
     if user.is_blocked:
         raise ValidationError("Аккаунт заблокирован.")
     now = timezone.now()
     if post.expires_at <= now:
         post.expires_at = now + timedelta(days=settings.POST_EXPIRY_DAYS)
+    previous_status = post.status
     post.status = "pending"
     post.pending_revision = None
     post.updated_at = now
@@ -365,7 +404,28 @@ def republish_post(post: Post, user) -> Post:
     post.save(
         update_fields=["status", "pending_revision", "expires_at", "updated_at", "rank_score"]
     )
+    PostStatusEvent.objects.create(
+        post=post, actor=user, previous_status=previous_status, new_status="pending", reason="seller_republish"
+    )
     return post
+
+
+@transaction.atomic
+def mark_post_sold(post: Post, user) -> None:
+    """Close a live listing after the seller completes a sale."""
+    if post.user_id != user.id and not user.is_staff:
+        raise ValidationError("Нет доступа.")
+    if post.status != "published":
+        raise ValidationError("Отметить проданным можно только опубликованное объявление.")
+    post.status = "sold"
+    post.updated_at = timezone.now()
+    post.save(update_fields=["status", "updated_at"])
+    PostStatusEvent.objects.create(
+        post=post, actor=user, previous_status="published", new_status="sold", reason="seller_marked_sold"
+    )
+    from bookmarks.services import notify_post_unpublished
+
+    notify_post_unpublished(post)
 
 
 @transaction.atomic

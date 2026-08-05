@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Case, IntegerField, Value, When
 from django.utils import timezone
 
 from listings.models import Post, Report
@@ -67,7 +68,15 @@ def pending_queue():
     return (
         Post.objects.filter(status="pending")
         .select_related("user")
-        .order_by("created_at")
+        .annotate(
+            risk_priority=Case(
+                When(moderation_flags__contains=["advance_payment"], then=Value(3)),
+                When(moderation_flags__contains=["external_link"], then=Value(2)),
+                When(moderation_flags__contains=["duplicate_title"], then=Value(1)),
+                default=Value(0), output_field=IntegerField(),
+            )
+        )
+        .order_by("-risk_priority", "created_at")
     )
 
 
@@ -125,16 +134,28 @@ def approve_post(post: Post, user) -> Post:
         if "price" in revision:
             price = revision.get("price")
             post.price = None if price in ("", None) else price
+        if "images" in revision and isinstance(revision["images"], list):
+            post.images = revision["images"][:5]
+            post.cover_index = min(
+                max(int(revision.get("cover_index") or 0), 0),
+                max(len(post.images) - 1, 0),
+            )
+            post.has_photo = bool(post.images)
         post.slug = make_seo_slug(post.title, post.city)
 
     post.pending_revision = None
     post.moderation_note = ""
     post.status = "published"
     post.ever_published = True
-    post.published_at = now
+    if was_first_publish or post.published_at is None:
+        post.published_at = now
     post.updated_at = now
     post.rank_score = calculate_rank_score(post)
     post.save()
+
+    from listings.services.promote import activate_pending_promotions
+
+    activate_pending_promotions(post)
 
     from bookmarks.services import notify_seller_moderation
 

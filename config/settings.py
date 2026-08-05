@@ -1,7 +1,18 @@
 import os
+from hashlib import sha256
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def static_build_version() -> str:
+    """Stable cache key that changes whenever a bundled static asset changes."""
+    digest = sha256()
+    static_dir = BASE_DIR / "static"
+    for asset in sorted(path for path in static_dir.rglob("*") if path.is_file()):
+        digest.update(str(asset.relative_to(static_dir)).encode("utf-8"))
+        digest.update(asset.read_bytes())
+    return digest.hexdigest()[:12]
 
 
 def env_bool(name: str, default: str = "false") -> bool:
@@ -115,21 +126,18 @@ DATABASES = {
 }
 
 _db_url = os.getenv("DATABASE_URL", "")
-if _db_url.startswith("postgresql+psycopg://") or _db_url.startswith("postgresql://"):
-    import re
+if _db_url.startswith(("postgresql+psycopg://", "postgresql://")):
+    from urllib.parse import unquote, urlparse
 
-    match = re.match(
-        r"postgresql(?:\+psycopg)?://(?P<user>[^:]+):(?P<password>[^@]+)@(?P<host>[^:]+):(?P<port>\d+)/(?P<name>.+)",
-        _db_url,
-    )
-    if match:
+    parsed = urlparse(_db_url)
+    if parsed.hostname and parsed.path.strip("/"):
         DATABASES["default"].update(
             {
-                "USER": match.group("user"),
-                "PASSWORD": match.group("password"),
-                "HOST": match.group("host"),
-                "PORT": match.group("port"),
-                "NAME": match.group("name"),
+                "USER": unquote(parsed.username or ""),
+                "PASSWORD": unquote(parsed.password or ""),
+                "HOST": parsed.hostname,
+                "PORT": str(parsed.port or 5432),
+                "NAME": unquote(parsed.path.lstrip("/")),
             }
         )
 
@@ -190,6 +198,8 @@ REPORTS_AUTO_HIDE_THRESHOLD = env_int("REPORTS_AUTO_HIDE_THRESHOLD", 3)
 CONTACT_RATE_LIMIT_PER_HOUR = env_int("CONTACT_RATE_LIMIT_PER_HOUR", 30)
 AUTH_RATE_LIMIT_PER_HOUR = env_int("AUTH_RATE_LIMIT_PER_HOUR", 30)
 MESSAGING_RATE_LIMIT_PER_HOUR = env_int("MESSAGING_RATE_LIMIT_PER_HOUR", 60)
+POST_CREATE_RATE_LIMIT_PER_DAY = env_int("POST_CREATE_RATE_LIMIT_PER_DAY", 10)
+SUGGEST_RATE_LIMIT_PER_MINUTE = env_int("SUGGEST_RATE_LIMIT_PER_MINUTE", 60)
 REVIEW_AFTER_PHONE_HOURS = env_int("REVIEW_AFTER_PHONE_HOURS", 2)
 DEAL_CONFIRM_TIMEOUT_DAYS = env_int("DEAL_CONFIRM_TIMEOUT_DAYS", 3)
 REVIEW_REMINDER_DAYS = env_int("REVIEW_REMINDER_DAYS", 1)
@@ -218,10 +228,12 @@ SITE_DESCRIPTION = os.getenv(
     "SITE_DESCRIPTION",
     "Бесплатная доска объявлений по всей России: купить и продать недвижимость, авто, услуги и товары.",
 )
-SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "info@poisker.ru")
-STATIC_VERSION = os.getenv("STATIC_VERSION", "django-105")
+SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "support@poisker.ru")
+# An explicit value is useful for local debugging; production defaults to a
+# content hash so each static release creates a fresh PWA cache automatically.
+STATIC_VERSION = os.getenv("STATIC_VERSION") or static_build_version()
 # Version of the separate PD consent document (152-FZ / 156-FZ). Bump when text changes.
-PDN_CONSENT_VERSION = os.getenv("PDN_CONSENT_VERSION", "2026-07-16b")
+PDN_CONSENT_VERSION = os.getenv("PDN_CONSENT_VERSION", "2026-08-04")
 OPERATOR_NAME = os.getenv(
     "OPERATOR_NAME",
     "Индивидуальный предприниматель Мусаев Алихан Хизирович",

@@ -22,7 +22,7 @@
                 <a href="{% post_public_url post %}" class="my-post-card-title-link">{{ post.title }}</a>
               </h3>
               <p class="my-post-card-meta">
-                {{ cities|get_item:post.city }}
+                {{ post.location_label }}
                 <span class="my-post-meta-sep" aria-hidden="true">·</span>
                 {{ category_labels|get_item:post.category }}
                 <span class="my-post-meta-sep" aria-hidden="true">·</span>
@@ -89,7 +89,7 @@
 
           <div class="my-post-card-actions">
             <div class="my-post-card-actions-primary">
-              {% if post.status != 'expired' and post.status != 'hidden' or not post.ever_published and post.status == 'hidden' %}
+              {% if post.status != 'expired' and post.status != 'hidden' and post.status != 'sold' or not post.ever_published and post.status == 'hidden' %}
                 <a href="{% url 'listings:edit' post.id %}" class="btn btn-secondary btn-sm">
                   <i data-lucide="pencil" class="icon icon-xs" aria-hidden="true"></i>
                   Изменить
@@ -112,6 +112,13 @@
                     <span class="my-post-promote-price">{{ promote_label }}</span>
                   </button>
                 </form>
+                <form method="post" action="{% url 'listings:mark_sold' post.id %}" data-action-confirm="Продать объявление?" data-action-confirm-message="Объявление исчезнет из поиска и будет перенесено в раздел «Продано».">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-secondary btn-sm">
+                    <i data-lucide="badge-check" class="icon icon-xs" aria-hidden="true"></i>
+                    Продано
+                  </button>
+                </form>
               {% elif post.status == 'hidden' or post.status == 'expired' %}
                 <form method="post" action="{% url 'listings:republish' post.id %}" onsubmit="return confirm('Отправить объявление на модерацию снова?')">
                   {% csrf_token %}
@@ -126,7 +133,7 @@
 
             <div class="my-post-card-actions-secondary">
               {% if post.status == 'draft' %}
-                <form method="post" action="{% url 'listings:delete' post.id %}" onsubmit="return confirm('Удалить черновик?')">
+                <form method="post" action="{% url 'listings:delete' post.id %}" data-action-confirm="Удалить черновик?" data-action-confirm-message="Черновик будет удалён без возможности восстановления.">
                   {% csrf_token %}
                   <input type="hidden" name="next" value="{{ return_url }}">
                   <button type="submit" class="my-post-text-action is-danger">
@@ -135,7 +142,7 @@
                   </button>
                 </form>
               {% elif post.status == 'published' %}
-                <form method="post" action="{% url 'listings:delete' post.id %}" onsubmit="return confirm('Снять объявление с публикации? Оно исчезнет из поиска и появится во вкладке «Снятые».')">
+                <form method="post" action="{% url 'listings:delete' post.id %}" data-action-confirm="Снять объявление?" data-action-confirm-message="Оно исчезнет из поиска и появится во вкладке «Снятые».">
                   {% csrf_token %}
                   <input type="hidden" name="next" value="{{ return_url }}">
                   <button type="submit" class="my-post-text-action">
@@ -144,7 +151,7 @@
                   </button>
                 </form>
               {% elif not post.ever_published and post.status != 'deleted' and post.status != 'hidden' and post.status != 'expired' %}
-                <form method="post" action="{% url 'listings:delete' post.id %}" onsubmit="return confirm('Удалить объявление?')">
+                <form method="post" action="{% url 'listings:delete' post.id %}" data-action-confirm="Удалить объявление?" data-action-confirm-message="Действие нельзя отменить.">
                   {% csrf_token %}
                   <input type="hidden" name="next" value="{{ return_url }}">
                   <button type="submit" class="my-post-text-action is-danger">

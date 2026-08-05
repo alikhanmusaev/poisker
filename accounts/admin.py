@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from accounts.models import User
+from accounts.models import User, UserBlock
 
 
 @admin.register(User)
@@ -60,3 +60,10 @@ class UserAdmin(BaseUserAdmin):
         "pdn_consent_version",
         "consent_ip",
     )
+
+
+@admin.register(UserBlock)
+class UserBlockAdmin(admin.ModelAdmin):
+    list_display = ("blocker", "blocked", "created_at")
+    search_fields = ("blocker__email", "blocked__email")
+    raw_id_fields = ("blocker", "blocked")

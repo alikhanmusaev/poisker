@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+import ssl
 from typing import Any
 
 import httpx
@@ -36,6 +37,19 @@ def _api_url() -> str:
 
 def is_configured() -> bool:
     return bool(_terminal_key() and _password())
+
+
+def _api_client(*, timeout: float) -> httpx.Client:
+    """Use the OS trust store for the bank's Russian certificate chain.
+
+    TLS verification remains enabled.  ``trust_env=False`` prevents an
+    accidental proxy environment variable from intercepting payment traffic.
+    """
+    return httpx.Client(
+        timeout=timeout,
+        verify=ssl.create_default_context(),
+        trust_env=False,
+    )
 
 
 def generate_token(payload: dict[str, Any], password: str | None = None) -> str:
@@ -132,7 +146,7 @@ def init_payment(
 
     url = f"{_api_url()}/Init"
     try:
-        with httpx.Client(timeout=20.0) as client:
+        with _api_client(timeout=20.0) as client:
             response = client.post(url, json=body)
             data = response.json()
     except Exception as exc:
@@ -161,7 +175,7 @@ def get_payment_state(payment_id: str | int) -> dict[str, Any]:
     body["Token"] = generate_token(body)
     url = f"{_api_url()}/GetState"
     try:
-        with httpx.Client(timeout=15.0) as client:
+        with _api_client(timeout=15.0) as client:
             response = client.post(url, json=body)
             data = response.json()
     except Exception as exc:

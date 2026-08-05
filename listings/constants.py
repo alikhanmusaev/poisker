@@ -64,6 +64,28 @@ RESERVED_SLUGS = frozenset({
 })
 CATEGORY_ICONS = {slug: icon for slug, (_, icon) in CATEGORIES.items()}
 
+# Three related vector symbols form a small scene in category landing headers.
+# They intentionally reuse the bundled Lucide subset so no extra asset is loaded.
+CATEGORY_VISUALS = {
+    "nedvizhimost": {"main": "home", "secondary": "key-round", "tertiary": "store"},
+    "avto": {"main": "car", "secondary": "cog", "tertiary": "wrench"},
+    "zapchasti": {"main": "cog", "secondary": "car", "tertiary": "wrench"},
+    "elektronika": {"main": "smartphone", "secondary": "layout-grid", "tertiary": "cog"},
+    "odezhda": {"main": "shirt", "secondary": "shopping-bag", "tertiary": "store"},
+    "prodazha": {"main": "shopping-bag", "secondary": "shirt", "tertiary": "store"},
+    "dlya-doma": {"main": "sofa", "secondary": "home", "tertiary": "hammer"},
+    "uslugi": {"main": "wrench", "secondary": "briefcase", "tertiary": "store"},
+    "rabota": {"main": "briefcase", "secondary": "store", "tertiary": "wrench"},
+    "detskie": {"main": "baby", "secondary": "shirt", "tertiary": "home"},
+    "zhivotnye": {"main": "paw-print", "secondary": "home", "tertiary": "shopping-bag"},
+    "sport": {"main": "dumbbell", "secondary": "shopping-bag", "tertiary": "layout-grid"},
+    "stroitelstvo": {"main": "hammer", "secondary": "wrench", "tertiary": "home"},
+    "rasteniya": {"main": "flower-2", "secondary": "apple", "tertiary": "shopping-bag"},
+    "produkti": {"main": "apple", "secondary": "shopping-bag", "tertiary": "store"},
+    "biznes": {"main": "store", "secondary": "briefcase", "tertiary": "layout-grid"},
+    "drugoe": {"main": "layout-grid", "secondary": "shopping-bag", "tertiary": "store"},
+}
+
 SORT_OPTIONS = {
     "date_desc": "Сначала новые",
     "price_asc": "Сначала дешевле",

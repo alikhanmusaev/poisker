@@ -61,6 +61,8 @@ class Notification(models.Model):
     KIND_DEAL_CONFIRM_REQUEST = "deal_confirm_request"
     KIND_REVIEW_UNLOCKED = "review_unlocked"
     KIND_REVIEW_REMINDER = "review_reminder"
+    KIND_PROMOTION_PAID = "promotion_paid"
+    KIND_PROMOTION_FAILED = "promotion_failed"
     KIND_CHOICES = [
         (KIND_PRICE_CHANGED, "Изменение цены"),
         (KIND_POST_UNPUBLISHED, "Снятие объявления"),
@@ -73,6 +75,8 @@ class Notification(models.Model):
         (KIND_DEAL_CONFIRM_REQUEST, "Подтвердите сделку"),
         (KIND_REVIEW_UNLOCKED, "Можно оставить отзыв"),
         (KIND_REVIEW_REMINDER, "Напоминание об отзыве"),
+        (KIND_PROMOTION_PAID, "Продвижение подключено"),
+        (KIND_PROMOTION_FAILED, "Оплата продвижения не прошла"),
     ]
 
     user = models.ForeignKey(

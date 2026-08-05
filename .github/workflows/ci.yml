@@ -29,3 +29,22 @@ jobs:
           DJANGO_DEBUG: "true"
           SECRET_KEY: test-secret
         run: python -m pytest tests/ -q
+
+      - name: Check model migrations
+        env:
+          USE_SQLITE: "1"
+          DJANGO_DEBUG: "true"
+          SECRET_KEY: test-secret
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Audit dependency vulnerabilities
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt
+
+      - name: Check production settings
+        env:
+          DJANGO_DEBUG: "false"
+          SECRET_KEY: test-production-secret
+          HMAC_SECRET: test-production-hmac-secret
+        run: python manage.py check --deploy

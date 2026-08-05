@@ -50,8 +50,8 @@ class SellerReview(models.Model):
         ordering = ["-created_at"]
         constraints = [
             models.UniqueConstraint(
-                fields=["reviewer", "seller"],
-                name="reviews_unique_reviewer_seller",
+                fields=["reviewer", "conversation"],
+                name="reviews_unique_reviewer_conversation",
             ),
             models.CheckConstraint(
                 condition=models.Q(rating__gte=1, rating__lte=5),

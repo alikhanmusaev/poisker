@@ -25,7 +25,9 @@ PROFILE_URL = "accounts:profile"
 
 def _user_posts_queryset(user):
     return annotate_seller_posts(
-        Post.objects.filter(user=user).exclude(status="deleted")
+        Post.objects.filter(user=user)
+        .exclude(status="deleted")
+        .select_related("user", "settlement__region")
     ).order_by("-created_at")
 
 

@@ -82,6 +82,12 @@ def build_show_context(request, post: Post) -> dict:
         region_url = ""
         category_url = f"/{post.city}/{post.category}/"
 
+    # A city of federal significance may have the same label as its region
+    # (for example, "Москва"). Show it once in navigation and structured data.
+    show_settlement_crumb = bool(
+        region_url and region_name and city_name.casefold() != region_name.casefold()
+    )
+
     category_name = CATEGORY_LABELS.get(post.category, post.category)
     body_plain = " ".join(strip_tags(post.body or "").split())
     snippet = body_plain[:160].rstrip()
@@ -134,15 +140,16 @@ def build_show_context(request, post: Post) -> dict:
             }
         )
         pos += 1
-    crumb_items.append(
-        {
-            "@type": "ListItem",
-            "position": pos,
-            "name": city_name,
-            "item": f"https://{settings.APP_DOMAIN}{settlement_url}",
-        }
-    )
-    pos += 1
+    if show_settlement_crumb or not region_url:
+        crumb_items.append(
+            {
+                "@type": "ListItem",
+                "position": pos,
+                "name": city_name,
+                "item": f"https://{settings.APP_DOMAIN}{settlement_url}",
+            }
+        )
+        pos += 1
     crumb_items.append(
         {
             "@type": "ListItem",
@@ -172,6 +179,7 @@ def build_show_context(request, post: Post) -> dict:
         "settlement_url": settlement_url,
         "region_url": region_url,
         "region_name": region_name,
+        "show_settlement_crumb": show_settlement_crumb,
         "is_bookmarked": is_post_bookmarked(request.user, post),
         "seo_title": f"{post.title} — {settings.SITE_NAME}",
         "seo_description": seo_description,

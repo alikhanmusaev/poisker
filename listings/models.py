@@ -8,11 +8,18 @@ from listings.constants import CONDITION_CHOICES
 
 
 class Post(models.Model):
+    MODERATION_FLAG_LABELS = {
+        "external_link": "внешняя ссылка",
+        "advance_payment": "упоминание предоплаты",
+        "duplicate_title": "похожее объявление продавца",
+        "duplicate_photo": "точная копия фото в другом объявлении",
+    }
     STATUS_CHOICES = [
         ("draft", "Черновик"),
         ("pending", "На модерации"),
         ("published", "Опубликовано"),
         ("hidden", "Снято с публикации"),
+        ("sold", "Продано"),
         ("expired", "Истекло"),
         ("deleted", "Удалено"),
     ]
@@ -50,7 +57,9 @@ class Post(models.Model):
     ever_published = models.BooleanField("Было опубликовано", default=False, db_index=True)
     published_at = models.DateTimeField("Опубликовано", null=True, blank=True, db_index=True)
     moderation_note = models.CharField("Комментарий модератора", max_length=400, blank=True)
+    moderation_flags = models.JSONField(default=list, blank=True)
     images = models.JSONField(default=list, blank=True)
+    image_hashes = models.JSONField(default=list, blank=True)
     cover_index = models.PositiveSmallIntegerField(default=0)
     pending_revision = models.JSONField(null=True, blank=True)
     views = models.PositiveIntegerField(default=0)
@@ -120,6 +129,10 @@ class Post(models.Model):
         return bool(self.paid_until and self.paid_until > timezone.now())
 
     @property
+    def moderation_flags_display(self):
+        return [self.MODERATION_FLAG_LABELS.get(flag, flag) for flag in self.moderation_flags]
+
+    @property
     def phone_masked(self):
         phone = self.contact_phone or self.user.phone
         if not phone:
@@ -183,3 +196,26 @@ class Promotion(models.Model):
     class Meta:
         verbose_name = "Продвижение"
         verbose_name_plural = "Продвижения"
+
+
+class PostStatusEvent(models.Model):
+    """Immutable audit trail for seller and moderator listing decisions."""
+
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="status_events")
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="post_status_events",
+    )
+    previous_status = models.CharField(max_length=20, blank=True)
+    new_status = models.CharField(max_length=20)
+    reason = models.CharField(max_length=80, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["post", "-created_at"])]
+        verbose_name = "Изменение статуса объявления"
+        verbose_name_plural = "Изменения статусов объявлений"

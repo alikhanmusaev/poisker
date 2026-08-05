@@ -81,7 +81,9 @@ def start_promotion(post: Post, *, user, absolute_uri) -> str:
     except TBankError as exc:
         promo.status = "failed"
         promo.save(update_fields=["status"])
-        raise PromoteError(str(exc) or "Не удалось создать платёж.") from exc
+        # Provider diagnostics are retained in the application log by the
+        # gateway client, but must not be exposed in a browser message.
+        raise PromoteError("Не удалось перейти к оплате. Попробуйте ещё раз позже.") from exc
 
     payment_id = str(data.get("PaymentId") or "")
     promo.payment_ref = payment_id
@@ -91,11 +93,25 @@ def start_promotion(post: Post, *, user, absolute_uri) -> str:
 
 @transaction.atomic
 def apply_paid_promotion(promo: Promotion) -> Promotion:
-    if promo.status == "paid":
+    # Bank notifications can be retried concurrently. Lock the payment row, not
+    # just the listing, so one payment can only grant one promotion period.
+    # Keep the same post → promotion locking order as deferred activation.
+    post = Post.objects.select_for_update().select_related("user").get(pk=promo.post_id)
+    promo = Promotion.objects.select_for_update().get(pk=promo.pk)
+    if promo.status in {"paid", "paid_pending_activation"}:
         return promo
 
-    post = Post.objects.select_for_update().select_related("user").get(pk=promo.post_id)
     now = timezone.now()
+    if post.status != "published" or post.expires_at <= now:
+        promo.status = "paid_pending_activation"
+        promo.save(update_fields=["status"])
+        return promo
+
+    return _activate_paid_promotion(promo, post, now=now)
+
+
+def _activate_paid_promotion(promo: Promotion, post: Post, *, now) -> Promotion:
+    """Apply a paid promotion to a locked, currently published listing."""
     days = promote_days()
     base = post.paid_until if post.paid_until and post.paid_until > now else now
     paid_until = base + timedelta(days=days)
@@ -120,14 +136,37 @@ def apply_paid_promotion(promo: Promotion) -> Promotion:
     promo.starts_at = now
     promo.ends_at = paid_until
     promo.save(update_fields=["status", "starts_at", "ends_at"])
+    from bookmarks.services import notify_promotion_result
+
+    transaction.on_commit(lambda: notify_promotion_result(promo, paid=True))
     return promo
 
 
+@transaction.atomic
+def activate_pending_promotions(post: Post) -> int:
+    """Start paid boosts that arrived while the listing was not public."""
+    post = Post.objects.select_for_update().get(pk=post.pk)
+    now = timezone.now()
+    if post.status != "published" or post.expires_at <= now:
+        return 0
+    promos = list(
+        Promotion.objects.select_for_update()
+        .filter(post=post, status="paid_pending_activation")
+        .order_by("created_at", "pk")
+    )
+    for promo in promos:
+        _activate_paid_promotion(promo, post, now=now)
+    return len(promos)
+
+
 def mark_promotion_failed(promo: Promotion) -> None:
-    if promo.status == "paid":
+    if promo.status in {"paid", "failed"}:
         return
     promo.status = "failed"
     promo.save(update_fields=["status"])
+    from bookmarks.services import notify_promotion_result
+
+    notify_promotion_result(promo, paid=False)
 
 
 def find_promotion_for_notification(*, order_id: str, payment_id: str) -> Promotion | None:
@@ -185,7 +224,7 @@ def sync_promotion_after_return(post: Post) -> str:
     if status in PAID_STATUSES:
         apply_paid_promotion(promo)
         post.refresh_from_db()
-        return "promoted"
+        return "promoted" if post.is_promoted else "pending"
     if status in FAILED_STATUSES:
         mark_promotion_failed(promo)
         return "failed"

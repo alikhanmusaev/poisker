@@ -86,12 +86,14 @@ class PromotionService:
     def record_impressions(self, posts: list[Post]) -> None:
         if not posts:
             return
-        ids = [p.pk for p in posts]
         now = timezone.now()
-        (
-            Promotion.objects.filter(post_id__in=ids, status="paid", ends_at__gt=now)
-            .order_by()
-            .update(
+        for post in posts:
+            Promotion.objects.filter(
+                post=post,
+                status="paid",
+                ends_at=post.paid_until,
+                ends_at__gt=now,
+            ).update(
                 impressions=F("impressions") + 1,
                 last_shown_at=now,
             )
@@ -99,11 +101,12 @@ class PromotionService:
 
     def record_click(self, post: Post) -> None:
         now = timezone.now()
-        (
-            Promotion.objects.filter(post_id=post.pk, status="paid", ends_at__gt=now)
-            .order_by("-starts_at")
-            .update(clicks=F("clicks") + 1)
-        )
+        Promotion.objects.filter(
+            post=post,
+            status="paid",
+            ends_at=post.paid_until,
+            ends_at__gt=now,
+        ).update(clicks=F("clicks") + 1)
 
     def bonus_kinds(self) -> dict:
         return BONUS_KINDS

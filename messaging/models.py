@@ -142,3 +142,14 @@ class Message(models.Model):
         if self.image:
             return "Фото"
         return ""
+
+
+class MessageReport(models.Model):
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name="reports")
+    reporter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="message_reports")
+    reason = models.CharField(max_length=40, default="other")
+    status = models.CharField(max_length=20, default="new", db_index=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["message", "reporter"], name="messaging_unique_message_report")]

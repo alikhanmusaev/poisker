@@ -27,7 +27,7 @@
               <div class="bookmark-post-body">
                 <p class="bookmark-post-title">{{ post.title }}</p>
                 <p class="bookmark-post-meta">
-                  {{ cities|get_item:post.city }} · {{ category_labels|get_item:post.category }}
+                  {{ post.location_label }} · {{ category_labels|get_item:post.category }}
                   {% if post.price is not None %} · {{ post.price|format_price }} ₽{% endif %}
                 </p>
                 {% if post.status != 'published' %}

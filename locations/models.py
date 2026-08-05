@@ -86,6 +86,8 @@ class Settlement(models.Model):
 
     @property
     def display_name(self) -> str:
+        if self.name.casefold() == self.region.name.casefold():
+            return self.name
         return f"{self.name}, {self.region.name}"
 
     def save(self, *args, **kwargs):

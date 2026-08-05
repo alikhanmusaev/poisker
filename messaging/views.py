@@ -8,6 +8,7 @@ from listings.constants import CATEGORY_LABELS, CITIES
 from listings.models import Post
 from listings.services.storage import upload_image
 from messaging.forms import MessageForm
+from messaging.models import Message, MessageReport
 from messaging.services import (
     MessagingError,
     confirm_deal_completed,
@@ -17,8 +18,10 @@ from messaging.services import (
     get_or_create_conversation,
     hide_conversation,
     inbox_conversations,
+    is_blocked_by,
     mark_conversation_read,
     send_message,
+    users_blocked,
 )
 
 
@@ -97,6 +100,8 @@ def thread(request, conversation_id):
         .order_by("created_at")
     )
     other_user = conversation.other_participant(request.user)
+    blocked_other = users_blocked(request.user, other_user)
+    blocked_by_me = is_blocked_by(request.user, other_user)
     can_leave_review = False
     existing_seller_review = None
     review_unlock_at = None
@@ -106,14 +111,14 @@ def thread(request, conversation_id):
     timeout_days = getattr(django_settings, "DEAL_CONFIRM_TIMEOUT_DAYS", 3)
     if request.user.id == conversation.buyer_id:
         from reviews.services import (
-            can_review_seller,
+            can_review_conversation,
             conversation_review_unlock_at,
             conversation_review_via_timeout,
             get_review,
         )
 
-        can_leave_review = can_review_seller(request.user, other_user)
-        existing_seller_review = get_review(request.user, other_user)
+        can_leave_review = can_review_conversation(request.user, conversation)
+        existing_seller_review = get_review(request.user, other_user, conversation)
         review_unlock_at = conversation_review_unlock_at(conversation)
         review_via_timeout = conversation_review_via_timeout(conversation)
 
@@ -127,6 +132,8 @@ def thread(request, conversation_id):
             "conversation": conversation,
             "post": conversation.post,
             "other_user": other_user,
+            "blocked_other": blocked_other,
+            "blocked_by_me": blocked_by_me,
             "thread_messages": message_list,
             "form": form if form.errors else MessageForm(),
             "cities": CITIES,
@@ -142,6 +149,54 @@ def thread(request, conversation_id):
             "deal_confirm_timeout_days": timeout_days,
         },
     )
+
+
+@login_required
+@require_http_methods(["POST"])
+def block_user(request, conversation_id):
+    try:
+        conversation = get_conversation_for_user(request.user, conversation_id)
+    except MessagingError as exc:
+        raise Http404 from exc
+
+    from accounts.models import UserBlock
+
+    other_user = conversation.other_participant(request.user)
+    UserBlock.objects.get_or_create(blocker=request.user, blocked=other_user)
+    messages.success(request, "Пользователь заблокирован. Новые сообщения в этом чате недоступны.")
+    return redirect("messaging:thread", conversation_id=conversation.pk)
+
+
+@login_required
+@require_http_methods(["POST"])
+def unblock_user(request, conversation_id):
+    try:
+        conversation = get_conversation_for_user(request.user, conversation_id)
+    except MessagingError as exc:
+        raise Http404 from exc
+
+    from accounts.models import UserBlock
+
+    other_user = conversation.other_participant(request.user)
+    UserBlock.objects.filter(blocker=request.user, blocked=other_user).delete()
+    messages.success(request, "Пользователь разблокирован.")
+    return redirect("messaging:thread", conversation_id=conversation.pk)
+
+
+@login_required
+@require_http_methods(["POST"])
+def report_message(request, message_id):
+    message = get_object_or_404(Message.objects.select_related("conversation"), pk=message_id)
+    if not message.conversation.involves(request.user) or message.sender_id == request.user.id:
+        raise Http404
+
+    MessageReport.objects.get_or_create(
+        message=message,
+        reporter=request.user,
+        defaults={"reason": (request.POST.get("reason") or "other")[:40]},
+    )
+    messages.success(request, "Жалоба принята и будет рассмотрена модератором.")
+    return redirect("messaging:thread", conversation_id=message.conversation_id)
 
 
 @login_required
@@ -176,6 +231,23 @@ def start(request, post_id):
 
     form = MessageForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
+        from django.conf import settings
+
+        from core.ratelimit import hit_rate_limit
+
+        limit = getattr(settings, "MESSAGING_RATE_LIMIT_PER_HOUR", 60)
+        if hit_rate_limit(
+            f"msg-rate:{request.user.id}",
+            limit=limit,
+            window_seconds=3600,
+            fail_closed=True,
+        ):
+            form.add_error(None, "Слишком много сообщений. Попробуйте позже.")
+            return render(
+                request,
+                "messaging/compose.html",
+                {"post": post, "other_user": post.user, "form": form, "cities": CITIES, "category_labels": CATEGORY_LABELS},
+            )
         image_url = ""
         image_file = form.cleaned_data.get("image")
         if image_file:

@@ -4,6 +4,8 @@ from django.views.decorators.http import require_GET
 from locations.services.search import (
     SEARCH_MIN_LEN,
     popular_settlements,
+    region_to_dict,
+    search_regions,
     search_settlements,
     settlement_to_dict,
 )
@@ -31,7 +33,11 @@ def locations_search(request):
     rows = search_settlements(
         q, region_id=region_id, region_slug=region_slug, limit=limit
     )
-    return JsonResponse({"results": [settlement_to_dict(s) for s in rows]})
+    regions = search_regions(q, limit=8)
+    return JsonResponse(
+        {"results": [region_to_dict(region) for region in regions]
+        + [settlement_to_dict(s) for s in rows]}
+    )
 
 
 @require_GET

@@ -14,7 +14,7 @@
       <h2 class="admin-card__title admin-detail-title">{{ post.title }}</h2>
       <div class="admin-mod-card__meta">
         <span class="admin-badge admin-badge--{{ post.status }}">{{ post.get_status_display }}</span>
-        <span>{{ cities|get_item:post.city }} · {{ category_labels|get_item:post.category }}</span>
+        <span>{{ post.location_label }} · {{ category_labels|get_item:post.category }}</span>
         {% if post.price is not None %}<span>{{ post.price }} ₽</span>{% endif %}
         <span>Автор: {{ post.user.display_name|default:post.user.email }}</span>
         <span>Тел.: {{ post.contact_phone|default:post.user.phone|default:"—" }}</span>
@@ -36,6 +36,9 @@
     <div class="admin-mod-note">
       <strong>Последний комментарий модератора:</strong> {{ post.moderation_note }}
     </div>
+  {% endif %}
+  {% if post.moderation_flags_display %}
+    <div class="admin-mod-note"><strong>Автопроверка:</strong> {{ post.moderation_flags_display|join:", " }}</div>
   {% endif %}
 
   {% if images %}

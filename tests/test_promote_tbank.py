@@ -64,6 +64,41 @@ def test_apply_paid_promotion_sets_boost(seller, make_post, settings):
 
 
 @pytest.mark.django_db
+def test_apply_paid_promotion_is_idempotent(seller, make_post, settings):
+    settings.PROMOTE_DAYS = 7
+    post = make_post(user=seller, status="published")
+    promo = Promotion.objects.create(post=post, type="boost", amount=19900, status="pending")
+
+    apply_paid_promotion(promo)
+    post.refresh_from_db()
+    first_paid_until = post.paid_until
+    apply_paid_promotion(promo)
+    post.refresh_from_db()
+
+    assert post.paid_until == first_paid_until
+
+
+@pytest.mark.django_db
+def test_paid_hidden_listing_activates_after_moderation(seller, staff_user, make_post, settings):
+    settings.PROMOTE_DAYS = 7
+    post = make_post(user=seller, status="hidden")
+    promo = Promotion.objects.create(post=post, type="boost", amount=19900, status="pending")
+
+    apply_paid_promotion(promo)
+    promo.refresh_from_db()
+    assert promo.status == "paid_pending_activation"
+    assert post.paid_until is None
+
+    from moderation.services import approve_post
+
+    approve_post(post, staff_user)
+    post.refresh_from_db()
+    promo.refresh_from_db()
+    assert promo.status == "paid"
+    assert post.is_promoted
+
+
+@pytest.mark.django_db
 def test_promote_requires_owner(seller, make_post, client, settings):
     settings.TBANK_TERMINAL_KEY = "Demo"
     settings.TBANK_PASSWORD = "pass"

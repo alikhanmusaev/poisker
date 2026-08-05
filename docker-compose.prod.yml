@@ -13,8 +13,8 @@ services:
 
   minio:
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?set S3_SECRET_KEY}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
 
   web:
     ports: !reset []
@@ -47,7 +47,6 @@ services:
       EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-poisker.ru,www.poisker.ru}
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-https://poisker.ru,https://www.poisker.ru}
-      STATIC_VERSION: ${STATIC_VERSION:-django-31}
       FCM_ENABLED: ${FCM_ENABLED:-true}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-poisker-84437}
       FIREBASE_CREDENTIALS_FILE: ${FIREBASE_CREDENTIALS_FILE:-/run/secrets/firebase-adminsdk.json}

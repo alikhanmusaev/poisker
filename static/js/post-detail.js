@@ -91,12 +91,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const promotePanel = document.querySelector('[data-promote-pending]');
   const promoteRefresh = document.querySelector('[data-promote-refresh]');
-  promoteRefresh?.addEventListener('click', (event) => {
-    event.preventDefault();
-    const url = new URL(window.location.href);
-    url.searchParams.set('_ts', String(Date.now()));
-    window.location.replace(url.toString());
-  });
+  let promoteRequestInFlight = false;
+  const refreshPromotionStatus = async () => {
+    if (!promotePanel || promoteRequestInFlight) return;
+    promoteRequestInFlight = true;
+    const originalLabel = promoteRefresh?.textContent;
+    if (promoteRefresh) {
+      promoteRefresh.disabled = true;
+      promoteRefresh.textContent = 'Проверяем…';
+    }
+    try {
+      const response = await fetch(promotePanel.dataset.promoteStatusUrl, {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      const data = response.ok ? await response.json() : null;
+      if (data?.status === 'promoted') {
+        window.location.reload();
+      }
+    } catch (_) {
+      // Keep the pending state visible; the user can safely try again.
+    } finally {
+      promoteRequestInFlight = false;
+      if (promoteRefresh) {
+        promoteRefresh.disabled = false;
+        promoteRefresh.textContent = originalLabel || 'Обновить статус';
+      }
+    }
+  };
+  promoteRefresh?.addEventListener('click', refreshPromotionStatus);
   if (promotePanel) {
     let attempts = 0;
     const maxAttempts = 8;
@@ -106,9 +129,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.clearInterval(timer);
         return;
       }
-      const url = new URL(window.location.href);
-      url.searchParams.set('_ts', String(Date.now()));
-      window.location.replace(url.toString());
+      refreshPromotionStatus();
     }, 3000);
   }
 

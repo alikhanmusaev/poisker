@@ -64,8 +64,8 @@ services:
     user: "1000:1000"
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     volumes:
       - minio_data:/data
     healthcheck:
@@ -74,6 +74,29 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-05-21T01-59-54Z
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
+        && mc mb --ignore-existing local/$${S3_BUCKET}
+        && (mc admin user add local "$${S3_ACCESS_KEY}" "$${S3_SECRET_KEY}" || true)
+        && (mc admin policy create local poisker-app /config/minio-app-policy.json || true)
+        && mc admin policy attach local poisker-app --user "$${S3_ACCESS_KEY}"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-poisker-app}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-poisker-app-secret}
+      S3_BUCKET: ${S3_BUCKET:-board-images}
+    volumes:
+      - ./minio-app-policy.json:/config/minio-app-policy.json:ro
+    depends_on:
+      minio:
+        condition: service_healthy
 
   web:
     build: .
@@ -106,7 +129,6 @@ services:
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
       NOTIFY_SELLER_EMAIL: ${NOTIFY_SELLER_EMAIL:-false}
       EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
-      STATIC_VERSION: ${STATIC_VERSION:-django-26}
     env_file:
       - .env
     volumes:
@@ -120,6 +142,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
@@ -162,6 +186,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
       web:
         condition: service_healthy
 

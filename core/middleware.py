@@ -1,10 +1,12 @@
+import secrets
+
 from django.conf import settings
 
-# 'unsafe-inline' for styles/scripts: templates use a few inline styles and one
-# small admin bootstrap script; tighten later if those move to static files.
+# Inline styles are still used by templates. Inline scripts use a per-response
+# nonce, so a markup injection cannot execute JavaScript by default.
 _DEFAULT_CSP = (
     "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline' https://www.gstatic.com; "
+    "script-src 'self' https://www.gstatic.com; "
     "style-src 'self' 'unsafe-inline'; "
     "img-src 'self' data: blob:; "
     "font-src 'self'; "
@@ -27,6 +29,7 @@ class SecurityHeadersMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        request.csp_nonce = secrets.token_urlsafe(16)
         response = self.get_response(request)
         if getattr(settings, "SECURITY_HEADERS_ENABLED", True):
             response.headers.setdefault("X-Content-Type-Options", "nosniff")
@@ -35,6 +38,7 @@ class SecurityHeadersMiddleware:
             response.headers.setdefault("Permissions-Policy", _DEFAULT_PERMISSIONS_POLICY)
             response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
             csp = getattr(settings, "CONTENT_SECURITY_POLICY", "") or _DEFAULT_CSP
+            csp = csp.replace("script-src 'self'", f"script-src 'self' 'nonce-{request.csp_nonce}'")
             if csp:
                 response.headers.setdefault("Content-Security-Policy", csp)
         return response

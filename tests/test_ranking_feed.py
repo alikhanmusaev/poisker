@@ -102,3 +102,26 @@ def test_stored_rank_score_excludes_freshness_decay(make_post):
     )
     # Same quality → stored scores should match (freshness is live-only now).
     assert calculate_rank_score(new) == calculate_rank_score(old)
+
+
+@pytest.mark.django_db
+def test_promotion_stats_only_count_current_promotion(make_post):
+    from listings.models import Promotion
+    from listings.ranking.promotion_service import PromotionService
+
+    now = timezone.now()
+    current_end = now + timedelta(days=7)
+    post = make_post(status="published", paid_until=current_end)
+    previous = Promotion.objects.create(
+        post=post, type="boost", amount=19900, status="paid", ends_at=now + timedelta(days=3)
+    )
+    current = Promotion.objects.create(
+        post=post, type="boost", amount=19900, status="paid", ends_at=current_end
+    )
+
+    PromotionService().record_impressions([post])
+    PromotionService().record_click(post)
+    previous.refresh_from_db()
+    current.refresh_from_db()
+    assert (previous.impressions, previous.clicks) == (0, 0)
+    assert (current.impressions, current.clicks) == (1, 1)

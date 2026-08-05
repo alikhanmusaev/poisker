@@ -27,7 +27,7 @@
           <a href="{% post_public_url post %}" class="message-post-context-title-link">{{ post.title }}</a>
         </h1>
         <p class="message-post-context-meta">
-          {{ cities|get_item:post.city }} · {{ category_labels|get_item:post.category }}
+          {{ post.location_label }} · {{ category_labels|get_item:post.category }}
           {% if post.price is not None %} · {{ post.price|format_price }} ₽{% endif %}
         </p>
         <p class="message-thread-participant">

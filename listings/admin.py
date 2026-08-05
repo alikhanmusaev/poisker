@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from listings.models import Post, Promotion, Report
+from listings.models import Post, PostStatusEvent, Promotion, Report
 from moderation.services import approve_post, hide_post
 
 
@@ -37,3 +37,11 @@ class ReportAdmin(admin.ModelAdmin):
 class PromotionAdmin(admin.ModelAdmin):
     list_display = ("post", "type", "amount", "status", "created_at")
     list_filter = ("status", "type")
+
+
+@admin.register(PostStatusEvent)
+class PostStatusEventAdmin(admin.ModelAdmin):
+    list_display = ("post", "previous_status", "new_status", "reason", "actor", "created_at")
+    list_filter = ("previous_status", "new_status", "reason")
+    search_fields = ("post__title", "actor__email")
+    readonly_fields = ("post", "actor", "previous_status", "new_status", "reason", "created_at")

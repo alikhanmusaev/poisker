@@ -11,11 +11,13 @@ urlpatterns = [
     path("<uuid:post_id>/contact/", views.contact, name="contact"),
     path("<uuid:post_id>/report/", media_views.report_post, name="report"),
     path("<uuid:post_id>/promote/", views.promote, name="promote"),
+    path("<uuid:post_id>/promote/status/", views.promote_status, name="promote_status"),
     path("<uuid:post_id>/promote/success/", views.promote_success, name="promote_success"),
     path("<uuid:post_id>/promote/fail/", views.promote_fail, name="promote_fail"),
     path("<uuid:post_id>/", views.show, name="show"),
     path("<uuid:post_id>/edit/", views.edit, name="edit"),
     path("<uuid:post_id>/delete/", views.delete, name="delete"),
     path("<uuid:post_id>/republish/", views.republish, name="republish"),
+    path("<uuid:post_id>/mark-sold/", views.mark_sold, name="mark_sold"),
     path("<uuid:post_id>/submit/", views.submit_for_moderation, name="submit"),
 ]

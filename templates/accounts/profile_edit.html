@@ -52,7 +52,7 @@
 {% block scripts %}
   {% load static %}
   <script src="{% static 'js/form-helpers.js' %}" defer></script>
-  <script defer>
+  <script nonce="{{ csp_nonce }}" defer>
     document.addEventListener('DOMContentLoaded', () => {
       window.initCityAutocomplete?.(
         document.getElementById('preferred-settlement-input'),

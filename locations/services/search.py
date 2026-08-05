@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Case, IntegerField, Q, QuerySet, Value, When
 
-from locations.models import Settlement
+from locations.models import Region, Settlement
 
 SEARCH_MIN_LEN = 2
 SEARCH_DEFAULT_LIMIT = 20
@@ -63,6 +63,7 @@ def search_settlements(
 
 def settlement_to_dict(s: Settlement) -> dict:
     return {
+        "kind": "settlement",
         "id": s.id,
         "name": s.name,
         "slug": s.slug,
@@ -74,6 +75,39 @@ def settlement_to_dict(s: Settlement) -> dict:
             "code": s.region.code,
         },
         "display_name": s.display_name,
+    }
+
+
+def search_regions(query: str, *, limit: int = 8) -> list[Region]:
+    """Return matching regions so visitors can search an entire region directly."""
+    q = (query or "").strip()
+    if len(q) < SEARCH_MIN_LEN:
+        return []
+
+    limit = max(1, min(int(limit or 8), 12))
+    return list(
+        Region.objects.filter(is_active=True)
+        .filter(Q(name__icontains=q) | Q(slug__icontains=q))
+        .annotate(
+            rank=Case(
+                When(name__iexact=q, then=Value(0)),
+                When(name__istartswith=q, then=Value(1)),
+                When(slug__istartswith=q, then=Value(2)),
+                default=Value(3),
+                output_field=IntegerField(),
+            )
+        )
+        .order_by("rank", "name")[:limit]
+    )
+
+
+def region_to_dict(region: Region) -> dict:
+    return {
+        "kind": "region",
+        "id": region.id,
+        "name": region.name,
+        "slug": region.slug,
+        "display_name": region.name,
     }
 
 

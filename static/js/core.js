@@ -159,3 +159,15 @@
 
   global.Poisker = Poisker;
 })(window);
+document.addEventListener('submit', (event) => {
+  const form = event.target.closest('form[data-action-confirm]');
+  if (!form || form.dataset.confirmed === 'true') return;
+  event.preventDefault();
+  const title = form.dataset.actionConfirm || 'Подтвердите действие';
+  const message = form.dataset.actionConfirmMessage || '';
+  const accepted = window.confirm(`${title}\n\n${message}`);
+  if (accepted) {
+    form.dataset.confirmed = 'true';
+    form.requestSubmit();
+  }
+});

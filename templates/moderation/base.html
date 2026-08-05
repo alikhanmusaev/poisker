@@ -115,7 +115,7 @@
   </nav>
 
   <script src="{% static 'js/admin.js' %}?v={{ static_version }}"></script>
-  <script>
+  <script nonce="{{ csp_nonce }}">
     document.addEventListener('DOMContentLoaded', () => {
       if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': 2 } });
     });

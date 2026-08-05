@@ -119,6 +119,14 @@ def can_review_seller(reviewer, seller) -> bool:
     return _has_deal_confirmed(reviewer, seller)
 
 
+def can_review_conversation(reviewer, conversation) -> bool:
+    if not reviewer.is_authenticated or conversation.buyer_id != reviewer.id:
+        return False
+    if getattr(reviewer, "is_blocked", False) or getattr(conversation.seller, "is_blocked", False):
+        return False
+    return conversation_allows_buyer_review(conversation)
+
+
 def needs_deal_confirmation(reviewer, seller) -> bool:
     if not reviewer.is_authenticated or reviewer.id == seller.id:
         return False
@@ -179,24 +187,29 @@ def eligible_phone_post(reviewer, seller):
     return reveal.post if reveal else None
 
 
-def get_review(reviewer, seller):
+def get_review(reviewer, seller, conversation=None):
     if not reviewer.is_authenticated:
         return None
-    return SellerReview.objects.filter(reviewer=reviewer, seller=seller).first()
+    reviews = SellerReview.objects.filter(reviewer=reviewer, seller=seller)
+    if conversation is not None:
+        reviews = reviews.filter(conversation=conversation)
+    return reviews.first()
 
 
-def upsert_review(*, reviewer, seller, rating: int, comment: str = "") -> SellerReview:
-    if not can_review_seller(reviewer, seller):
+def upsert_review(*, reviewer, seller, rating: int, comment: str = "", conversation=None) -> SellerReview:
+    conversation = conversation or eligible_conversation(reviewer, seller)
+    if not conversation or not can_review_conversation(reviewer, conversation):
         raise ReviewError(review_denied_message(reviewer, seller))
-    conversation = eligible_conversation(reviewer, seller)
-    post = conversation.post if conversation else eligible_phone_post(reviewer, seller)
+    if conversation.seller_id != seller.id:
+        raise ReviewError("Переписка не относится к этому продавцу.")
+    post = conversation.post
     review, created = SellerReview.objects.update_or_create(
         reviewer=reviewer,
-        seller=seller,
+        conversation=conversation,
         defaults={
+            "seller": seller,
             "rating": rating,
             "comment": (comment or "").strip()[:1000],
-            "conversation": conversation,
             "post": post,
         },
     )
@@ -329,7 +342,7 @@ def process_deal_review_jobs() -> dict:
     for conversation in timeout_candidates.iterator(chunk_size=100):
         if SellerReview.objects.filter(
             reviewer_id=conversation.buyer_id,
-            seller_id=conversation.seller_id,
+            conversation_id=conversation.id,
         ).exists():
             continue
         unlocked += notify_review_unlocked(
@@ -368,7 +381,7 @@ def process_deal_review_jobs() -> dict:
             continue
         if SellerReview.objects.filter(
             reviewer_id=conversation.buyer_id,
-            seller_id=conversation.seller_id,
+            conversation_id=conversation.id,
         ).exists():
             continue
         unlock_note = Notification.objects.filter(

@@ -63,6 +63,7 @@ class PostForm(HoneypotFormMixin, forms.Form):
         self._init_honeypot()
 
 
+
 class DraftPostForm(HoneypotFormMixin, forms.Form):
     """Relaxed validation for saving incomplete listings as drafts."""
 

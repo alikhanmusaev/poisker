@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 import json
 import logging
 
@@ -22,6 +22,7 @@ from listings.services.posts import (
     create_post,
     delete_post,
     republish_post,
+    mark_post_sold,
     submit_draft,
     sync_user_post_phones,
     unpublish_post,
@@ -39,7 +40,7 @@ from listings.services.promote import (
     sync_promotion_after_return,
 )
 from listings.services.show_context import build_show_context, increment_views
-from listings.services.storage import upload_image
+from listings.services.storage import upload_image, uploaded_sha256
 from listings.services.tbank import verify_notification
 
 logger = logging.getLogger(__name__)
@@ -65,13 +66,15 @@ def _upload_images(files):
 
 
 def _collect_images(request):
-    image_keys = _upload_images(request.FILES.getlist("images"))
+    files = request.FILES.getlist("images")[:5]
+    image_hashes = [uploaded_sha256(image) for image in files if image]
+    image_keys = _upload_images(files)
     cover_index = int(request.POST.get("cover_index") or 0)
     if image_keys:
         cover_index = max(0, min(cover_index, len(image_keys) - 1))
     else:
         cover_index = 0
-    return image_keys, cover_index
+    return image_keys, cover_index, image_hashes
 
 
 def _resolve_edit_images(request, post):
@@ -124,7 +127,18 @@ def create(request):
     errors = []
     if request.method == "POST" and form.is_valid():
         try:
-            image_keys, cover_index = _collect_images(request)
+            if not as_draft:
+                from core.ratelimit import hit_rate_limit
+                from django.conf import settings
+
+                if hit_rate_limit(
+                    f"post-create:{request.user.pk}",
+                    limit=settings.POST_CREATE_RATE_LIMIT_PER_DAY,
+                    window_seconds=24 * 60 * 60,
+                    fail_closed=True,
+                ):
+                    raise ValidationError("Лимит публикаций на сегодня исчерпан. Попробуйте завтра.")
+            image_keys, cover_index, image_hashes = _collect_images(request)
             post = create_post(
                 request.user,
                 {
@@ -132,6 +146,7 @@ def create(request):
                     "cover_index": cover_index,
                 },
                 image_keys=image_keys,
+                image_hashes=image_hashes,
                 as_draft=as_draft,
             )
             if as_draft:
@@ -167,6 +182,9 @@ def edit(request, post_id):
     post = get_object_or_404(Post.objects.select_related("settlement__region"), pk=post_id)
     if post.user_id != request.user.id and not request.user.is_staff:
         raise Http404
+    if post.status == "sold":
+        messages.info(request, "Проданное объявление нельзя редактировать.")
+        return redirect("accounts:profile")
     if post.status == "hidden" and not can_edit_rejected_post(post):
         messages.info(
             request,
@@ -318,13 +336,25 @@ def republish(request, post_id):
     return _redirect_after_post_action(request, post)
 
 
+@login_required
+@require_POST
+def mark_sold(request, post_id):
+    post = _user_post_or_404(request.user, post_id)
+    try:
+        mark_post_sold(post, request.user)
+        messages.success(request, "Объявление отмечено как проданное и снято из поиска.")
+    except ValidationError as exc:
+        messages.error(request, str(exc))
+    return redirect("accounts:profile")
+
+
 def show(request, post_id):
     post = get_object_or_404(Post.objects.select_related("user"), pk=post_id)
     if post.status == "published" and post.expires_at and post.expires_at > timezone.now():
         from listings.services.seo_urls import post_public_url
 
         return redirect(post_public_url(post), permanent=True)
-    if post.status not in ("published", "pending", "hidden", "draft", "expired"):
+    if post.status not in ("published", "pending", "hidden", "sold", "draft", "expired"):
         raise Http404
     is_owner = post.user_id == getattr(request.user, "id", None)
     is_staff = bool(getattr(request.user, "is_staff", False) and request.user.is_authenticated)
@@ -400,6 +430,21 @@ def promote(request, post_id):
 
         return redirect(post_public_url(post) if post.status == "published" else "accounts:profile")
     return redirect(payment_url)
+
+
+@login_required
+@require_GET
+def promote_status(request, post_id):
+    """Return the bank-verified promotion state without navigating the page."""
+    post = _user_post_or_404(request.user, post_id)
+    if post.status != "published":
+        raise Http404
+    if has_pending_promotion(post) and not post.is_promoted:
+        sync_promotion_after_return(post)
+        post.refresh_from_db()
+    if post.is_promoted:
+        return JsonResponse({"status": "promoted"})
+    return JsonResponse({"status": "pending" if has_pending_promotion(post) else "unknown"})
 
 
 @login_required

@@ -8,10 +8,13 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from accounts.models import User
 from listings.models import Post
+from messaging.models import Conversation
 from reviews.forms import SellerReviewForm, SellerReviewReplyForm
 from reviews.services import (
     ReviewError,
+    can_review_conversation,
     can_review_seller,
+    eligible_conversation,
     get_review,
     needs_deal_confirmation,
     reply_to_review,
@@ -27,7 +30,7 @@ def seller_profile(request, user_id):
         user=seller,
         status="published",
         expires_at__gte=timezone.now(),
-    )
+    ).select_related("user", "settlement__region")
     posts = list(live_posts.order_by("-rank_score", "-created_at")[:12])
     reviews = list(seller_reviews_qs(seller)[:50])
     existing = get_review(request.user, seller) if request.user.is_authenticated else None
@@ -62,11 +65,21 @@ def seller_profile(request, user_id):
 @require_http_methods(["GET", "POST"])
 def review_seller(request, user_id):
     seller = get_object_or_404(User, pk=user_id, is_blocked=False)
-    if not can_review_seller(request.user, seller):
+    conversation_id = request.GET.get("conversation")
+    if conversation_id:
+        conversation = get_object_or_404(
+            Conversation.objects.select_related("seller", "post"),
+            pk=conversation_id,
+            buyer=request.user,
+            seller=seller,
+        )
+    else:
+        conversation = eligible_conversation(request.user, seller)
+    if not conversation or not can_review_conversation(request.user, conversation):
         messages.error(request, review_denied_message(request.user, seller))
         return redirect("reviews:seller_profile", user_id=seller.id)
 
-    existing = get_review(request.user, seller)
+    existing = get_review(request.user, seller, conversation)
     if request.method == "POST":
         form = SellerReviewForm(request.POST, instance=existing)
         if form.is_valid():
@@ -76,6 +89,7 @@ def review_seller(request, user_id):
                     seller=seller,
                     rating=form.cleaned_data["rating"],
                     comment=form.cleaned_data.get("comment") or "",
+                    conversation=conversation,
                 )
                 messages.success(request, "Отзыв сохранён.")
                 return redirect("reviews:seller_profile", user_id=seller.id)

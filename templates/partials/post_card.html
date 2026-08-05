@@ -30,7 +30,7 @@
           {% endfor %}
         </div>
       {% else %}
-        <a href="{% post_public_url post %}" class="post-card-slide">
+        <a href="{% post_public_url post %}" class="post-card-slide" aria-label="{{ post.title }}">
           {% if lcp_priority %}
             {% responsive_img post.images.0 alt=post.title img_class="post-card-img" sizes="(max-width: 640px) 50vw, 320px" width=320 height=240 loading="eager" fetchpriority="high" card=True %}
           {% else %}
@@ -39,7 +39,7 @@
         </a>
       {% endif %}
     {% else %}
-      <a href="{% post_public_url post %}" class="post-card-slide">
+      <a href="{% post_public_url post %}" class="post-card-slide" aria-label="{{ post.title }}">
         <div class="post-card-img post-card-img-placeholder" aria-hidden="true">
           <i data-lucide="image" class="icon icon-xl" aria-hidden="true"></i>
         </div>
@@ -61,7 +61,7 @@
       {% if post.settlement_id %}
       <a class="post-card-location" href="{{ post.settlement_public_path }}">{{ post.settlement.name }}</a>
       {% else %}
-      <span>{{ cities|get_item:post.city }}</span>
+      <span>{{ post.location_label }}</span>
       {% endif %}
       <span class="meta-dot" aria-hidden="true">·</span>
       <span>{{ category_labels|get_item:post.category }}</span>

@@ -238,6 +238,10 @@
       valueMode: 'id',
       showPopularOnEmpty: false,
       onSelect(_id, _label, item) {
+        if (item?.kind === 'region') {
+          navigateToGeo({ regionSlug: item.slug || '' });
+          return;
+        }
         navigateToGeo({
           regionSlug: item?.regionSlug || item?.region?.slug || '',
           settlementSlug: item?.slug || hidden.value,
@@ -330,12 +334,51 @@
     });
   }
 
+  function syncCategoryHero(cat) {
+    const hero = document.querySelector('[data-category-hero]');
+    const visual = document.querySelector('[data-category-visual]');
+    const heading = document.getElementById('home-title');
+    if (!hero || !visual || !heading) return;
+
+    const chip = [...document.querySelectorAll('.category-chip[data-category]')]
+      .find((item) => (item.dataset.category || '') === cat);
+    heading.textContent = chip?.dataset.heroTitle || hero.dataset.defaultTitle || heading.textContent;
+    hero.classList.add('home-hero--category');
+    visual.className = `category-visual category-visual--${cat || 'home'} is-visible`;
+
+    const posters = {
+      home: 'home-pixel-v5.webp',
+      nedvizhimost: 'nedvizhimost-pixel-v1.webp', avto: 'avto-pixel-v1.webp',
+      zapchasti: 'zapchasti-pixel-v1.webp', elektronika: 'elektronika-pixel-v1.webp',
+      odezhda: 'odezhda-pixel-v1.webp', prodazha: 'prodazha-pixel-v1.webp',
+      'dlya-doma': 'dlya-doma-pixel-v1.webp', uslugi: 'uslugi-pixel-v1.webp',
+      rabota: 'rabota-pixel-v1.webp', detskie: 'detskie-pixel-v1.webp',
+      zhivotnye: 'zhivotnye-pixel-v1.webp', sport: 'sport-pixel-v1.webp',
+      stroitelstvo: 'stroitelstvo-pixel-v1.webp', rasteniya: 'rasteniya-pixel-v1.webp',
+      produkti: 'produkti-pixel-v1.webp', biznes: 'biznes-pixel-v1.webp', drugoe: 'drugoe-pixel-v1.webp',
+    };
+    const file = posters[cat || 'home'];
+    if (file) {
+      let poster = visual.querySelector('.category-pixel-poster');
+      if (!poster) {
+        visual.replaceChildren();
+        poster = document.createElement('img');
+        poster.className = 'category-pixel-poster';
+        poster.alt = '';
+        poster.decoding = 'async';
+        visual.append(poster);
+      }
+      poster.src = `/static/category-art/${file}`;
+    }
+  }
+
   function syncControlsFromUrl() {
     if (window.refreshIcons) refreshIcons();
     syncListingFormPath();
     const params = new URLSearchParams(window.location.search);
     const cat = params.get('category') || categoryFromPath() || '';
     setActiveCategoryChip(cat);
+    syncCategoryHero(cat);
 
     const rawSort = params.get('sort') || '';
     const sortSelect = document.getElementById('sort-select');
@@ -364,6 +407,7 @@
     const chip = event.target.closest('.category-chip[data-category]');
     if (!chip || chip.classList.contains('is-active')) return;
     setActiveCategoryChip(chip.dataset.category || '');
+    syncCategoryHero(chip.dataset.category || '');
     carouselApi?.scrollChipIntoView(chip, 'auto');
   });
 

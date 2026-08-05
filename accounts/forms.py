@@ -1,6 +1,10 @@
 from django import forms
+from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.forms import PasswordChangeForm, PasswordResetForm, SetPasswordForm, UserCreationForm
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.urls import reverse
 
 from accounts.models import User
 from core.forms import HoneypotFormMixin
@@ -201,6 +205,49 @@ class StyledPasswordResetForm(PasswordResetForm):
         self.fields["email"].widget.attrs.update(
             {"class": "input", "autocomplete": "email", "placeholder": "you@example.com"}
         )
+
+    def send_mail(
+        self,
+        subject_template_name,
+        email_template_name,
+        context,
+        from_email,
+        to_email,
+        html_email_template_name=None,
+    ):
+        """Send a multipart reset email while keeping Django's safe token flow."""
+        subject = "".join(
+            render_to_string(subject_template_name, context).splitlines()
+        )
+        body = render_to_string(email_template_name, context)
+        action_url = (
+            f"{context['protocol']}://{context['domain']}"
+            f"{reverse('accounts:password_reset_confirm', kwargs={'uidb64': context['uid'], 'token': context['token']})}"
+        )
+        message = EmailMultiAlternatives(
+            subject=subject,
+            body=body,
+            from_email=from_email,
+            to=[to_email],
+            reply_to=[settings.SUPPORT_EMAIL],
+        )
+        message.attach_alternative(
+            render_to_string(
+                "emails/notification.html",
+                {
+                    "site_name": settings.SITE_NAME,
+                    "user_name": context["user"].display_name,
+                    "title": "Восстановление пароля",
+                    "body": "Вы запросили восстановление пароля. По кнопке можно задать новый пароль.",
+                    "action_url": action_url,
+                    "action_label": "Задать новый пароль",
+                    "support_email": settings.SUPPORT_EMAIL,
+                    "logo_url": f"https://{settings.APP_DOMAIN}/static/brand/logo.png",
+                },
+            ),
+            "text/html",
+        )
+        message.send(fail_silently=False)
 
 
 class StyledSetPasswordForm(SetPasswordForm):

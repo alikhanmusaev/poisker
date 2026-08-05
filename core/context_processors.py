@@ -31,6 +31,7 @@ def site_context(request):
         "site_description": settings.SITE_DESCRIPTION,
         "support_email": settings.SUPPORT_EMAIL,
         "static_version": settings.STATIC_VERSION,
+        "csp_nonce": getattr(request, "csp_nonce", ""),
         "pdn_consent_version": getattr(settings, "PDN_CONSENT_VERSION", ""),
         "operator_name": getattr(settings, "OPERATOR_NAME", ""),
         "operator_address": getattr(settings, "OPERATOR_ADDRESS", ""),

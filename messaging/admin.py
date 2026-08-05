@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from messaging.models import Conversation, Message
+from messaging.models import Conversation, Message, MessageReport
 
 
 class MessageInline(admin.TabularInline):
@@ -33,3 +33,11 @@ class MessageAdmin(admin.ModelAdmin):
     @admin.display(description="Фото", boolean=True)
     def has_image(self, obj):
         return bool(obj.image)
+
+
+@admin.register(MessageReport)
+class MessageReportAdmin(admin.ModelAdmin):
+    list_display = ("message", "reporter", "reason", "status", "created_at")
+    list_filter = ("status", "reason", "created_at")
+    search_fields = ("message__body", "reporter__email", "message__sender__email")
+    raw_id_fields = ("message", "reporter")

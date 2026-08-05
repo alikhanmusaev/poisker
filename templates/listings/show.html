@@ -10,8 +10,8 @@
 {% block twitter_title %}{{ post.title }}{% endblock %}
 {% block twitter_description %}{{ seo_description }}{% endblock %}
 {% block structured_data %}
-<script type="application/ld+json">{{ json_ld_json|safe }}</script>
-<script type="application/ld+json">{{ breadcrumb_ld_json|safe }}</script>
+<script type="application/ld+json" nonce="{{ csp_nonce }}">{{ json_ld_json|safe }}</script>
+<script type="application/ld+json" nonce="{{ csp_nonce }}">{{ breadcrumb_ld_json|safe }}</script>
 {% endblock %}
 {% block content %}
 <article class="page-card post-detail"
@@ -23,6 +23,7 @@
       <li class="breadcrumbs-item">
         <a href="{% url 'core:index' %}">Главная</a>
       </li>
+      <li class="breadcrumbs-separator" aria-hidden="true">/</li>
       <li class="breadcrumbs-item">
         {% if region_url and region_name %}
         <a href="{{ region_url }}">{{ region_name }}</a>
@@ -30,10 +31,12 @@
         <a href="{{ settlement_url }}">{{ location_label }}</a>
         {% endif %}
       </li>
-      {% if region_url and region_name %}
+      <li class="breadcrumbs-separator" aria-hidden="true">/</li>
+      {% if show_settlement_crumb %}
       <li class="breadcrumbs-item">
         <a href="{{ settlement_url }}">{{ post.settlement.name|default:location_label }}</a>
       </li>
+      <li class="breadcrumbs-separator" aria-hidden="true">/</li>
       {% endif %}
       <li class="breadcrumbs-item">
         <a href="{% if post.settlement_id %}{{ settlement_url }}{{ post.category }}/{% else %}{% city_category_path post.city post.category %}{% endif %}">{{ category_labels|get_item:post.category }}</a>
@@ -112,7 +115,7 @@
     <section
       class="promote-panel{% if post.is_promoted %} is-active{% elif promote_pending or request.GET.promote == 'pending' %} is-pending{% endif %}"
       aria-live="polite"
-      {% if promote_pending or request.GET.promote == 'pending' %}data-promote-pending="1"{% endif %}
+      {% if promote_pending or request.GET.promote == 'pending' %}data-promote-pending="1" data-promote-status-url="{% url 'listings:promote_status' post.id %}"{% endif %}
     >
       {% if post.is_promoted %}
         <div class="promote-panel__icon" aria-hidden="true">
@@ -138,7 +141,7 @@
         <div class="promote-panel__body">
           <p class="promote-panel__title">Ждём подтверждение оплаты</p>
           <p class="promote-panel__text">
-            Банк ещё обрабатывает платёж. Обычно это занимает до минуты — статус обновится сам.
+            Банк ещё обрабатывает платёж. Обычно это занимает до минуты — мы проверим статус без перезагрузки страницы.
           </p>
           <button type="button" class="btn btn-secondary btn-sm" data-promote-refresh>
             Обновить статус
@@ -185,7 +188,7 @@
     {% if post.settlement_id %}
     <a href="{{ settlement_url }}">{{ post.settlement.name }}</a>
     {% else %}
-    <span>{{ cities|get_item:post.city }}</span>
+    <span>{{ post.location_label }}</span>
     {% endif %}
     <span class="meta-dot">·</span>
     <span>{{ post.created_at|relative_time }}</span>
@@ -197,6 +200,18 @@
   </p>
 
   <div class="contact-box">
+    <div class="contact-box__heading">
+      <div class="contact-box__seller-mark" aria-hidden="true">{{ post.seller_name|default:post.user.email|slice:":1"|upper }}</div>
+      <div>
+        <p class="contact-box__eyebrow">Продавец</p>
+        <a href="{% url 'reviews:seller_profile' post.user_id %}" class="contact-box__seller-name">{{ post.seller_name|default:post.user.email }}</a>
+      </div>
+      {% if post.user.rating_count %}
+        <span class="contact-box__rating" aria-label="Рейтинг {{ post.user.rating_avg|floatformat:1 }} из 5">
+          <i data-lucide="star" class="icon icon-xs" aria-hidden="true"></i>{{ post.user.rating_avg|floatformat:1 }}
+        </span>
+      {% endif %}
+    </div>
     {% url 'messaging:start' post.id as message_start_url %}
     {% if user.is_staff %}
       <a href="{% url 'moderation:post_detail' post.id %}" class="btn btn-primary btn-block">
@@ -232,6 +247,7 @@
       </a>
       <p class="contact-guest-note">Сообщения и телефон доступны только зарегистрированным пользователям.</p>
     {% endif %}
+    <p class="contact-box__safe-note"><i data-lucide="shield-check" class="icon icon-xs" aria-hidden="true"></i> Общайтесь в чате сервиса — так проще решить спорные ситуации.</p>
     <button type="button" class="btn btn-secondary btn-block" id="share-post">
       <i data-lucide="share-2" class="icon" aria-hidden="true"></i>
       Поделиться
