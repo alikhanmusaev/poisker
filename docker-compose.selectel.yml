@@ -1,0 +1,17 @@
+services:
+  web:
+    ports: !override
+      - "127.0.0.1:8001:8000"
+    volumes: !override
+      - ./staticfiles:/app/staticfiles
+    environment:
+      FCM_ENABLED: "false"
+
+  scheduler:
+    volumes: !override []
+    environment:
+      FCM_ENABLED: "false"
+
+  nginx:
+    ports: !override
+      - "80:80"
