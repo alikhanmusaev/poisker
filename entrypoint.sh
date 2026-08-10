@@ -33,6 +33,7 @@ if [ "${SEED_DEMO_DATA:-0}" = "1" ]; then
 fi
 
 echo "Collecting static files..."
+umask 022
 python manage.py collectstatic --noinput
 
 # Keep gzip_static siblings in sync (stale .gz would otherwise win forever).
@@ -40,6 +41,10 @@ if command -v gzip >/dev/null 2>&1; then
   find /app/staticfiles \( -name '*.css' -o -name '*.js' -o -name '*.svg' -o -name '*.json' \) -type f -print0 \
     | xargs -0 -r gzip -kf
 fi
+
+# The Nginx container reads this shared volume as an unprivileged user.
+# Keep every collected asset world-readable and traversable after deployments.
+chmod -R a+rX /app/staticfiles
 
 echo "Starting gunicorn..."
 exec gunicorn config.wsgi:application -w "${WEB_CONCURRENCY:-2}" -b 0.0.0.0:8000 --timeout 120
