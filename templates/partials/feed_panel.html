@@ -27,7 +27,11 @@
     </div>
   {% endif %}
 
-  {% if ranking_mode == "home" and feed_sections and page == 1 and not query %}
+  {% if not total %}
+    <div id="post-list">
+      {% include "partials/post_list.html" %}
+    </div>
+  {% elif ranking_mode == "home" and feed_sections and page == 1 and not query %}
     {% if feed_sections.new %}
       <section class="feed-section" aria-label="Новые объявления">
         <h2 class="feed-section__title">Новые объявления</h2>
