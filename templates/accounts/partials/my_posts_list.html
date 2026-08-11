@@ -142,7 +142,7 @@
                   </button>
                 </form>
               {% elif post.status == 'published' %}
-                <form method="post" action="{% url 'listings:delete' post.id %}" data-action-confirm="Снять объявление?" data-action-confirm-message="Оно исчезнет из поиска и появится во вкладке «Снятые».">
+                <form method="post" action="{% url 'listings:unpublish' post.id %}" data-action-confirm="Снять объявление?" data-action-confirm-message="Оно исчезнет из поиска и появится во вкладке «Снятые».">
                   {% csrf_token %}
                   <input type="hidden" name="next" value="{{ return_url }}">
                   <button type="submit" class="my-post-text-action">

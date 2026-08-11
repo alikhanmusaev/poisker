@@ -298,26 +298,35 @@ def _redirect_after_post_action(request, post):
 
 @login_required
 @require_POST
+def unpublish(request, post_id):
+    """Remove an active listing from search without deleting its record."""
+    post = _user_post_or_404(request.user, post_id)
+    try:
+        unpublish_post(post, request.user)
+        messages.success(request, "Объявление снято с публикации.")
+        next_url = request.POST.get("next")
+        if not next_url:
+            return redirect(f"{reverse('accounts:profile')}?tab=hidden")
+    except ValidationError as exc:
+        messages.error(request, str(exc))
+    return _redirect_after_post_action(request, post)
+
+
+@login_required
+@require_POST
 def delete(request, post_id):
     post = _user_post_or_404(request.user, post_id)
     try:
-        if post.status == "published":
-            unpublish_post(post, request.user)
-            messages.success(request, "Объявление снято с публикации.")
-            next_url = request.POST.get("next")
-            if not next_url:
-                return redirect(f"{reverse('accounts:profile')}?tab=hidden")
-        else:
-            delete_post(post, request.user)
-            messages.success(request, "Объявление удалено.")
-            next_url = request.POST.get("next")
-            if next_url and url_has_allowed_host_and_scheme(
-                next_url,
-                allowed_hosts={request.get_host()},
-                require_https=request.is_secure(),
-            ):
-                return redirect(next_url)
-            return redirect("accounts:profile")
+        delete_post(post, request.user)
+        messages.success(request, "Объявление удалено.")
+        next_url = request.POST.get("next")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect("accounts:profile")
     except ValidationError as exc:
         messages.error(request, str(exc))
     return _redirect_after_post_action(request, post)
