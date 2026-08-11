@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from difflib import SequenceMatcher
+
 from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Case, IntegerField, Q, QuerySet, Value, When
@@ -57,6 +59,7 @@ def search_settlements(
     elif region_slug:
         qs = qs.filter(region__slug=region_slug)
 
+    fuzzy_mode = False
     exact_matches = qs.filter(Q(name__icontains=q) | Q(slug__icontains=q))
     if exact_matches.exists():
         qs = exact_matches
@@ -70,6 +73,7 @@ def search_settlements(
         for variant in shorter_queries:
             fuzzy_filter |= Q(name__icontains=variant) | Q(slug__icontains=variant)
         qs = qs.filter(fuzzy_filter)
+        fuzzy_mode = True
 
     qs = qs.annotate(
         rank=Case(
@@ -79,9 +83,30 @@ def search_settlements(
             default=Value(3),
             output_field=IntegerField(),
         )
-    ).order_by("rank", "-population", "name")[:limit]
+    ).order_by("rank", "-population", "name")
 
-    rows = list(qs)
+    if fuzzy_mode:
+        # The broad fallback can include unrelated places with the same tail
+        # (for example, "Шатура" for "Атуры"). Rank the compact candidate
+        # set by actual spelling proximity before showing it to the visitor.
+        query_folded = q.casefold()
+        rows = list(qs[:100])
+        rows.sort(
+            key=lambda settlement: (
+                SequenceMatcher(
+                    a=query_folded,
+                    b=settlement.name.casefold(),
+                    autojunk=False,
+                ).ratio(),
+                -abs(len(settlement.name) - len(q)),
+                settlement.population,
+            ),
+            reverse=True,
+        )
+        rows = rows[:limit]
+    else:
+        rows = list(qs[:limit])
+
     cache.set(cache_key, [s.pk for s in rows], SEARCH_CACHE_TTL)
     return rows
 

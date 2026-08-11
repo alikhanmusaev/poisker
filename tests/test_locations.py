@@ -63,7 +63,7 @@ def test_location_search_tolerates_one_omitted_character(client, chechnya):
     response = client.get("/api/locations/search/", {"q": "Атуры"})
 
     assert response.status_code == 200
-    assert avtury.id in [row["id"] for row in response.json()["results"]]
+    assert response.json()["results"][0]["id"] == avtury.id
 
 
 @pytest.mark.django_db
