@@ -255,6 +255,12 @@ class StyledSetPasswordForm(SetPasswordForm):
         super().__init__(*args, **kwargs)
         self.fields["new_password1"].label = "Новый пароль"
         self.fields["new_password2"].label = "Повтор пароля"
+        # Django's default HTML list is technically accurate but overwhelms
+        # the small reset form on phones. Validation remains unchanged.
+        self.fields["new_password1"].help_text = (
+            "Минимум 8 символов. Не используйте очевидный пароль или личные данные."
+        )
+        self.fields["new_password2"].help_text = "Введите тот же пароль ещё раз."
         _style_auth_fields(self)
 
 
@@ -264,4 +270,8 @@ class StyledPasswordChangeForm(PasswordChangeForm):
         self.fields["old_password"].label = "Текущий пароль"
         self.fields["new_password1"].label = "Новый пароль"
         self.fields["new_password2"].label = "Повтор пароля"
+        self.fields["new_password1"].help_text = (
+            "Минимум 8 символов. Не используйте очевидный пароль или личные данные."
+        )
+        self.fields["new_password2"].help_text = "Введите тот же пароль ещё раз."
         _style_auth_fields(self)

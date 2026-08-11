@@ -11,6 +11,18 @@ SEARCH_DEFAULT_LIMIT = 20
 SEARCH_CACHE_TTL = 120
 
 
+def _one_character_shorter_queries(query: str) -> set[str]:
+    """Return useful typo variants for a locality lookup.
+
+    Mobile keyboards make a single omitted character common ("Атуры" instead
+    of "Автуры"). Keep this conservative: it is only a fallback after an
+    exact substring lookup and is never used for very short queries.
+    """
+    if len(query) < 4:
+        return set()
+    return {f"{query[:index]}{query[index + 1:]}" for index in range(len(query))}
+
+
 def search_settlements(
     query: str,
     *,
@@ -23,7 +35,7 @@ def search_settlements(
         return []
 
     limit = max(1, min(int(limit or SEARCH_DEFAULT_LIMIT), 20))
-    cache_key = f"loc:search:v1:{region_id or region_slug or '-'}:{limit}:{q.lower()}"
+    cache_key = f"loc:search:v2:{region_id or region_slug or '-'}:{limit}:{q.lower()}"
     cached_ids = cache.get(cache_key)
     if cached_ids is not None:
         preserved = {pk: i for i, pk in enumerate(cached_ids)}
@@ -45,7 +57,20 @@ def search_settlements(
     elif region_slug:
         qs = qs.filter(region__slug=region_slug)
 
-    qs = qs.filter(Q(name__icontains=q) | Q(slug__icontains=q))
+    exact_matches = qs.filter(Q(name__icontains=q) | Q(slug__icontains=q))
+    if exact_matches.exists():
+        qs = exact_matches
+    else:
+        # Fallback for one omitted character. It runs only when the regular
+        # query has no results, so common searches retain indexed lookup.
+        shorter_queries = _one_character_shorter_queries(q)
+        if not shorter_queries:
+            return []
+        fuzzy_filter = Q()
+        for variant in shorter_queries:
+            fuzzy_filter |= Q(name__icontains=variant) | Q(slug__icontains=variant)
+        qs = qs.filter(fuzzy_filter)
+
     qs = qs.annotate(
         rank=Case(
             When(name__iexact=q, then=Value(0)),

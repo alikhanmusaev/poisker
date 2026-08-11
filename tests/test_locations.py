@@ -52,6 +52,22 @@ def test_location_search_returns_settlements(client, chechnya):
 
 
 @pytest.mark.django_db
+def test_location_search_tolerates_one_omitted_character(client, chechnya):
+    region, _grozny = chechnya
+    avtury = Settlement.objects.create(
+        region=region,
+        name="Автуры",
+        slug="avtury",
+        is_active=True,
+    )
+
+    response = client.get("/api/locations/search/", {"q": "Атуры"})
+
+    assert response.status_code == 200
+    assert avtury.id in [row["id"] for row in response.json()["results"]]
+
+
+@pytest.mark.django_db
 def test_search_filters_settlement_and_legacy_city(make_post, chechnya):
     region, grozny = chechnya
     argun = Settlement.objects.create(region=region, name="Аргун", slug="argun")
