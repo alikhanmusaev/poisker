@@ -10,7 +10,7 @@ def test_manifest_served_without_redirect():
     response = client.get("/manifest.webmanifest")
     assert response.status_code == 200
     assert "application/manifest+json" in response["Content-Type"]
-    assert response["Cache-Control"] == "no-cache"
+    assert "no-store" in response["Cache-Control"]
     data = json.loads(response.content.decode())
     assert data["display"] == "standalone"
     assert data["start_url"].startswith("/")
@@ -23,7 +23,8 @@ def test_service_worker_served_without_redirect():
     response = client.get("/sw.js")
     assert response.status_code == 200
     assert "javascript" in response["Content-Type"]
-    assert response["Cache-Control"] == "no-cache"
+    assert "no-store" in response["Cache-Control"]
+    assert response["Service-Worker-Allowed"] == "/"
     body = response.content.decode()
     assert "CACHE_NAME" in body
     assert "/offline" in body
@@ -58,6 +59,6 @@ def test_service_worker_precache_matches_versioned_assets():
     assert "staticAsset('/static/js/core.js')" in sw
     assert "staticAsset('/static/brand/logo.png')" in sw
     assert "staticAsset('/static/vendor/htmx.min.js')" in sw
-    # Controlled updates: skipWaiting only via postMessage, not on install
+    # New worker activates immediately after its pre-cache is ready.
     assert "event.data?.type === 'SKIP_WAITING'" in sw
-    assert ".then(() => self.skipWaiting())" not in sw
+    assert ".then(() => self.skipWaiting())" in sw

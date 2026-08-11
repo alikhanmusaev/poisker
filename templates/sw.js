@@ -53,7 +53,7 @@ self.addEventListener('install', (event) => {
           cache.add(url).catch(() => undefined)
         )
       )
-    )
+    ).then(() => self.skipWaiting())
   );
 });
 

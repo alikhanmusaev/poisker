@@ -587,7 +587,11 @@ def csrf_failure(request, reason=""):
 
 
 def _no_cache_headers(response):
-    response["Cache-Control"] = "no-cache"
+    # Service worker and manifest must be checked again on every app launch.
+    # Static assets themselves are immutable and use a content version.
+    response["Cache-Control"] = "no-store, max-age=0, must-revalidate"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
     return response
 
 
@@ -611,4 +615,5 @@ def service_worker(request):
         },
     )
     response["Content-Type"] = "application/javascript; charset=utf-8"
+    response["Service-Worker-Allowed"] = "/"
     return _no_cache_headers(response)

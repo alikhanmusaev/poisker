@@ -5,51 +5,26 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register(swUrl)
       .then((reg) => {
-        const promptUpdate = (worker) => {
-          if (!worker || document.getElementById('sw-update-banner')) return;
-          dismissInstallBanner();
-          const banner = document.createElement('div');
-          banner.id = 'sw-update-banner';
-          banner.className = 'sw-update-banner';
-          banner.setAttribute('role', 'status');
-          banner.innerHTML =
-            '<span class="sw-update-banner-text">Доступно обновление приложения</span>' +
-            '<button type="button" class="btn btn-primary btn-sm" data-sw-update>Обновить</button>' +
-            '<button type="button" class="sw-update-banner-dismiss" data-sw-dismiss aria-label="Закрыть">×</button>';
-          document.body.appendChild(banner);
-          banner.querySelector('[data-sw-update]')?.addEventListener('click', () => {
-            const btn = banner.querySelector('[data-sw-update]');
-            if (btn) {
-              btn.disabled = true;
-              btn.textContent = 'Обновление…';
-            }
-            try {
-              worker.postMessage({ type: 'SKIP_WAITING' });
-            } catch (_) {
-              /* ignore */
-            }
-            // Fallback: some browsers miss controllerchange after skipWaiting.
-            window.setTimeout(() => {
-              if (window.__swReloading) return;
-              window.__swReloading = true;
-              window.location.reload();
-            }, 400);
-          });
-          banner.querySelector('[data-sw-dismiss]')?.addEventListener('click', () => {
-            banner.remove();
-          });
+        const activateUpdate = (worker) => {
+          if (!worker) return;
+          try {
+            worker.postMessage({ type: 'SKIP_WAITING' });
+          } catch (_) {
+            /* The worker activates itself after pre-caching. */
+          }
         };
 
-        if (reg.waiting) {
-          promptUpdate(reg.waiting);
-        }
+        // A versioned worker URL plus this explicit check means a fresh app
+        // launch never waits for the browser's periodic update interval.
+        reg.update().catch(() => {});
+        activateUpdate(reg.waiting);
 
         reg.addEventListener('updatefound', () => {
           const worker = reg.installing;
           if (!worker) return;
           worker.addEventListener('statechange', () => {
             if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-              promptUpdate(worker);
+              activateUpdate(worker);
             }
           });
         });
