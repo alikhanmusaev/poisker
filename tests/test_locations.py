@@ -54,11 +54,10 @@ def test_location_search_returns_settlements(client, chechnya):
 @pytest.mark.django_db
 def test_location_search_tolerates_one_omitted_character(client, chechnya):
     region, _grozny = chechnya
-    avtury = Settlement.objects.create(
+    avtury, _ = Settlement.objects.get_or_create(
         region=region,
-        name="Автуры",
         slug="avtury",
-        is_active=True,
+        defaults={"name": "Автуры", "is_active": True},
     )
 
     response = client.get("/api/locations/search/", {"q": "Атуры"})
