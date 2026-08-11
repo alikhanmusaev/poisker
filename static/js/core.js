@@ -168,6 +168,9 @@ document.addEventListener('submit', (event) => {
   const accepted = window.confirm(`${title}\n\n${message}`);
   if (accepted) {
     form.dataset.confirmed = 'true';
-    form.requestSubmit();
+    // Do not re-dispatch a submit event here.  Some Android WebViews used by
+    // installed PWAs handle requestSubmit inconsistently after preventDefault,
+    // leaving destructive actions such as "Unpublish" silently inactive.
+    HTMLFormElement.prototype.submit.call(form);
   }
 });
