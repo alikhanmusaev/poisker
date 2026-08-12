@@ -215,7 +215,7 @@
     const cat = category || categoryField?.value || '';
     if (russia) {
       applyGeoSelection({ russia: true });
-      params.set('all', '1');
+      params.set('geo', 'russia');
       const path = cat ? `/${cat}/` : '/';
       const qs = params.toString();
       window.location.assign(qs ? `${path}?${qs}` : path);

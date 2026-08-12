@@ -272,7 +272,7 @@ def _listing_context(request, *, fixed_settlement=None, fixed_region=None, fixed
 
 
 def index(request):
-    if request.GET.get("all") == "1" or request.GET.get("geo") == "russia":
+    if request.GET.get("all") == "1":
         return _clear_city_and_redirect(request, "/")
     ctx = _listing_context(request)
     if request.headers.get("HX-Request"):
@@ -283,7 +283,7 @@ def index(request):
 def category_listing(request, category_slug):
     if category_slug not in CATEGORIES:
         raise Http404
-    if request.GET.get("all") == "1" or request.GET.get("geo") == "russia":
+    if request.GET.get("all") == "1":
         return _clear_city_and_redirect(request, f"/{category_slug}/")
     ctx = _listing_context(request, fixed_category=category_slug)
     if request.headers.get("HX-Request"):
