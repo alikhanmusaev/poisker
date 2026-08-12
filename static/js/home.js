@@ -164,6 +164,30 @@
     document.cookie = `poisker_geo_scope=; Max-Age=0; Path=/; SameSite=Lax${secure}`;
   }
 
+  function setGeoCookie(name, value) {
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `${name}=${encodeURIComponent(String(value))}; Max-Age=${60 * 60 * 24 * 180}; Path=/; SameSite=Lax${secure}`;
+  }
+
+  function applyGeoSelection({ regionId, settlementId, russia }) {
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+    if (russia) {
+      clearPreferredCityCookie();
+      return;
+    }
+    if (settlementId) {
+      setGeoCookie('poisker_settlement_id', settlementId);
+      setGeoCookie('poisker_geo_scope', 'settlement');
+      if (regionId) setGeoCookie('poisker_region_id', regionId);
+      return;
+    }
+    // A region search must not be shadowed by the settlement chosen before it.
+    document.cookie = `poisker_settlement_id=; Max-Age=0; Path=/; SameSite=Lax${secure}`;
+    document.cookie = `poisker_city=; Max-Age=0; Path=/; SameSite=Lax${secure}`;
+    if (regionId) setGeoCookie('poisker_region_id', regionId);
+    setGeoCookie('poisker_geo_scope', 'region');
+  }
+
   function listingPathFromGeo({ regionSlug, settlementSlug, category }) {
     const P = window.Poisker;
     if (regionSlug && !P?.isSafeSlug?.(regionSlug)) regionSlug = '';
@@ -181,7 +205,7 @@
     return '/';
   }
 
-  function navigateToGeo({ regionSlug, settlementSlug, russia, category }) {
+  function navigateToGeo({ regionId, regionSlug, settlementId, settlementSlug, russia, category }) {
     const params = new URLSearchParams(window.location.search);
     params.delete('city');
     params.delete('category');
@@ -190,7 +214,7 @@
     params.delete('geo');
     const cat = category || categoryField?.value || '';
     if (russia) {
-      clearPreferredCityCookie();
+      applyGeoSelection({ russia: true });
       params.set('all', '1');
       const path = cat ? `/${cat}/` : '/';
       const qs = params.toString();
@@ -198,6 +222,7 @@
       return;
     }
     params.delete('all');
+    applyGeoSelection({ regionId, settlementId });
     const path = listingPathFromGeo({
       regionSlug,
       settlementSlug,
@@ -239,11 +264,13 @@
       showPopularOnEmpty: false,
       onSelect(_id, _label, item) {
         if (item?.kind === 'region') {
-          navigateToGeo({ regionSlug: item.slug || '' });
+          navigateToGeo({ regionId: item.id, regionSlug: item.slug || '' });
           return;
         }
         navigateToGeo({
+          regionId: item?.region?.id,
           regionSlug: item?.regionSlug || item?.region?.slug || '',
+          settlementId: item?.id,
           settlementSlug: item?.slug || hidden.value,
         });
       },
@@ -286,7 +313,7 @@
     regionPick?.addEventListener('click', (event) => {
       event.preventDefault();
       const regionSlug = regionPick.dataset.regionSlug || '';
-      if (regionSlug) navigateToGeo({ regionSlug });
+      if (regionSlug) navigateToGeo({ regionId: regionPick.dataset.regionId, regionSlug });
     });
 
     document.querySelectorAll('.home-popular-city').forEach((btn) => {
@@ -294,6 +321,7 @@
         event.preventDefault();
         navigateToGeo({
           regionSlug: btn.dataset.regionSlug || '',
+          settlementId: btn.dataset.settlementId,
           settlementSlug: btn.dataset.settlementSlug || '',
         });
       });

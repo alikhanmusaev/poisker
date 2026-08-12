@@ -161,6 +161,7 @@
             <div class="home-city-panel__actions">
               {% if geo.region %}
               <button type="button" class="home-geo-chip" id="home-region-pick"
+                      data-region-id="{{ geo.region.id }}"
                       data-region-slug="{{ geo.region.slug }}">
                 Весь регион: {{ geo.region.name }}
               </button>
