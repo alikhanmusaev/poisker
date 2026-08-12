@@ -259,6 +259,20 @@
       }
     }
 
+    function bindFirstTap(element, handler) {
+      if (!element) return;
+      let handled = false;
+      const activate = (event) => {
+        if (handled || (event.type === 'pointerdown' && event.button !== 0)) return;
+        handled = true;
+        event.preventDefault();
+        event.stopPropagation();
+        handler(event);
+      };
+      element.addEventListener('pointerdown', activate);
+      element.addEventListener('click', activate);
+    }
+
     window.initCityAutocomplete(input, settlementIdInput || hidden, list, {}, {
       valueMode: 'id',
       showPopularOnEmpty: false,
@@ -301,24 +315,19 @@
       navigateToGeo({ russia: true });
     }
 
-    clearBtn?.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
+    bindFirstTap(clearBtn, () => {
       goRussia();
     });
-    russiaPick?.addEventListener('click', (event) => {
-      event.preventDefault();
+    bindFirstTap(russiaPick, () => {
       goRussia();
     });
-    regionPick?.addEventListener('click', (event) => {
-      event.preventDefault();
+    bindFirstTap(regionPick, () => {
       const regionSlug = regionPick.dataset.regionSlug || '';
       if (regionSlug) navigateToGeo({ regionId: regionPick.dataset.regionId, regionSlug });
     });
 
     document.querySelectorAll('.home-popular-city').forEach((btn) => {
-      btn.addEventListener('click', (event) => {
-        event.preventDefault();
+      bindFirstTap(btn, () => {
         navigateToGeo({
           regionSlug: btn.dataset.regionSlug || '',
           settlementId: btn.dataset.settlementId,
