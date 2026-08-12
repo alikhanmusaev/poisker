@@ -83,8 +83,13 @@
           ? `${window.Poisker.escapeHtml(item.label || item.name || '')}<span class="suggest-meta">${window.Poisker.escapeHtml(item.regionName || '')}</span>`
           : (item.display || item.label);
         if (index === activeIndex) btn.setAttribute('aria-selected', 'true');
-        btn.addEventListener('mousedown', (event) => event.preventDefault());
-        btn.addEventListener('click', () =>
+        let selected = false;
+        const choose = (event) => {
+          if (selected || (event.type === 'pointerdown' && event.button !== 0)) return;
+          selected = true;
+          // On mobile WebViews the first tap on a suggestion can otherwise be
+          // consumed while the focused input/keyboard is being dismissed.
+          event.preventDefault();
           selectCity({
             slug: item.slug,
             id: item.id,
@@ -93,8 +98,10 @@
             regionSlug: item.regionSlug,
             region: item.region,
             kind: item.kind,
-          })
-        );
+          });
+        };
+        btn.addEventListener('pointerdown', choose);
+        btn.addEventListener('click', choose);
         li.appendChild(btn);
         listEl.appendChild(li);
       });
