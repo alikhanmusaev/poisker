@@ -9,6 +9,11 @@ urlpatterns = [
     path("health", views.health, name="health"),
     path("ready", views.ready, name="ready"),
     path("robots.txt", views.robots_txt, name="robots"),
+    path(
+        "google05c2cca6c3f18f09.html",
+        views.google_site_verification,
+        name="google_site_verification",
+    ),
     path("sitemap.xml", views.sitemap_xml, name="sitemap"),
     path("offline", views.offline, name="offline"),
     path("manifest.webmanifest", views.web_manifest, name="web_manifest"),

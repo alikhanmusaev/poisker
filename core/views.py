@@ -473,6 +473,16 @@ def guidelines(request):
     return render(request, "guidelines.html")
 
 
+GOOGLE_SITE_VERIFICATION_FILE = "google05c2cca6c3f18f09.html"
+
+
+def google_site_verification(request):
+    return HttpResponse(
+        f"google-site-verification: {GOOGLE_SITE_VERIFICATION_FILE}",
+        content_type="text/html; charset=utf-8",
+    )
+
+
 def robots_txt(request):
     lines = [
         "User-agent: *",

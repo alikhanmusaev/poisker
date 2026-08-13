@@ -49,6 +49,7 @@ RESERVED_SLUGS = frozenset({
     "promotions",
     "sitemap.xml",
     "robots.txt",
+    "google05c2cca6c3f18f09.html",
     "manifest.webmanifest",
     "sw.js",
     "static",

@@ -31,6 +31,16 @@ def test_ready_endpoint():
     assert "database" in payload["checks"]
 
 
+def test_google_site_verification_file():
+    client = Client()
+    response = client.get("/google05c2cca6c3f18f09.html")
+    assert response.status_code == 200
+    assert (
+        response.content.decode().strip()
+        == "google-site-verification: google05c2cca6c3f18f09.html"
+    )
+
+
 @pytest.mark.django_db
 def test_robots_and_sitemap():
     client = Client()
