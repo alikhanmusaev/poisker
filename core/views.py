@@ -581,9 +581,50 @@ def csrf_failure(request, reason=""):
     return render(
         request,
         "errors/csrf.html",
-        {"reason": reason},
+        {"reason": reason, "robots_noindex": True},
         status=403,
     )
+
+
+def _error_page(request, template_name, status):
+    return render(request, template_name, {"robots_noindex": True}, status=status)
+
+
+def bad_request(request, exception):
+    return _error_page(request, "errors/400.html", 400)
+
+
+def permission_denied(request, exception):
+    return _error_page(request, "errors/403.html", 403)
+
+
+def page_not_found(request, exception):
+    return _error_page(request, "errors/404.html", 404)
+
+
+def server_error(request):
+    """Render 500 without request context processors — they may be the failure."""
+    from django.template.loader import get_template
+
+    try:
+        html = get_template("errors/500.html").render(
+            {
+                "site_name": getattr(settings, "SITE_NAME", "Поискер"),
+                "static_version": getattr(settings, "STATIC_VERSION", ""),
+            }
+        )
+        return HttpResponse(html, status=500)
+    except Exception:
+        return HttpResponse(
+            "<!DOCTYPE html><html lang='ru'><head><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+            "<title>Ошибка сервера</title></head><body>"
+            "<h1>На сервере произошла ошибка</h1>"
+            "<p>Попробуйте обновить страницу или вернуться позже.</p>"
+            "<p><a href='/'>На главную</a></p></body></html>",
+            status=500,
+            content_type="text/html; charset=utf-8",
+        )
 
 
 def _no_cache_headers(response):

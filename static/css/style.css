@@ -4278,6 +4278,19 @@ input[type="file"].sr-only,
   gap: 12px;
 }
 
+.error-page .error-code {
+  font-size: 56px;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 1;
+  color: var(--primary-100);
+  margin: 0 0 4px;
+}
+
+.error-page .auth-card-icon {
+  margin-bottom: 10px;
+}
+
 .auth-footer-actions {
   gap: 10px;
 }

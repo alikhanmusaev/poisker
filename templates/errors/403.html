@@ -1,0 +1,17 @@
+{% extends "errors/base.html" %}
+{% block error_code %}403{% endblock %}
+{% block error_icon %}shield-alert{% endblock %}
+{% block error_title %}Нет доступа{% endblock %}
+{% block error_heading %}Нет доступа{% endblock %}
+{% block error_lead %}У вас нет прав на эту страницу. Если вы уже вошли в другой аккаунт — выйдите и войдите снова.{% endblock %}
+{% block error_actions %}
+<a href="{% url 'core:index' %}" class="btn btn-primary btn-block">
+  <i data-lucide="home" class="icon" aria-hidden="true"></i>
+  На главную
+</a>
+{% if user.is_authenticated %}
+<p class="auth-switch"><a href="{% url 'accounts:profile' %}">В профиль</a></p>
+{% else %}
+<p class="auth-switch"><a href="{% url 'accounts:login' %}">Войти</a></p>
+{% endif %}
+{% endblock %}

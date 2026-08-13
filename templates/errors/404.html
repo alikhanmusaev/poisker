@@ -1,0 +1,16 @@
+{% extends "errors/base.html" %}
+{% block error_code %}404{% endblock %}
+{% block error_icon %}search{% endblock %}
+{% block error_title %}Страница не найдена{% endblock %}
+{% block error_heading %}Страница не найдена{% endblock %}
+{% block error_lead %}Объявление снято с публикации, истекло или такой страницы нет. Проверьте адрес или вернитесь на главную.{% endblock %}
+{% block error_actions %}
+<a href="{% url 'core:index' %}" class="btn btn-primary btn-block">
+  <i data-lucide="home" class="icon" aria-hidden="true"></i>
+  На главную
+</a>
+<a href="{% url 'listings:create' %}" class="btn btn-secondary btn-block">
+  <i data-lucide="plus" class="icon" aria-hidden="true"></i>
+  Подать объявление
+</a>
+{% endblock %}
