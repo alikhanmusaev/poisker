@@ -1,0 +1,12 @@
+<resources>
+    <style name="Theme.Poisker" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:statusBarColor">@color/colorPrimary</item>
+        <item name="android:navigationBarColor">#F8FAFC</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
+    <style name="Theme.Poisker.Launcher" parent="Theme.Poisker">
+        <item name="android:windowBackground">@drawable/splash</item>
+    </style>
+</resources>

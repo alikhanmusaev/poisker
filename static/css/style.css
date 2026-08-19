@@ -111,7 +111,8 @@ img { display: block; max-width: 100%; height: auto; }
   position: sticky;
   top: 0;
   z-index: 50;
-  height: var(--header-h);
+  height: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);

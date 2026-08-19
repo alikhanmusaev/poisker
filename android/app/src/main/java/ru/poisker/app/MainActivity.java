@@ -8,6 +8,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowInsets;
 import android.webkit.CookieManager;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
@@ -34,8 +35,9 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         getWindow().setStatusBarColor(Color.parseColor("#B91C1C"));
         if (Build.VERSION.SDK_INT >= 21) {
-            getWindow().setNavigationBarColor(Color.parseColor("#B91C1C"));
+            getWindow().setNavigationBarColor(Color.parseColor("#F8FAFC"));
         }
+        applySystemInsets();
 
         progressBar = findViewById(R.id.progress);
         webView = findViewById(R.id.webview);
@@ -59,8 +61,8 @@ public class MainActivity extends Activity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
-        settings.setLoadWithOverviewMode(true);
-        settings.setUseWideViewPort(true);
+        settings.setLoadWithOverviewMode(false);
+        settings.setUseWideViewPort(false);
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
@@ -149,6 +151,25 @@ public class MainActivity extends Activity {
             return true;
         }
         return !URLUtil.isNetworkUrl(url);
+    }
+
+    private void applySystemInsets() {
+        View root = findViewById(R.id.root);
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
+            int top;
+            int bottom;
+            if (Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+                top = bars.top;
+                bottom = bars.bottom;
+            } else {
+                top = insets.getSystemWindowInsetTop();
+                bottom = insets.getSystemWindowInsetBottom();
+            }
+            view.setPadding(0, top, 0, bottom);
+            return insets;
+        });
+        root.requestApplyInsets();
     }
 
     private void goBackOrFinish() {
