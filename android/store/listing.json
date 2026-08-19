@@ -1,0 +1,17 @@
+{
+  "packageName": "ru.poisker.app",
+  "appName": "Поискер",
+  "appType": "MAIN",
+  "categories": ["adsAndServices"],
+  "ageLegal": "16+",
+  "publishType": "INSTANTLY",
+  "minAndroidVersion": 7,
+  "shortDescription": "Бесплатная доска объявлений по всей России — купить и продать рядом.",
+  "fullDescription": "Поискер — бесплатная доска объявлений по всей России. Покупайте и продавайте недвижимость, автомобили, электронику, вещи для дома и услуги рядом с вами — без лишних посредников.\n\nВ приложении можно:\n• искать объявления по городу и категории;\n• подавать объявления с фото;\n• писать продавцам и сохранять закладки;\n• получать уведомления о модерации.\n\nСайт: https://poisker.ru\nПолитика конфиденциальности: https://poisker.ru/privacy\nУсловия: https://poisker.ru/terms\nПоддержка: support@poisker.ru",
+  "whatsNew": "Первая публикация приложения Поискер.",
+  "moderInfo": "Официальное приложение доски объявлений poisker.ru (TWA). Контакт: support@poisker.ru",
+  "developerContacts": {
+    "email": "support@poisker.ru",
+    "website": "https://poisker.ru"
+  }
+}

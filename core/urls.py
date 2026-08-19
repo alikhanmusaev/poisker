@@ -18,6 +18,11 @@ urlpatterns = [
     path("offline", views.offline, name="offline"),
     path("manifest.webmanifest", views.web_manifest, name="web_manifest"),
     path("sw.js", views.service_worker, name="service_worker"),
+    path(
+        ".well-known/assetlinks.json",
+        views.assetlinks_json,
+        name="assetlinks",
+    ),
     path("privacy", views.privacy, name="privacy"),
     path("terms", views.terms, name="terms"),
     path("consent", views.pdn_consent, name="pdn_consent"),

@@ -1,0 +1,10 @@
+<resources>
+    <style name="Theme.Poisker" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:statusBarColor">@color/colorPrimary</item>
+        <item name="android:navigationBarColor">@color/navigationColor</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+    <style name="Theme.Poisker.Launcher" parent="Theme.Poisker">
+        <item name="android:windowBackground">@drawable/splash</item>
+    </style>
+</resources>

@@ -31,6 +31,23 @@ def test_service_worker_served_without_redirect():
 
 
 @pytest.mark.django_db
+def test_assetlinks_json():
+    client = Client()
+    response = client.get("/.well-known/assetlinks.json")
+    assert response.status_code == 200
+    assert "application/json" in response["Content-Type"]
+    data = json.loads(response.content.decode())
+    assert isinstance(data, list)
+    assert data[0]["target"]["namespace"] == "android_app"
+    assert data[0]["target"]["package_name"] == "ru.poisker.app"
+    fingerprints = data[0]["target"]["sha256_cert_fingerprints"]
+    assert fingerprints
+    assert ":" in fingerprints[0]
+    assert "PLACEHOLDER" not in fingerprints[0]
+    assert "delegate_permission/common.handle_all_urls" in data[0]["relation"]
+
+
+@pytest.mark.django_db
 def test_offline_page():
     client = Client()
     response = client.get("/offline")

@@ -4,6 +4,7 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from core.android_twa import asset_links
 from listings.constants import (
     CATEGORIES,
     CATEGORY_LABELS,
@@ -653,6 +654,12 @@ def offline(request):
 def web_manifest(request):
     response = render(request, "manifest.webmanifest")
     response["Content-Type"] = "application/manifest+json; charset=utf-8"
+    return _no_cache_headers(response)
+
+
+def assetlinks_json(request):
+    response = JsonResponse(asset_links(), safe=False)
+    response["Content-Type"] = "application/json; charset=utf-8"
     return _no_cache_headers(response)
 
 

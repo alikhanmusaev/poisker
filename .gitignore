@@ -39,3 +39,13 @@ locations/data/*.json
 
 # Precompressed static (generated on deploy)
 static/**/*.gz
+
+# Android local build / signing
+android/.gradle/
+android/**/build/
+android/local.properties
+android/keystore.properties
+android/keystore/
+android/app/release/
+android/store/*.apk
+android/store/screenshots/chrome-profile/
