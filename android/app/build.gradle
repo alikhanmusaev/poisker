@@ -16,9 +16,8 @@ android {
         applicationId "ru.poisker.app"
         minSdk 24
         targetSdk 36
-        versionCode 1
-        versionName "1.0.0"
-        resConfigs "ru"
+        versionCode 2
+        versionName "1.0.1"
     }
 
     signingConfigs {
@@ -47,5 +46,4 @@ android {
 }
 
 dependencies {
-    implementation "com.google.androidbrowserhelper:androidbrowserhelper:2.6.2"
 }
