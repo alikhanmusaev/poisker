@@ -25,7 +25,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ANDROID = ROOT / "android"
 LISTING_PATH = ANDROID / "store" / "listing.json"
-DEFAULT_KEY = Path(r"C:\Users\a\Desktop\rustore key api.txt")
+DEFAULT_KEY = Path(r"C:\Users\a\Desktop\поискер ключ.txt")
 DEFAULT_KEY_ID = Path(r"C:\Users\a\Desktop\rustore key id.txt")
 API = "https://public-api.rustore.ru"
 PACKAGE = "ru.poisker.app"
@@ -150,6 +150,11 @@ def auth(openssl: str, key_id: str, pem: str) -> str:
     return result["body"]["jwe"]
 
 
+def _log(message: str) -> None:
+    sys.stdout.buffer.write((message + "\n").encode("utf-8", errors="replace"))
+    sys.stdout.buffer.flush()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--key-file", type=Path, default=DEFAULT_KEY)
@@ -166,22 +171,29 @@ def main():
         raise SystemExit(f"Нет APK: {args.apk}. Сначала соберите android/assembleRelease.")
 
     listing = json.loads(LISTING_PATH.read_text(encoding="utf-8"))
+    listing.pop("packageName", None)
     openssl = _openssl()
     pem = _private_key_pem(args.key_file.read_text(encoding="utf-8"))
     key_id = _load_key_id(args)
     token = auth(openssl, key_id, pem)
-    print("JWE token получен")
+    _log("JWE token OK")
 
     apps = _request("GET", f"{API}/public/v1/application", token=token)
     content = (apps.get("body") or {}).get("content") or []
-    print("Приложения в аккаунте:", json.dumps(content, ensure_ascii=False, indent=2))
-    packages = {item.get("packageName") for item in content}
+    _log("Apps: " + json.dumps(content, ensure_ascii=True, indent=2))
+    packages = {item.get("packageName") for item in content if item.get("packageName")}
     if PACKAGE not in packages:
-        raise SystemExit(
-            f"В RuStore ещё нет приложения {PACKAGE}.\n"
-            "Первое приложение создаётся в консоли: https://console.rustore.ru/\n"
-            "Укажите package name ru.poisker.app, затем запустите скрипт снова."
-        )
+        unnamed = [item for item in content if not item.get("packageName")]
+        if unnamed:
+            _log(
+                f"Found app without packageName (appId={unnamed[0].get('appId')}); "
+                f"uploading as {PACKAGE}"
+            )
+        else:
+            raise SystemExit(
+                f"No app {PACKAGE} in RuStore yet. Create it in https://console.rustore.ru/ "
+                "with package name ru.poisker.app, then re-run."
+            )
 
     created = _request(
         "POST",
@@ -192,44 +204,38 @@ def main():
     version_id = created.get("body")
     if not version_id:
         raise SystemExit(f"Не удалось создать черновик: {json.dumps(created, ensure_ascii=False)}")
-    print("versionId", version_id)
+    _log(f"versionId {version_id}")
 
-    print("Загрузка APK…")
-    print(
-        _curl_upload(
+    _log("Uploading APK...")
+    _log(json.dumps(_curl_upload(
             token,
             f"{API}/public/v1/application/{PACKAGE}/version/{version_id}/apk?isMainApk=true&servicesType=Unknown",
             [("file", args.apk)],
-        )
-    )
-    print("Загрузка иконки…")
-    print(
-        _curl_upload(
+        ), ensure_ascii=True))
+    _log("Uploading icon...")
+    _log(json.dumps(_curl_upload(
             token,
             f"{API}/public/v1/application/{PACKAGE}/version/{version_id}/image/icon",
             [("file", args.icon)],
-        )
-    )
+        ), ensure_ascii=True))
     shots = sorted(args.screenshots.glob("*.png")) + sorted(args.screenshots.glob("*.jpg"))
     if len(shots) < 3:
-        raise SystemExit(f"Нужно минимум 3 скриншота в {args.screenshots}")
-    print("Загрузка скриншотов…")
-    print(
-        _curl_upload(
+        raise SystemExit(f"Need at least 3 screenshots in {args.screenshots}")
+    _log("Uploading screenshots...")
+    _log(json.dumps(_curl_upload(
             token,
             f"{API}/public/v1/application/{PACKAGE}/version/{version_id}/screens?deviceType=MOBILE",
             [("files", path) for path in shots[:8]],
-        )
-    )
+        ), ensure_ascii=True))
     if args.commit:
         committed = _request(
             "POST",
             f"{API}/public/v1/application/{PACKAGE}/version/{version_id}/commit",
             token=token,
         )
-        print("Отправлено на модерацию:", json.dumps(committed, ensure_ascii=False))
+        _log("Submitted: " + json.dumps(committed, ensure_ascii=True))
     else:
-        print("Черновик готов. Для модерации запустите с --commit")
+        _log("Draft ready. Re-run with --commit to send to moderation.")
 
 
 if __name__ == "__main__":
